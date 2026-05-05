@@ -29,17 +29,6 @@ struct LstnrDashboardView: View {
         .frame(minWidth: 760, minHeight: 520)
         .onAppear {
             scratchpadIsFocused = true
-            state.setInAppTextInsertionTargetFocused(true)
-        }
-        .onDisappear {
-            state.setInAppTextInsertionTargetFocused(false)
-        }
-        .onChange(of: scratchpadIsFocused) { _, isFocused in
-            state.setInAppTextInsertionTargetFocused(isFocused)
-        }
-        .onChange(of: state.latestTextInsertion?.id) { _, _ in
-            guard scratchpadIsFocused, let insertion = state.latestTextInsertion else { return }
-            insertIntoScratchpad(insertion.text)
         }
     }
 
@@ -200,15 +189,6 @@ struct LstnrDashboardView: View {
             }
         }
         .padding(18)
-    }
-
-    private func insertIntoScratchpad(_ text: String) {
-        if scratchpadText.isEmpty || scratchpadText.hasSuffix("\n") {
-            scratchpadText += text
-        } else {
-            scratchpadText += "\n" + text
-        }
-        scratchpadIsFocused = true
     }
 
     private var historyPanel: some View {

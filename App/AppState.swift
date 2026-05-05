@@ -17,9 +17,7 @@ final class AppState {
     var settings: LstnrAppSettings
     var microphoneName: String
     var microphonePermissionStatus: String
-    var latestTextInsertion: AppTextInsertion?
     var debugLogEntries: [AppDebugLogEntry] = []
-    var inAppTextInsertionTargetIsFocused: Bool = false
 
     var debugLogFilePath: String {
         Self.debugLogFileURL().path
@@ -232,20 +230,11 @@ final class AppState {
             textSink: { text in
                 guard pasteAutomatically else { return }
                 await MainActor.run {
-                    if self.inAppTextInsertionTargetIsFocused {
-                        self.latestTextInsertion = AppTextInsertion(text: text)
-                        self.log("Inserted transcript into in-app text target")
-                    } else {
-                        ClipboardPaster.pasteAtCursor(text: text)
-                        self.log("Inserted transcript using clipboard paste")
-                    }
+                    ClipboardPaster.pasteAtCursor(text: text)
+                    self.log("Inserted transcript using cursor paste")
                 }
             }
         )
-    }
-
-    func setInAppTextInsertionTargetFocused(_ isFocused: Bool) {
-        inAppTextInsertionTargetIsFocused = isFocused
     }
 
     func toggleDictationFromMenu() {
@@ -262,11 +251,7 @@ final class AppState {
     }
 
     func reinsertTranscript(_ item: DictationHistoryItem) {
-        if inAppTextInsertionTargetIsFocused {
-            latestTextInsertion = AppTextInsertion(text: item.displayTranscript)
-        } else {
-            ClipboardPaster.pasteAtCursor(text: item.displayTranscript)
-        }
+        ClipboardPaster.pasteAtCursor(text: item.displayTranscript)
         lastTranscript = item.displayTranscript
         statusMessage = "Reinserted from history"
     }
@@ -657,11 +642,6 @@ struct AppDebugLogEntry: Identifiable, Hashable {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return "\(formatter.string(from: createdAt)) \(message)"
     }
-}
-
-struct AppTextInsertion: Identifiable, Hashable {
-    let id = UUID()
-    let text: String
 }
 
 /// Copies text to the clipboard and simulates ⌘V into the frontmost app.
