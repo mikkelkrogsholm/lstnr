@@ -24,9 +24,10 @@ public enum HotkeyError: Error, CustomStringConvertible {
 }
 
 /// CGEventTap-based global hotkey that listens for modifier-key transitions and
-/// fires onDown/onUp. Uses per-side NX bits so Right Option is distinguished
-/// from Left Option. Re-enables the tap on timeout / user-input-secure-input
-/// interruptions, and after sleep/wake and lock/unlock.
+/// fires onDown/onUp. The keyCode identifies the physical modifier key, while
+/// the normal modifier flag tells us whether that key transition is down/up.
+/// Re-enables the tap on timeout / user-input-secure-input interruptions, and
+/// after sleep/wake and lock/unlock.
 public final class GlobalHotkey: @unchecked Sendable {
     public enum Key: UInt16, Sendable {
         case rightOption = 61
@@ -35,15 +36,16 @@ public final class GlobalHotkey: @unchecked Sendable {
         case rightControl = 62
         case function = 63
 
-        /// Raw NX device bitmask for this specific side.
-        /// From IOKit/hidsystem/IOLLEvent.h.
-        public var sideMask: UInt64 {
+        public var modifierFlag: CGEventFlags? {
             switch self {
-            case .rightOption:  return 0x0000_0040
-            case .leftOption:   return 0x0000_0020
-            case .rightCommand: return 0x0000_0010
-            case .rightControl: return 0x0000_2000
-            case .function:     return 0  // Fn doesn't expose a side bit
+            case .rightOption, .leftOption:
+                return .maskAlternate
+            case .rightCommand:
+                return .maskCommand
+            case .rightControl:
+                return .maskControl
+            case .function:
+                return nil
             }
         }
     }
@@ -151,14 +153,13 @@ public final class GlobalHotkey: @unchecked Sendable {
         guard type == .flagsChanged else { return }
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         guard keyCode == key.rawValue else { return }
-        let sideMask = key.sideMask
-        guard sideMask != 0 else {
+        guard let modifierFlag = key.modifierFlag else {
             // Fallback for Fn which lacks a side bit: use transition toggle.
             isDown.toggle()
             if isDown { onDown() } else { onUp() }
             return
         }
-        let isCurrentlyDown = (event.flags.rawValue & sideMask) != 0
+        let isCurrentlyDown = event.flags.contains(modifierFlag)
         if isCurrentlyDown && !isDown {
             isDown = true
             onDown()

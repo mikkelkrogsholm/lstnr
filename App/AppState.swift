@@ -222,7 +222,10 @@ final class AppState {
     }
 
     private func beginDictationInteraction() {
-        guard let dictationSession else { return }
+        guard let dictationSession else {
+            reloadConfiguration()
+            return
+        }
         Task { @MainActor [weak self] in
             let result = await dictationSession.beginInteraction()
             self?.apply(commandResult: result)
@@ -230,7 +233,10 @@ final class AppState {
     }
 
     private func endDictationInteraction() {
-        guard let dictationSession else { return }
+        guard let dictationSession else {
+            reloadConfiguration()
+            return
+        }
         if isRecording {
             statusMessage = "Transcribing…"
             isTranscribing = true
