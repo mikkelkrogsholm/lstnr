@@ -561,6 +561,7 @@ private extension LstnrLanguageChoice {
 private extension LstnrShortcutChoice {
     var globalHotkeyKey: GlobalHotkey.Key {
         switch self {
+        case .rightCommand: .rightCommand
         case .rightOption: .rightOption
         case .leftOption: .leftOption
         case .functionKey: .function
@@ -569,6 +570,7 @@ private extension LstnrShortcutChoice {
 
     var symbol: String {
         switch self {
+        case .rightCommand: "⌘"
         case .rightOption: "⌥"
         case .leftOption: "⌥"
         case .functionKey: "fn"

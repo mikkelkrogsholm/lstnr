@@ -216,7 +216,7 @@ struct LstnrAppSettings: Codable, Hashable {
     var historyLimit: Int
 
     static let defaults = LstnrAppSettings(
-        shortcut: .rightOption,
+        shortcut: .rightCommand,
         language: .automatic,
         cleanupMode: .raw,
         pasteAutomatically: true,
@@ -459,6 +459,7 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
 }
 
 enum LstnrShortcutChoice: String, CaseIterable, Codable, Identifiable {
+    case rightCommand
     case rightOption
     case leftOption
     case functionKey
@@ -467,9 +468,10 @@ enum LstnrShortcutChoice: String, CaseIterable, Codable, Identifiable {
 
     var title: String {
         switch self {
+        case .rightCommand: "Right Command"
         case .rightOption: "Right Option"
         case .leftOption: "Left Option"
-        case .functionKey: "Function key"
+        case .functionKey: "Function key (best effort)"
         }
     }
 }
