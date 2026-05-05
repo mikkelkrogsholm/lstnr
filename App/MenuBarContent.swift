@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MenuBarContent: View {
     let state: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -24,6 +25,14 @@ struct MenuBarContent: View {
             }
             .buttonStyle(.borderedProminent)
             .disabled(state.isTranscribing)
+
+            Button {
+                openWindow(id: "main")
+            } label: {
+                Label("Open App", systemImage: "macwindow")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
 
             if !state.lastTranscript.isEmpty {
                 Divider()

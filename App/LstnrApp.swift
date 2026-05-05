@@ -5,6 +5,11 @@ struct LstnrApp: App {
     @State private var state = AppState()
 
     var body: some Scene {
+        WindowGroup("Lstnr", id: "main") {
+            LstnrDashboardView(state: state)
+        }
+        .defaultSize(width: 860, height: 620)
+
         MenuBarExtra {
             MenuBarContent(state: state)
         } label: {

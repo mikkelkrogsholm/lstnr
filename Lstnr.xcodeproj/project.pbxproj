@@ -14,9 +14,11 @@
 		4D5DC32033CAA01025B91C43 /* LstnrSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCD70FABA02D9D3CD4084EC /* LstnrSettingsView.swift */; };
 		5E5E7123722CEDDA04C69697 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F68B11D180048D181E993725 /* AppState.swift */; };
 		D0DA021F2B5E7803A8C0D90A /* LstnrCore in Frameworks */ = {isa = PBXBuildFile; productRef = E5CCDA942FEBACA48FD73A69 /* LstnrCore */; };
+		EF224B2B05EAB2611F539E7C /* LstnrDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0874CE0E0CF804A3A46FB11D /* LstnrDashboardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0874CE0E0CF804A3A46FB11D /* LstnrDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LstnrDashboardView.swift; sourceTree = "<group>"; };
 		74AA25301FFD05281544A7B2 /* Lstnr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lstnr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		83295DCFDF515B867BBE092B /* Lstnr.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lstnr.entitlements; sourceTree = "<group>"; };
 		83F92F43FAD9B31E144B5E64 /* RecordingHUDWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHUDWindowController.swift; sourceTree = "<group>"; };
@@ -50,6 +52,7 @@
 				F8CA79A95AE85C1A18B40A70 /* Info.plist */,
 				83295DCFDF515B867BBE092B /* Lstnr.entitlements */,
 				FCB6B752EFA931FD73E0B470 /* LstnrApp.swift */,
+				0874CE0E0CF804A3A46FB11D /* LstnrDashboardView.swift */,
 				CBFBE7C7257E13EF3CDD18D8 /* MenuBarContent.swift */,
 			);
 			path = App;
@@ -162,6 +165,7 @@
 			files = (
 				5E5E7123722CEDDA04C69697 /* AppState.swift in Sources */,
 				323C991EFD0403CB7CF0BBCA /* LstnrApp.swift in Sources */,
+				EF224B2B05EAB2611F539E7C /* LstnrDashboardView.swift in Sources */,
 				4D5DC32033CAA01025B91C43 /* LstnrSettingsView.swift in Sources */,
 				125118DFF0B8EE5CA411C417 /* MenuBarContent.swift in Sources */,
 				439E24A1B0278E53516FF315 /* RecordingHUDView.swift in Sources */,

@@ -23,7 +23,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>
-	<true/>
+	<false/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>lstnr listens to your voice and sends audio to ElevenLabs Scribe for live transcription.</string>
 </dict>
