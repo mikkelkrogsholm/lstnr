@@ -122,10 +122,9 @@ struct LstnrSettingsView: View {
 
     private var audioSection: some View {
         Section {
-            Picker("Input device", selection: $draft.inputDevice) {
-                ForEach(LstnrInputDeviceChoice.previewDevices) { device in
-                    Text(device.name).tag(device)
-                }
+            LabeledContent("Input device") {
+                Text("macOS System Default")
+                    .foregroundStyle(.secondary)
             }
 
             HStack {
@@ -139,7 +138,7 @@ struct LstnrSettingsView: View {
         } header: {
             Text("Audio")
         } footer: {
-            Text("Device names are sample values and do not query the audio backend.")
+            Text("The MVP records from macOS' default input device. Change the microphone in System Settings → Sound → Input.")
         }
     }
 

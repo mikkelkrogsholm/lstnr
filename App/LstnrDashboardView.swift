@@ -77,6 +77,21 @@ struct LstnrDashboardView: View {
                     .foregroundStyle(.secondary)
             }
 
+            LabeledContent("Microphone") {
+                Text(state.microphoneName)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            Button {
+                _ = state.requestAccessibilityPermission()
+            } label: {
+                Label("Check Accessibility", systemImage: "lock.shield")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+
             Spacer()
 
             SettingsLink {

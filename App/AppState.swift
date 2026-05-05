@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import CoreGraphics
 import Foundation
 import LstnrCore
@@ -14,6 +15,7 @@ final class AppState {
     var statusMessage: String = "Starting…"
     var historyItems: [DictationHistoryItem] = []
     var settings: LstnrAppSettings
+    var microphoneName: String
 
     private var backend: ScribeRealtimeBackend?
     private var dictationSession: DictationSession?
@@ -29,6 +31,7 @@ final class AppState {
     init() {
         let loadedSettings = settingsStore.load()
         settings = loadedSettings
+        microphoneName = AppState.defaultMicrophoneName()
         historyStore = DictationHistoryStore(
             fileURL: Self.defaultHistoryFileURL(),
             maxRecentCount: loadedSettings.historyLimit
@@ -54,14 +57,14 @@ final class AppState {
         reloadSettings()
         await reloadHistory()
         guard loadAPIKey() else { return }
-        guard ensureAccessibility() else { return }
+        guard ensureAccessibility(prompt: true) else { return }
         installHotkey()
     }
 
     private func reloadConfiguration() {
         reloadSettings()
         guard loadAPIKey() else { return }
-        if ensureAccessibility() {
+        if ensureAccessibility(prompt: false) {
             installHotkey()
         } else {
             statusMessage = "Grant Accessibility in System Settings, then relaunch."
@@ -71,6 +74,7 @@ final class AppState {
     private func reloadSettings() {
         let loadedSettings = settingsStore.load()
         settings = loadedSettings
+        microphoneName = Self.defaultMicrophoneName()
         historyStore = DictationHistoryStore(
             fileURL: Self.defaultHistoryFileURL(),
             maxRecentCount: loadedSettings.historyLimit
@@ -110,8 +114,13 @@ final class AppState {
     }
 
     @discardableResult
-    private func ensureAccessibility() -> Bool {
-        if GlobalHotkey.hasAccessibility(prompt: true) { return true }
+    func requestAccessibilityPermission() -> Bool {
+        ensureAccessibility(prompt: true)
+    }
+
+    @discardableResult
+    private func ensureAccessibility(prompt: Bool) -> Bool {
+        if GlobalHotkey.hasAccessibility(prompt: prompt) { return true }
         statusMessage = "Grant Accessibility in System Settings, then relaunch."
         return false
     }
@@ -340,6 +349,10 @@ final class AppState {
         return baseURL
             .appendingPathComponent("lstnr", isDirectory: true)
             .appendingPathComponent("dictation-history.json")
+    }
+
+    private static func defaultMicrophoneName() -> String {
+        AVCaptureDevice.default(for: .audio)?.localizedName ?? "macOS System Default"
     }
 }
 
