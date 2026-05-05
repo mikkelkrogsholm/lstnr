@@ -37,7 +37,7 @@ public final class AudioRecorder: @unchecked Sendable {
         let input = engine.inputNode
         let sourceFormat = input.outputFormat(forBus: 0)
 
-        guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
+        guard AVAudioConverter(from: sourceFormat, to: targetFormat) != nil else {
             throw AudioRecorderError.cannotCreateConverter("\(sourceFormat) → \(targetFormat)")
         }
 
@@ -46,6 +46,10 @@ public final class AudioRecorder: @unchecked Sendable {
 
         let targetFormat = self.targetFormat
         input.installTap(onBus: 0, bufferSize: 4096, format: sourceFormat) { buffer, _ in
+            guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
+                return
+            }
+
             let ratio = targetFormat.sampleRate / sourceFormat.sampleRate
             let outCapacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio + 512)
             guard let out = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outCapacity) else {

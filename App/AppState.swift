@@ -371,7 +371,8 @@ final class AppState {
                 self?.microphonePermissionStatus = Self.microphoneAuthorizationStatusTitle()
                 self?.log("Microphone permission response: granted=\(granted)")
                 if granted {
-                    self?.statusMessage = "Microphone ready. Press Start again."
+                    self?.statusMessage = "Microphone ready"
+                    self?.beginDictationInteraction()
                 } else {
                     self?.statusMessage = "Grant Microphone in System Settings"
                 }
