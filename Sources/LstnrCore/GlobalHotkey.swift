@@ -53,25 +53,30 @@ public final class GlobalHotkey: @unchecked Sendable {
     private var pressedKeys: Set<Key> = []
     private var isDown = false
     let shortcut: Shortcut
+    let diagnosticLog: (@Sendable (String) -> Void)?
     let onDown: @Sendable () -> Void
     let onUp: @Sendable () -> Void
 
     public init(
         key: Key = .rightOption,
+        diagnosticLog: (@Sendable (String) -> Void)? = nil,
         onDown: @escaping @Sendable () -> Void,
         onUp: @escaping @Sendable () -> Void
     ) {
         self.shortcut = Shortcut(keys: [key])
+        self.diagnosticLog = diagnosticLog
         self.onDown = onDown
         self.onUp = onUp
     }
 
     public init(
         shortcut: Shortcut,
+        diagnosticLog: (@Sendable (String) -> Void)? = nil,
         onDown: @escaping @Sendable () -> Void,
         onUp: @escaping @Sendable () -> Void
     ) {
         self.shortcut = shortcut
+        self.diagnosticLog = diagnosticLog
         self.onDown = onDown
         self.onUp = onUp
     }
@@ -110,6 +115,7 @@ public final class GlobalHotkey: @unchecked Sendable {
 
         self.eventTap = tap
         self.runLoopSource = source
+        diagnosticLog?("Global hotkey event tap installed. shortcut=\(describe(shortcut.keys))")
 
         // Re-arm the tap after sleep/wake (macOS Tahoe frequently disables it).
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -160,6 +166,7 @@ public final class GlobalHotkey: @unchecked Sendable {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             pressedKeys = []
             isDown = false
+            diagnosticLog?("Global hotkey event tap disabled by macOS. Rearming.")
             rearm()
             return
         }
@@ -174,12 +181,48 @@ public final class GlobalHotkey: @unchecked Sendable {
         }
 
         let isCurrentlyDown = !shortcut.keys.isEmpty && shortcut.keys.isSubset(of: pressedKeys)
+        diagnosticLog?(
+            "Global hotkey flagsChanged key=\(changedKey.displayTitle), pressed=\(describe(pressedKeys)), target=\(describe(shortcut.keys)), matched=\(isCurrentlyDown)"
+        )
         if isCurrentlyDown, !isDown {
             isDown = true
+            diagnosticLog?("Global hotkey down")
             onDown()
         } else if !isCurrentlyDown, isDown {
             isDown = false
+            diagnosticLog?("Global hotkey up")
             onUp()
+        }
+    }
+
+    private func describe(_ keys: Set<Key>) -> String {
+        guard !keys.isEmpty else { return "none" }
+        return keys.sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.displayTitle)
+            .joined(separator: "+")
+    }
+}
+
+private extension GlobalHotkey.Key {
+    var displayTitle: String {
+        switch self {
+        case .leftCommand: "leftCommand"
+        case .rightCommand: "rightCommand"
+        case .leftOption: "leftOption"
+        case .rightOption: "rightOption"
+        case .rightControl: "rightControl"
+        case .function: "function"
+        }
+    }
+
+    var sortOrder: Int {
+        switch self {
+        case .leftCommand: 10
+        case .rightCommand: 11
+        case .leftOption: 20
+        case .rightOption: 21
+        case .rightControl: 30
+        case .function: 40
         }
     }
 }

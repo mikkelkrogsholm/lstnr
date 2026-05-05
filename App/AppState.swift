@@ -162,6 +162,9 @@ final class AppState {
         hotkey?.uninstall()
         let hotkey = GlobalHotkey(
             shortcut: settings.shortcut.globalHotkeyShortcut,
+            diagnosticLog: { [weak self] message in
+                Task { @MainActor in self?.log(message) }
+            },
             onDown: { [weak self] in
                 Task { @MainActor in self?.beginDictationInteraction() }
             },

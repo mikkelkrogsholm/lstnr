@@ -13,6 +13,7 @@ struct LstnrSettingsView: View {
     @State private var selectedSection: LstnrSettingsSection = .dictation
     @State private var elevenLabsAPIKey: String = ""
     @State private var credentialStatus: String?
+    @State private var accessibilityGranted = false
     private let store: LstnrSettingsStore?
     private let credentialStore: LstnrCredentialStoring?
 
@@ -60,6 +61,7 @@ struct LstnrSettingsView: View {
         }
         .onAppear {
             loadCredentials()
+            refreshAccessibility(prompt: false)
         }
     }
 
@@ -71,7 +73,11 @@ struct LstnrSettingsView: View {
                 }
             }
 
-            ShortcutRecorderButton(shortcut: $draft.shortcut)
+            ShortcutRecorderButton(shortcut: $draft.shortcut) {
+                refreshAccessibility(prompt: false)
+            }
+
+            shortcutAccessRow
 
             Picker("Language", selection: $draft.language) {
                 ForEach(LstnrLanguageChoice.allCases) { language in
@@ -203,6 +209,28 @@ struct LstnrSettingsView: View {
             NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
         } catch {
             credentialStatus = "Remove failed"
+        }
+    }
+
+    private var shortcutAccessRow: some View {
+        HStack {
+            LabeledContent("Global hotkey access") {
+                Label(accessibilityGranted ? "Ready" : "Needs Accessibility", systemImage: accessibilityGranted ? "checkmark.circle" : "exclamationmark.triangle")
+                    .foregroundStyle(accessibilityGranted ? .green : .orange)
+            }
+
+            Spacer()
+
+            Button(accessibilityGranted ? "Check Again" : "Open Accessibility") {
+                refreshAccessibility(prompt: true)
+            }
+        }
+    }
+
+    private func refreshAccessibility(prompt: Bool) {
+        accessibilityGranted = GlobalHotkey.hasAccessibility(prompt: prompt)
+        if accessibilityGranted {
+            NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
         }
     }
 }
@@ -565,6 +593,7 @@ enum LstnrShortcutChoice: String, CaseIterable, Codable, Identifiable {
 
 private struct ShortcutRecorderButton: View {
     @Binding var shortcut: LstnrShortcutChoice
+    var onRecorded: () -> Void
     @State private var activeKeys: Set<GlobalHotkey.Key> = []
     @State private var capturedKeys: Set<GlobalHotkey.Key> = []
     @State private var eventMonitor: Any?
@@ -642,6 +671,7 @@ private struct ShortcutRecorderButton: View {
 
         shortcut = recordedShortcut
         stopRecording(status: "Recorded \(recordedShortcut.title).")
+        onRecorded()
     }
 
     private func stopRecording(status newStatus: String) {
