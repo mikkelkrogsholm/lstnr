@@ -1,0 +1,65 @@
+name: Lstnr
+options:
+  bundleIdPrefix: dk.56n
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  LstnrCore:
+    path: .
+
+settings:
+  base:
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    SWIFT_VERSION: "6.0"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_REQUIRED: "YES"
+    CODE_SIGNING_ALLOWED: "YES"
+    ENABLE_HARDENED_RUNTIME: "NO"
+    DEAD_CODE_STRIPPING: "YES"
+
+targets:
+  Lstnr:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleName: lstnr
+        CFBundleDisplayName: lstnr
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        LSMinimumSystemVersion: "14.0"
+        NSMicrophoneUsageDescription: >-
+          lstnr listens to your voice and sends audio to ElevenLabs Scribe
+          for live transcription.
+    entitlements:
+      path: App/Lstnr.entitlements
+      properties:
+        com.apple.security.device.audio-input: true
+    dependencies:
+      - package: LstnrCore
+        product: LstnrCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dk.56n.lstnr
+        GENERATE_INFOPLIST_FILE: "NO"
+        INFOPLIST_FILE: App/Info.plist
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+
+schemes:
+  Lstnr:
+    build:
+      targets:
+        Lstnr: all
+    run:
+      config: Debug
+    archive:
+      config: Release

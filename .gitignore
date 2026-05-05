@@ -1,0 +1,17 @@
+.DS_Store
+
+# Local secrets and environment overrides.
+.env
+.env.*
+!.env.example
+
+# Swift/Xcode build output and machine-local metadata.
+.build/
+.derivedData/
+.swiftpm/
+xcuserdata/
+*.xcuserstate
+
+# Local assistant/editor state.
+.agents/
+.claude/
