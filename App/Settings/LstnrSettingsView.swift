@@ -1,11 +1,18 @@
+import Security
 import SwiftUI
 
 struct LstnrSettingsView: View {
     @State private var draft: LstnrSettingsDraft
     @State private var selectedSection: LstnrSettingsSection = .dictation
+    private let store: LstnrSettingsStore?
 
-    init(draft: LstnrSettingsDraft = .preview) {
-        _draft = State(initialValue: draft)
+    init(
+        draft: LstnrSettingsDraft? = nil,
+        store: LstnrSettingsStore? = LstnrSettingsStore()
+    ) {
+        self.store = store
+        let initialDraft = draft ?? store?.load().draft ?? .preview
+        _draft = State(initialValue: initialDraft)
     }
 
     var body: some View {
@@ -32,6 +39,9 @@ struct LstnrSettingsView: View {
             .navigationTitle(selectedSection.title)
         }
         .frame(minWidth: 680, idealWidth: 720, minHeight: 420, idealHeight: 460)
+        .onChange(of: draft) { _, newDraft in
+            try? store?.save(LstnrAppSettings(draft: newDraft))
+        }
     }
 
     private var dictationSection: some View {
@@ -53,7 +63,7 @@ struct LstnrSettingsView: View {
         } header: {
             Text("Dictation")
         } footer: {
-            Text("These settings are placeholder UI state until the native preferences model is wired.")
+            Text("Preferences are saved locally and are not wired into dictation runtime behavior yet.")
         }
     }
 
@@ -101,6 +111,207 @@ struct LstnrSettingsView: View {
     }
 }
 
+struct LstnrAppSettings: Codable, Hashable {
+    var shortcut: LstnrShortcutChoice
+    var language: LstnrLanguageChoice
+    var pasteAutomatically: Bool
+    var showHUD: Bool
+    var inputDevice: LstnrInputDeviceChoice
+    var inputGain: Double
+    var reduceNoise: Bool
+    var keepRecentTranscript: Bool
+
+    static let defaults = LstnrAppSettings(
+        shortcut: .rightOption,
+        language: .automatic,
+        pasteAutomatically: true,
+        showHUD: true,
+        inputDevice: .previewDevices[0],
+        inputGain: 0.72,
+        reduceNoise: true,
+        keepRecentTranscript: true
+    )
+
+    init(
+        shortcut: LstnrShortcutChoice,
+        language: LstnrLanguageChoice,
+        pasteAutomatically: Bool,
+        showHUD: Bool,
+        inputDevice: LstnrInputDeviceChoice,
+        inputGain: Double,
+        reduceNoise: Bool,
+        keepRecentTranscript: Bool
+    ) {
+        self.shortcut = shortcut
+        self.language = language
+        self.pasteAutomatically = pasteAutomatically
+        self.showHUD = showHUD
+        self.inputDevice = inputDevice
+        self.inputGain = inputGain
+        self.reduceNoise = reduceNoise
+        self.keepRecentTranscript = keepRecentTranscript
+    }
+
+    init(draft: LstnrSettingsDraft) {
+        self.init(
+            shortcut: draft.shortcut,
+            language: draft.language,
+            pasteAutomatically: draft.pasteAutomatically,
+            showHUD: draft.showHUD,
+            inputDevice: draft.inputDevice,
+            inputGain: draft.inputGain,
+            reduceNoise: draft.reduceNoise,
+            keepRecentTranscript: draft.keepRecentTranscript
+        )
+    }
+
+    var draft: LstnrSettingsDraft {
+        LstnrSettingsDraft(
+            shortcut: shortcut,
+            language: language,
+            pasteAutomatically: pasteAutomatically,
+            showHUD: showHUD,
+            inputDevice: inputDevice,
+            inputGain: min(max(inputGain, 0), 1),
+            reduceNoise: reduceNoise,
+            keepRecentTranscript: keepRecentTranscript
+        )
+    }
+}
+
+final class LstnrSettingsStore {
+    private let defaults: UserDefaults
+    private let key: String
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
+
+    init(
+        defaults: UserDefaults = .standard,
+        key: String = "dk.56n.lstnr.settings.v1"
+    ) {
+        self.defaults = defaults
+        self.key = key
+    }
+
+    func load() -> LstnrAppSettings {
+        guard let data = defaults.data(forKey: key) else {
+            return .defaults
+        }
+
+        return (try? decoder.decode(LstnrAppSettings.self, from: data)) ?? .defaults
+    }
+
+    func save(_ settings: LstnrAppSettings) throws {
+        let data = try encoder.encode(settings)
+        defaults.set(data, forKey: key)
+    }
+
+    func reset() {
+        defaults.removeObject(forKey: key)
+    }
+}
+
+enum LstnrCredentialProvider: String, CaseIterable, Identifiable {
+    case elevenLabs
+
+    var id: String { rawValue }
+
+    var keychainAccount: String {
+        switch self {
+        case .elevenLabs: "elevenlabs.api-key"
+        }
+    }
+}
+
+protocol LstnrCredentialStoring {
+    func credential(for provider: LstnrCredentialProvider) throws -> String?
+    func saveCredential(_ credential: String, for provider: LstnrCredentialProvider) throws
+    func deleteCredential(for provider: LstnrCredentialProvider) throws
+}
+
+struct LstnrKeychainCredentialStore: LstnrCredentialStoring {
+    var service: String
+
+    init(service: String = Bundle.main.bundleIdentifier.map { "\($0).credentials" } ?? "dk.56n.lstnr.credentials") {
+        self.service = service
+    }
+
+    func credential(for provider: LstnrCredentialProvider) throws -> String? {
+        var query = baseQuery(for: provider)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        if status == errSecItemNotFound {
+            return nil
+        }
+
+        guard status == errSecSuccess else {
+            throw LstnrKeychainError.unhandledStatus(status)
+        }
+
+        guard let data = item as? Data else {
+            throw LstnrKeychainError.invalidData
+        }
+
+        return String(data: data, encoding: .utf8)
+    }
+
+    func saveCredential(_ credential: String, for provider: LstnrCredentialProvider) throws {
+        guard !credential.isEmpty else {
+            try deleteCredential(for: provider)
+            return
+        }
+
+        let data = Data(credential.utf8)
+        let query = baseQuery(for: provider)
+        let attributes: [String: Any] = [
+            kSecValueData as String: data
+        ]
+
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess {
+            return
+        }
+
+        guard updateStatus == errSecItemNotFound else {
+            throw LstnrKeychainError.unhandledStatus(updateStatus)
+        }
+
+        var addQuery = query
+        addQuery[kSecValueData as String] = data
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+            throw LstnrKeychainError.unhandledStatus(addStatus)
+        }
+    }
+
+    func deleteCredential(for provider: LstnrCredentialProvider) throws {
+        let status = SecItemDelete(baseQuery(for: provider) as CFDictionary)
+
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw LstnrKeychainError.unhandledStatus(status)
+        }
+    }
+
+    private func baseQuery(for provider: LstnrCredentialProvider) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: provider.keychainAccount
+        ]
+    }
+}
+
+enum LstnrKeychainError: Error, Equatable {
+    case invalidData
+    case unhandledStatus(OSStatus)
+}
+
 struct LstnrSettingsDraft: Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
@@ -111,16 +322,7 @@ struct LstnrSettingsDraft: Hashable {
     var reduceNoise: Bool
     var keepRecentTranscript: Bool
 
-    static let preview = LstnrSettingsDraft(
-        shortcut: .rightOption,
-        language: .automatic,
-        pasteAutomatically: true,
-        showHUD: true,
-        inputDevice: .previewDevices[0],
-        inputGain: 0.72,
-        reduceNoise: true,
-        keepRecentTranscript: true
-    )
+    static let preview = LstnrAppSettings.defaults.draft
 }
 
 enum LstnrSettingsSection: String, CaseIterable, Identifiable {
@@ -147,7 +349,7 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
     }
 }
 
-enum LstnrShortcutChoice: String, CaseIterable, Identifiable {
+enum LstnrShortcutChoice: String, CaseIterable, Codable, Identifiable {
     case rightOption
     case leftOption
     case functionKey
@@ -163,7 +365,7 @@ enum LstnrShortcutChoice: String, CaseIterable, Identifiable {
     }
 }
 
-enum LstnrLanguageChoice: String, CaseIterable, Identifiable {
+enum LstnrLanguageChoice: String, CaseIterable, Codable, Identifiable {
     case automatic
     case danish
     case english
@@ -179,7 +381,7 @@ enum LstnrLanguageChoice: String, CaseIterable, Identifiable {
     }
 }
 
-struct LstnrInputDeviceChoice: Hashable, Identifiable {
+struct LstnrInputDeviceChoice: Codable, Hashable, Identifiable {
     let id: String
     let name: String
 
@@ -191,5 +393,5 @@ struct LstnrInputDeviceChoice: Hashable, Identifiable {
 }
 
 #Preview("Settings") {
-    LstnrSettingsView()
+    LstnrSettingsView(draft: .preview, store: nil)
 }

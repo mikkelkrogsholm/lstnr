@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		125118DFF0B8EE5CA411C417 /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFBE7C7257E13EF3CDD18D8 /* MenuBarContent.swift */; };
+		234F123DDABF9C6E0B472C53 /* RecordingHUDWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F92F43FAD9B31E144B5E64 /* RecordingHUDWindowController.swift */; };
 		323C991EFD0403CB7CF0BBCA /* LstnrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB6B752EFA931FD73E0B470 /* LstnrApp.swift */; };
 		439E24A1B0278E53516FF315 /* RecordingHUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A594BD6DDABAA86BC3D889 /* RecordingHUDView.swift */; };
 		4D5DC32033CAA01025B91C43 /* LstnrSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCD70FABA02D9D3CD4084EC /* LstnrSettingsView.swift */; };
@@ -18,6 +19,7 @@
 /* Begin PBXFileReference section */
 		74AA25301FFD05281544A7B2 /* Lstnr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lstnr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		83295DCFDF515B867BBE092B /* Lstnr.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lstnr.entitlements; sourceTree = "<group>"; };
+		83F92F43FAD9B31E144B5E64 /* RecordingHUDWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHUDWindowController.swift; sourceTree = "<group>"; };
 		8CCD70FABA02D9D3CD4084EC /* LstnrSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LstnrSettingsView.swift; sourceTree = "<group>"; };
 		A2AE6F92CDDDDE51E4539076 /* lstnr */ = {isa = PBXFileReference; lastKnownFileType = folder; name = lstnr; path = .; sourceTree = SOURCE_ROOT; };
 		C9A594BD6DDABAA86BC3D889 /* RecordingHUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHUDView.swift; sourceTree = "<group>"; };
@@ -65,6 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				C9A594BD6DDABAA86BC3D889 /* RecordingHUDView.swift */,
+				83F92F43FAD9B31E144B5E64 /* RecordingHUDWindowController.swift */,
 			);
 			path = HUD;
 			sourceTree = "<group>";
@@ -162,6 +165,7 @@
 				4D5DC32033CAA01025B91C43 /* LstnrSettingsView.swift in Sources */,
 				125118DFF0B8EE5CA411C417 /* MenuBarContent.swift in Sources */,
 				439E24A1B0278E53516FF315 /* RecordingHUDView.swift in Sources */,
+				234F123DDABF9C6E0B472C53 /* RecordingHUDWindowController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
