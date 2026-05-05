@@ -29,6 +29,13 @@ struct LstnrDashboardView: View {
         .frame(minWidth: 760, minHeight: 520)
         .onAppear {
             scratchpadIsFocused = true
+            state.setInAppTextInsertionTargetFocused(true)
+        }
+        .onDisappear {
+            state.setInAppTextInsertionTargetFocused(false)
+        }
+        .onChange(of: scratchpadIsFocused) { _, isFocused in
+            state.setInAppTextInsertionTargetFocused(isFocused)
         }
         .onChange(of: state.latestTextInsertion?.id) { _, _ in
             guard scratchpadIsFocused, let insertion = state.latestTextInsertion else { return }

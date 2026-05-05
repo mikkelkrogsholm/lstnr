@@ -19,6 +19,7 @@ final class AppState {
     var microphonePermissionStatus: String
     var latestTextInsertion: AppTextInsertion?
     var debugLogEntries: [AppDebugLogEntry] = []
+    var inAppTextInsertionTargetIsFocused: Bool = false
 
     var debugLogFilePath: String {
         Self.debugLogFileURL().path
@@ -231,10 +232,20 @@ final class AppState {
             textSink: { text in
                 guard pasteAutomatically else { return }
                 await MainActor.run {
-                    ClipboardPaster.pasteAtCursor(text: text)
+                    if self.inAppTextInsertionTargetIsFocused {
+                        self.latestTextInsertion = AppTextInsertion(text: text)
+                        self.log("Inserted transcript into in-app text target")
+                    } else {
+                        ClipboardPaster.pasteAtCursor(text: text)
+                        self.log("Inserted transcript using clipboard paste")
+                    }
                 }
             }
         )
+    }
+
+    func setInAppTextInsertionTargetFocused(_ isFocused: Bool) {
+        inAppTextInsertionTargetIsFocused = isFocused
     }
 
     func toggleDictationFromMenu() {
@@ -251,9 +262,12 @@ final class AppState {
     }
 
     func reinsertTranscript(_ item: DictationHistoryItem) {
-        ClipboardPaster.pasteAtCursor(text: item.displayTranscript)
+        if inAppTextInsertionTargetIsFocused {
+            latestTextInsertion = AppTextInsertion(text: item.displayTranscript)
+        } else {
+            ClipboardPaster.pasteAtCursor(text: item.displayTranscript)
+        }
         lastTranscript = item.displayTranscript
-        latestTextInsertion = AppTextInsertion(text: item.displayTranscript)
         statusMessage = "Reinserted from history"
     }
 
@@ -332,7 +346,6 @@ final class AppState {
         case .completed(let insertedText):
             if let insertedText {
                 lastTranscript = insertedText
-                latestTextInsertion = AppTextInsertion(text: insertedText)
             }
             isRecording = false
             isTranscribing = false
