@@ -128,14 +128,25 @@ private final class RecordingHUDPanel: NSPanel {
 }
 
 private enum TextInsertionPointLocator {
+    private static var selectedTextMarkerRangeAttribute: CFString {
+        "AXSelectedTextMarkerRange" as CFString
+    }
+
+    private static var boundsForTextMarkerRangeParameterizedAttribute: CFString {
+        "AXBoundsForTextMarkerRange" as CFString
+    }
+
     static func locate() -> NSRect? {
         guard let focusedElement = focusedUIElement() else {
             return nil
         }
-        guard let selectedRange = selectedTextRange(in: focusedElement) else {
-            return nil
+
+        if let selectedRange = selectedTextRange(in: focusedElement),
+           let rangeBounds = bounds(for: selectedRange, in: focusedElement) {
+            return rangeBounds
         }
-        return bounds(for: selectedRange, in: focusedElement)
+
+        return boundsForSelectedTextMarkerRange(in: focusedElement)
     }
 
     private static func focusedUIElement() -> AXUIElement? {
@@ -170,8 +181,66 @@ private enum TextInsertionPointLocator {
         return selectedRange
     }
 
+    private static func selectedTextMarkerRange(in element: AXUIElement) -> CFTypeRef? {
+        var markerRangeValue: CFTypeRef?
+        let error = AXUIElementCopyAttributeValue(
+            element,
+            selectedTextMarkerRangeAttribute,
+            &markerRangeValue
+        )
+        guard error == .success else {
+            return nil
+        }
+        return markerRangeValue
+    }
+
+    private static func boundsForSelectedTextMarkerRange(in element: AXUIElement) -> NSRect? {
+        guard let markerRange = selectedTextMarkerRange(in: element) else {
+            return nil
+        }
+
+        var boundsValue: CFTypeRef?
+        let error = AXUIElementCopyParameterizedAttributeValue(
+            element,
+            boundsForTextMarkerRangeParameterizedAttribute,
+            markerRange,
+            &boundsValue
+        )
+        guard error == .success,
+              let boundsValue,
+              let bounds = accessibilityRect(from: boundsValue) else {
+            return nil
+        }
+
+        return convertAccessibilityRectToAppKitScreenRect(bounds)
+    }
+
     private static func bounds(for selectedRange: CFRange, in element: AXUIElement) -> NSRect? {
-        var requestedRange = selectedRange
+        let candidateRanges = caretCandidateRanges(for: selectedRange)
+        for range in candidateRanges {
+            guard let bounds = bounds(forRange: range, in: element) else {
+                continue
+            }
+            return caretRect(from: bounds, using: range, originalRange: selectedRange)
+        }
+        return nil
+    }
+
+    private static func caretCandidateRanges(for selectedRange: CFRange) -> [CFRange] {
+        if selectedRange.length > 0 {
+            return [selectedRange]
+        }
+
+        var ranges = [selectedRange]
+        ranges.append(CFRange(location: selectedRange.location, length: 1))
+        if selectedRange.location > 0 {
+            ranges.append(CFRange(location: selectedRange.location - 1, length: 1))
+        }
+        return ranges
+    }
+
+    private static func bounds(forRange range: CFRange, in element: AXUIElement) -> NSRect? {
+        var requestedRange = range
         guard let rangeValue = AXValueCreate(.cfRange, &requestedRange) else {
             return nil
         }
@@ -187,40 +256,69 @@ private enum TextInsertionPointLocator {
             return nil
         }
 
-        var bounds = CGRect.zero
-        guard AXValueGetValue(boundsValue as! AXValue, .cgRect, &bounds) else {
-            return nil
-        }
-        guard bounds.isFinite else {
+        guard let bounds = accessibilityRect(from: boundsValue) else {
             return nil
         }
 
         return convertAccessibilityRectToAppKitScreenRect(bounds)
     }
 
-    private static func convertAccessibilityRectToAppKitScreenRect(_ rect: CGRect) -> NSRect? {
-        let normalizedHeight = max(rect.height, 18)
-        let directRect = NSRect(x: rect.minX, y: rect.minY, width: max(rect.width, 2), height: normalizedHeight)
-        if isOnScreen(directRect) {
-            return directRect
+    private static func accessibilityRect(from value: CFTypeRef) -> CGRect? {
+        if CFGetTypeID(value) == AXValueGetTypeID() {
+            var rect = CGRect.zero
+            guard AXValueGetValue(value as! AXValue, .cgRect, &rect), rect.isFinite else {
+                return nil
+            }
+            return rect
         }
 
-        guard let likelyScreen = NSScreen.screens.first(where: { $0.frame.minX <= rect.midX && rect.midX <= $0.frame.maxX })
-            ?? NSScreen.main else {
+        guard let value = value as? NSValue else {
+            return nil
+        }
+        let rect = value.rectValue
+        return rect.isFinite ? rect : nil
+    }
+
+    private static func caretRect(from bounds: NSRect, using range: CFRange, originalRange: CFRange) -> NSRect {
+        guard originalRange.length == 0 else {
+            return bounds
+        }
+
+        let caretX = range.location < originalRange.location ? bounds.maxX : bounds.minX
+        return NSRect(
+            x: caretX,
+            y: bounds.minY,
+            width: 2,
+            height: max(bounds.height, 18)
+        )
+    }
+
+    private static func convertAccessibilityRectToAppKitScreenRect(_ rect: CGRect) -> NSRect? {
+        guard let desktopFrame = desktopFrame else {
             return nil
         }
 
+        let normalizedHeight = max(rect.height, 18)
         let flippedRect = NSRect(
             x: rect.minX,
-            y: likelyScreen.frame.maxY - rect.minY - normalizedHeight,
+            y: desktopFrame.maxY - rect.minY - normalizedHeight,
             width: max(rect.width, 2),
             height: normalizedHeight
         )
-        return isOnScreen(flippedRect) ? flippedRect : directRect
+        return isOnScreen(flippedRect) ? flippedRect : nil
     }
 
     private static func isOnScreen(_ rect: NSRect) -> Bool {
         NSScreen.screens.contains { $0.frame.intersects(rect) || $0.visibleFrame.intersects(rect) }
+    }
+
+    private static var desktopFrame: NSRect? {
+        NSScreen.screens
+            .map(\.frame)
+            .reduce(nil) { partial, frame in
+                guard let partial else { return frame }
+                return partial.union(frame)
+            }
     }
 }
 
