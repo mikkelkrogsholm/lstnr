@@ -17,8 +17,12 @@ struct LstnrDashboardView: View {
 
                 Divider()
 
-                historyPanel
-                    .frame(width: 300)
+                VStack(spacing: 0) {
+                    historyPanel
+                    Divider()
+                    debugLogPanel
+                }
+                .frame(width: 330)
             }
             .navigationTitle("Lstnr")
         }
@@ -221,6 +225,61 @@ struct LstnrDashboardView: View {
             }
         }
         .padding(18)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private var debugLogPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Debug Log", systemImage: "stethoscope")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button {
+                    state.copyDebugLog()
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .help("Copy Debug Log")
+                .buttonStyle(.borderless)
+
+                Button {
+                    state.clearDebugLog()
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .help("Clear Debug Log")
+                .buttonStyle(.borderless)
+            }
+
+            Text(state.debugLogFilePath)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+
+            if state.debugLogEntries.isEmpty {
+                Text("No events yet")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 10)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 6) {
+                        ForEach(state.debugLogEntries.prefix(20)) { entry in
+                            Text(entry.line)
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .frame(minHeight: 180, maxHeight: 220)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 

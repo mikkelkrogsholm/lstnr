@@ -16,6 +16,11 @@ final class AppState {
     var historyItems: [DictationHistoryItem] = []
     var settings: LstnrAppSettings
     var microphoneName: String
+    var debugLogEntries: [AppDebugLogEntry] = []
+
+    var debugLogFilePath: String {
+        Self.debugLogFileURL().path
+    }
 
     private var backend: ScribeRealtimeBackend?
     private var dictationSession: DictationSession?
@@ -50,10 +55,12 @@ final class AppState {
         ) { [weak self] _ in
             Task { @MainActor in self?.reloadConfiguration() }
         }
+        log("App started. Microphone: \(microphoneName)")
         Task { await bootstrap() }
     }
 
     private func bootstrap() async {
+        log("Bootstrap started")
         reloadSettings()
         await reloadHistory()
         guard loadAPIKey() else { return }
@@ -62,6 +69,7 @@ final class AppState {
     }
 
     private func reloadConfiguration() {
+        log("Reloading configuration")
         reloadSettings()
         guard loadAPIKey() else { return }
         if ensureAccessibility(prompt: false) {
@@ -75,6 +83,9 @@ final class AppState {
         let loadedSettings = settingsStore.load()
         settings = loadedSettings
         microphoneName = Self.defaultMicrophoneName()
+        log(
+            "Settings loaded: shortcut=\(loadedSettings.shortcut.rawValue), language=\(loadedSettings.language.rawValue), cleanup=\(loadedSettings.cleanupMode.rawValue), paste=\(loadedSettings.pasteAutomatically), hud=\(loadedSettings.showHUD)"
+        )
         historyStore = DictationHistoryStore(
             fileURL: Self.defaultHistoryFileURL(),
             maxRecentCount: loadedSettings.historyLimit
@@ -93,6 +104,7 @@ final class AppState {
             self.backend = backend
             dictationSession = makeDictationSession(backend: backend)
             lastError = nil
+            log("ElevenLabs backend ready. API key source resolved without exposing key.")
             return true
         } catch {
             backend = nil
@@ -101,6 +113,7 @@ final class AppState {
             hotkey = nil
             statusMessage = "Add ElevenLabs API key in Settings"
             lastError = "\(error)"
+            log("API key/backend setup failed: \(error)")
             return false
         }
     }
@@ -115,17 +128,21 @@ final class AppState {
 
     @discardableResult
     func requestAccessibilityPermission() -> Bool {
-        ensureAccessibility(prompt: true)
+        log("User requested Accessibility permission check")
+        return ensureAccessibility(prompt: true)
     }
 
     @discardableResult
     private func ensureAccessibility(prompt: Bool) -> Bool {
-        if GlobalHotkey.hasAccessibility(prompt: prompt) { return true }
+        let granted = GlobalHotkey.hasAccessibility(prompt: prompt)
+        log("Accessibility check: granted=\(granted), prompt=\(prompt)")
+        if granted { return true }
         statusMessage = "Grant Accessibility in System Settings, then relaunch."
         return false
     }
 
     private func installHotkey() {
+        log("Installing hotkey: \(settings.shortcut.rawValue)")
         hotkey?.uninstall()
         let hotkey = GlobalHotkey(
             key: settings.shortcut.globalHotkeyKey,
@@ -140,9 +157,11 @@ final class AppState {
             try hotkey.install()
             self.hotkey = hotkey
             statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            log("Hotkey installed")
         } catch {
             statusMessage = "Hotkey setup failed"
             lastError = "\(error)"
+            log("Hotkey install failed: \(error)")
         }
     }
 
@@ -189,6 +208,7 @@ final class AppState {
     }
 
     func toggleDictationFromMenu() {
+        log("Dictation toggle requested. isRecording=\(isRecording), isTranscribing=\(isTranscribing)")
         if isRecording {
             endDictationInteraction()
         } else {
@@ -232,9 +252,11 @@ final class AppState {
 
     private func beginDictationInteraction() {
         guard let dictationSession else {
+            log("Begin dictation requested, but session is missing. Reloading configuration.")
             reloadConfiguration()
             return
         }
+        log("Begin dictation interaction")
         Task { @MainActor [weak self] in
             let result = await dictationSession.beginInteraction()
             self?.apply(commandResult: result)
@@ -243,6 +265,7 @@ final class AppState {
 
     private func endDictationInteraction() {
         guard let dictationSession else {
+            log("End dictation requested, but session is missing. Reloading configuration.")
             reloadConfiguration()
             return
         }
@@ -252,6 +275,7 @@ final class AppState {
             showHUD(phase: .transcribing)
         }
         isRecording = false
+        log("End dictation interaction")
         Task { @MainActor [weak self] in
             let result = await dictationSession.endInteraction()
             self?.apply(commandResult: result)
@@ -265,8 +289,10 @@ final class AppState {
             isTranscribing = false
             lastError = nil
             statusMessage = "Recording…"
+            log("Recording started")
             showHUD(phase: .recording)
         case .ignored:
+            log("Dictation command ignored")
             return
         case .completed(let insertedText):
             if let insertedText {
@@ -280,9 +306,11 @@ final class AppState {
                 await self?.savePendingHistory(insertionStatus: insertionStatus)
             }
             if let insertedText {
+                log("Dictation completed. Inserted text length=\(insertedText.count), insertionStatus=\(insertionStatus.rawValue)")
                 showHUD(phase: .inserted, transcriptPreview: insertedText)
                 hideHUDAfterDelay()
             } else {
+                log("Dictation completed with empty transcript")
                 hideHUD()
             }
         case .failed(let message):
@@ -290,6 +318,7 @@ final class AppState {
             isTranscribing = false
             lastError = message
             statusMessage = "Error"
+            log("Dictation failed: \(message)")
             showHUD(phase: .error, transcriptPreview: message)
         }
     }
@@ -308,17 +337,45 @@ final class AppState {
                 insertionStatus: insertionStatus
             )
             await reloadHistory()
+            log("History saved. insertionStatus=\(insertionStatus.rawValue)")
         } catch {
             lastError = "\(error)"
+            log("History save failed: \(error)")
         }
     }
 
     private func reloadHistory() async {
         do {
             historyItems = try await historyStore.listRecent()
+            log("History loaded. itemCount=\(historyItems.count)")
         } catch {
             lastError = "\(error)"
+            log("History load failed: \(error)")
         }
+    }
+
+    func copyDebugLog() {
+        let text = debugLogEntries
+            .reversed()
+            .map(\.line)
+            .joined(separator: "\n")
+        ClipboardPaster.copyToClipboard(text: text)
+        log("Debug log copied to clipboard")
+    }
+
+    func clearDebugLog() {
+        debugLogEntries.removeAll()
+        try? FileManager.default.removeItem(at: Self.debugLogFileURL())
+        log("Debug log cleared")
+    }
+
+    private func log(_ message: String) {
+        let entry = AppDebugLogEntry(createdAt: Date(), message: message)
+        debugLogEntries.insert(entry, at: 0)
+        if debugLogEntries.count > 120 {
+            debugLogEntries.removeLast(debugLogEntries.count - 120)
+        }
+        Self.appendDebugLogLine(entry.line)
     }
 
     private func showHUD(phase: RecordingHUDPhase, transcriptPreview: String = "") {
@@ -351,8 +408,49 @@ final class AppState {
             .appendingPathComponent("dictation-history.json")
     }
 
+    private static func debugLogFileURL() -> URL {
+        let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return baseURL
+            .appendingPathComponent("lstnr", isDirectory: true)
+            .appendingPathComponent("debug.log")
+    }
+
+    private static func appendDebugLogLine(_ line: String) {
+        let fileURL = debugLogFileURL()
+        do {
+            try FileManager.default.createDirectory(
+                at: fileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            let data = Data((line + "\n").utf8)
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                let handle = try FileHandle(forWritingTo: fileURL)
+                try handle.seekToEnd()
+                try handle.write(contentsOf: data)
+                try handle.close()
+            } else {
+                try data.write(to: fileURL, options: .atomic)
+            }
+        } catch {
+            // Logging must never break dictation.
+        }
+    }
+
     private static func defaultMicrophoneName() -> String {
         AVCaptureDevice.default(for: .audio)?.localizedName ?? "macOS System Default"
+    }
+}
+
+struct AppDebugLogEntry: Identifiable, Hashable {
+    let id = UUID()
+    let createdAt: Date
+    let message: String
+
+    var line: String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return "\(formatter.string(from: createdAt)) \(message)"
     }
 }
 
