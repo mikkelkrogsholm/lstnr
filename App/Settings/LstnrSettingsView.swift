@@ -1,8 +1,11 @@
+import AppKit
+import LstnrCore
 import Security
 import SwiftUI
 
 extension Notification.Name {
     static let lstnrCredentialsDidChange = Notification.Name("dk.56n.lstnr.credentialsDidChange")
+    static let lstnrSettingsDidChange = Notification.Name("dk.56n.lstnr.settingsDidChange")
 }
 
 struct LstnrSettingsView: View {
@@ -10,6 +13,7 @@ struct LstnrSettingsView: View {
     @State private var selectedSection: LstnrSettingsSection = .dictation
     @State private var elevenLabsAPIKey: String = ""
     @State private var credentialStatus: String?
+    @State private var accessibilityGranted = false
     private let store: LstnrSettingsStore?
     private let credentialStore: LstnrCredentialStoring?
 
@@ -51,10 +55,13 @@ struct LstnrSettingsView: View {
         }
         .frame(minWidth: 680, idealWidth: 720, minHeight: 420, idealHeight: 460)
         .onChange(of: draft) { _, newDraft in
-            try? store?.save(LstnrAppSettings(draft: newDraft))
+            guard let store else { return }
+            try? store.save(LstnrAppSettings(draft: newDraft))
+            NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
         }
         .onAppear {
             loadCredentials()
+            refreshAccessibility(prompt: false)
         }
     }
 
@@ -66,9 +73,21 @@ struct LstnrSettingsView: View {
                 }
             }
 
+            ShortcutRecorderButton(shortcut: $draft.shortcut) {
+                refreshAccessibility(prompt: false)
+            }
+
+            shortcutAccessRow
+
             Picker("Language", selection: $draft.language) {
                 ForEach(LstnrLanguageChoice.allCases) { language in
                     Text(language.title).tag(language)
+                }
+            }
+
+            Picker("Cleanup", selection: $draft.cleanupMode) {
+                ForEach(LstnrCleanupModeChoice.allCases) { mode in
+                    Text(mode.title).tag(mode)
                 }
             }
 
@@ -77,7 +96,7 @@ struct LstnrSettingsView: View {
         } header: {
             Text("Dictation")
         } footer: {
-            Text("Preferences are saved locally and are not wired into dictation runtime behavior yet.")
+            Text("Raw mode inserts the direct transcript. Clean mode lightly tidies spacing and punctuation before insertion.")
         }
     }
 
@@ -113,10 +132,9 @@ struct LstnrSettingsView: View {
 
     private var audioSection: some View {
         Section {
-            Picker("Input device", selection: $draft.inputDevice) {
-                ForEach(LstnrInputDeviceChoice.previewDevices) { device in
-                    Text(device.name).tag(device)
-                }
+            LabeledContent("Input device") {
+                Text("macOS System Default")
+                    .foregroundStyle(.secondary)
             }
 
             HStack {
@@ -130,13 +148,20 @@ struct LstnrSettingsView: View {
         } header: {
             Text("Audio")
         } footer: {
-            Text("Device names are sample values and do not query the audio backend.")
+            Text("The MVP records from macOS' default input device. Change the microphone in System Settings → Sound → Input.")
         }
     }
 
     private var privacySection: some View {
         Section {
             Toggle("Keep recent transcript visible in menu bar", isOn: $draft.keepRecentTranscript)
+
+            Stepper(value: $draft.historyLimit, in: 10...200, step: 10) {
+                LabeledContent("History limit") {
+                    Text("\(draft.historyLimit) items")
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             LabeledContent("Processing") {
                 Text("Realtime transcription service")
@@ -150,7 +175,7 @@ struct LstnrSettingsView: View {
         } header: {
             Text("Privacy")
         } footer: {
-            Text("Privacy copy is intentionally descriptive only; backend behavior remains unchanged.")
+            Text("History is stored locally on this Mac. API keys are stored in Keychain.")
         }
     }
 
@@ -186,59 +211,91 @@ struct LstnrSettingsView: View {
             credentialStatus = "Remove failed"
         }
     }
+
+    private var shortcutAccessRow: some View {
+        HStack {
+            LabeledContent("Global hotkey access") {
+                Label(accessibilityGranted ? "Ready" : "Needs Accessibility", systemImage: accessibilityGranted ? "checkmark.circle" : "exclamationmark.triangle")
+                    .foregroundStyle(accessibilityGranted ? .green : .orange)
+            }
+
+            Spacer()
+
+            Button(accessibilityGranted ? "Check Again" : "Open Accessibility") {
+                refreshAccessibility(prompt: true)
+            }
+        }
+    }
+
+    private func refreshAccessibility(prompt: Bool) {
+        accessibilityGranted = GlobalHotkey.hasAccessibility(prompt: prompt)
+        if accessibilityGranted {
+            NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+        }
+    }
 }
 
 struct LstnrAppSettings: Codable, Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
+    var cleanupMode: LstnrCleanupModeChoice
     var pasteAutomatically: Bool
     var showHUD: Bool
     var inputDevice: LstnrInputDeviceChoice
     var inputGain: Double
     var reduceNoise: Bool
     var keepRecentTranscript: Bool
+    var historyLimit: Int
 
     static let defaults = LstnrAppSettings(
-        shortcut: .rightOption,
+        shortcut: .rightCommand,
         language: .automatic,
+        cleanupMode: .raw,
         pasteAutomatically: true,
         showHUD: true,
         inputDevice: .previewDevices[0],
         inputGain: 0.72,
         reduceNoise: true,
-        keepRecentTranscript: true
+        keepRecentTranscript: true,
+        historyLimit: 100
     )
 
     init(
         shortcut: LstnrShortcutChoice,
         language: LstnrLanguageChoice,
+        cleanupMode: LstnrCleanupModeChoice,
         pasteAutomatically: Bool,
         showHUD: Bool,
         inputDevice: LstnrInputDeviceChoice,
         inputGain: Double,
         reduceNoise: Bool,
-        keepRecentTranscript: Bool
+        keepRecentTranscript: Bool,
+        historyLimit: Int
     ) {
         self.shortcut = shortcut
         self.language = language
+        self.cleanupMode = cleanupMode
         self.pasteAutomatically = pasteAutomatically
         self.showHUD = showHUD
         self.inputDevice = inputDevice
         self.inputGain = inputGain
         self.reduceNoise = reduceNoise
         self.keepRecentTranscript = keepRecentTranscript
+        self.historyLimit = historyLimit
     }
 
     init(draft: LstnrSettingsDraft) {
         self.init(
             shortcut: draft.shortcut,
             language: draft.language,
+            cleanupMode: draft.cleanupMode,
             pasteAutomatically: draft.pasteAutomatically,
             showHUD: draft.showHUD,
             inputDevice: draft.inputDevice,
             inputGain: draft.inputGain,
             reduceNoise: draft.reduceNoise,
-            keepRecentTranscript: draft.keepRecentTranscript
+            keepRecentTranscript: draft.keepRecentTranscript,
+            historyLimit: draft.historyLimit
         )
     }
 
@@ -246,12 +303,14 @@ struct LstnrAppSettings: Codable, Hashable {
         LstnrSettingsDraft(
             shortcut: shortcut,
             language: language,
+            cleanupMode: cleanupMode,
             pasteAutomatically: pasteAutomatically,
             showHUD: showHUD,
             inputDevice: inputDevice,
             inputGain: min(max(inputGain, 0), 1),
             reduceNoise: reduceNoise,
-            keepRecentTranscript: keepRecentTranscript
+            keepRecentTranscript: keepRecentTranscript,
+            historyLimit: min(max(historyLimit, 10), 200)
         )
     }
 }
@@ -392,12 +451,14 @@ enum LstnrKeychainError: Error, Equatable {
 struct LstnrSettingsDraft: Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
+    var cleanupMode: LstnrCleanupModeChoice
     var pasteAutomatically: Bool
     var showHUD: Bool
     var inputDevice: LstnrInputDeviceChoice
     var inputGain: Double
     var reduceNoise: Bool
     var keepRecentTranscript: Bool
+    var historyLimit: Int
 
     static let preview = LstnrAppSettings.defaults.draft
 }
@@ -430,17 +491,231 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
 }
 
 enum LstnrShortcutChoice: String, CaseIterable, Codable, Identifiable {
+    case rightCommand
+    case leftCommand
     case rightOption
     case leftOption
     case functionKey
+    case leftCommandLeftOption
+    case leftCommandRightOption
+    case rightCommandLeftOption
+    case rightCommandRightOption
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
+        case .rightCommand: "Right Command"
+        case .leftCommand: "Left Command"
         case .rightOption: "Right Option"
         case .leftOption: "Left Option"
-        case .functionKey: "Function key"
+        case .functionKey: "Function key (best effort)"
+        case .leftCommandLeftOption: "Left Command + Left Option"
+        case .leftCommandRightOption: "Left Command + Right Option"
+        case .rightCommandLeftOption: "Right Command + Left Option"
+        case .rightCommandRightOption: "Right Command + Right Option"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .rightCommand, .leftCommand: "⌘"
+        case .rightOption, .leftOption: "⌥"
+        case .functionKey: "fn"
+        case .leftCommandLeftOption,
+             .leftCommandRightOption,
+             .rightCommandLeftOption,
+             .rightCommandRightOption:
+            "⌘⌥"
+        }
+    }
+
+    var globalHotkeyShortcut: GlobalHotkey.Shortcut {
+        GlobalHotkey.Shortcut(keys: shortcutKeys)
+    }
+
+    static let recordableKeys: Set<GlobalHotkey.Key> = [
+        .leftCommand,
+        .rightCommand,
+        .leftOption,
+        .rightOption,
+        .function
+    ]
+
+    init?(keys: Set<GlobalHotkey.Key>) {
+        switch keys {
+        case Set<GlobalHotkey.Key>([.rightCommand]):
+            self = .rightCommand
+        case Set<GlobalHotkey.Key>([.leftCommand]):
+            self = .leftCommand
+        case Set<GlobalHotkey.Key>([.rightOption]):
+            self = .rightOption
+        case Set<GlobalHotkey.Key>([.leftOption]):
+            self = .leftOption
+        case Set<GlobalHotkey.Key>([.function]):
+            self = .functionKey
+        case Set<GlobalHotkey.Key>([.leftCommand, .leftOption]):
+            self = .leftCommandLeftOption
+        case Set<GlobalHotkey.Key>([.leftCommand, .rightOption]):
+            self = .leftCommandRightOption
+        case Set<GlobalHotkey.Key>([.rightCommand, .leftOption]):
+            self = .rightCommandLeftOption
+        case Set<GlobalHotkey.Key>([.rightCommand, .rightOption]):
+            self = .rightCommandRightOption
+        default:
+            return nil
+        }
+    }
+
+    private var shortcutKeys: Set<GlobalHotkey.Key> {
+        switch self {
+        case .rightCommand:
+            [.rightCommand]
+        case .leftCommand:
+            [.leftCommand]
+        case .rightOption:
+            [.rightOption]
+        case .leftOption:
+            [.leftOption]
+        case .functionKey:
+            [.function]
+        case .leftCommandLeftOption:
+            [.leftCommand, .leftOption]
+        case .leftCommandRightOption:
+            [.leftCommand, .rightOption]
+        case .rightCommandLeftOption:
+            [.rightCommand, .leftOption]
+        case .rightCommandRightOption:
+            [.rightCommand, .rightOption]
+        }
+    }
+}
+
+private struct ShortcutRecorderButton: View {
+    @Binding var shortcut: LstnrShortcutChoice
+    var onRecorded: () -> Void
+    @State private var activeKeys: Set<GlobalHotkey.Key> = []
+    @State private var capturedKeys: Set<GlobalHotkey.Key> = []
+    @State private var eventMonitor: Any?
+    @State private var isRecording = false
+    @State private var status: String = "Press record, then press and release a shortcut."
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                LabeledContent("Recorded shortcut") {
+                    Text(shortcut.title)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button(isRecording ? "Cancel" : "Record Shortcut") {
+                    if isRecording {
+                        stopRecording(status: "Recording cancelled.")
+                    } else {
+                        startRecording()
+                    }
+                }
+            }
+
+            Text(statusText)
+                .font(.caption)
+                .foregroundStyle(isRecording ? .primary : .secondary)
+        }
+        .onDisappear {
+            stopRecording(status: status)
+        }
+    }
+
+    private var statusText: String {
+        if isRecording, !capturedKeys.isEmpty {
+            return "Recording \(Self.title(for: capturedKeys)). Release all keys to save."
+        }
+        if isRecording {
+            return "Press a modifier key, or Command + Option together."
+        }
+        return status
+    }
+
+    private func startRecording() {
+        removeEventMonitor()
+        activeKeys = []
+        capturedKeys = []
+        status = "Press a modifier key, or Command + Option together."
+        isRecording = true
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { event in
+            record(event: event)
+            return nil
+        }
+    }
+
+    private func record(event: NSEvent) {
+        guard isRecording else { return }
+        guard let key = GlobalHotkey.Key(rawValue: UInt16(event.keyCode)) else { return }
+        guard LstnrShortcutChoice.recordableKeys.contains(key) else { return }
+
+        if activeKeys.contains(key) {
+            activeKeys.remove(key)
+        } else {
+            activeKeys.insert(key)
+        }
+        capturedKeys.insert(key)
+        capturedKeys.formUnion(activeKeys)
+
+        guard activeKeys.isEmpty else { return }
+        guard let recordedShortcut = LstnrShortcutChoice(keys: capturedKeys) else {
+            stopRecording(status: "Unsupported shortcut: \(Self.title(for: capturedKeys)).")
+            return
+        }
+
+        shortcut = recordedShortcut
+        stopRecording(status: "Recorded \(recordedShortcut.title).")
+        onRecorded()
+    }
+
+    private func stopRecording(status newStatus: String) {
+        removeEventMonitor()
+        activeKeys = []
+        capturedKeys = []
+        isRecording = false
+        status = newStatus
+    }
+
+    private func removeEventMonitor() {
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+        }
+        eventMonitor = nil
+    }
+
+    private static func title(for keys: Set<GlobalHotkey.Key>) -> String {
+        keys.sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.displayTitle)
+            .joined(separator: " + ")
+    }
+}
+
+private extension GlobalHotkey.Key {
+    var displayTitle: String {
+        switch self {
+        case .leftCommand: "Left Command"
+        case .rightCommand: "Right Command"
+        case .leftOption: "Left Option"
+        case .rightOption: "Right Option"
+        case .rightControl: "Right Control"
+        case .function: "Function key"
+        }
+    }
+
+    var sortOrder: Int {
+        switch self {
+        case .leftCommand: 10
+        case .rightCommand: 11
+        case .leftOption: 20
+        case .rightOption: 21
+        case .rightControl: 30
+        case .function: 40
         }
     }
 }
@@ -457,6 +732,20 @@ enum LstnrLanguageChoice: String, CaseIterable, Codable, Identifiable {
         case .automatic: "Automatic"
         case .danish: "Danish"
         case .english: "English"
+        }
+    }
+}
+
+enum LstnrCleanupModeChoice: String, CaseIterable, Codable, Identifiable {
+    case raw
+    case clean
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .raw: "Raw"
+        case .clean: "Clean"
         }
     }
 }
