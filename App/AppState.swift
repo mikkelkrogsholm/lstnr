@@ -16,6 +16,7 @@ final class AppState {
     var historyItems: [DictationHistoryItem] = []
     var settings: LstnrAppSettings
     var microphoneName: String
+    var microphonePermissionStatus: String
     var debugLogEntries: [AppDebugLogEntry] = []
 
     var debugLogFilePath: String {
@@ -37,6 +38,7 @@ final class AppState {
         let loadedSettings = settingsStore.load()
         settings = loadedSettings
         microphoneName = AppState.defaultMicrophoneName()
+        microphonePermissionStatus = Self.microphoneAuthorizationStatusTitle()
         historyStore = DictationHistoryStore(
             fileURL: Self.defaultHistoryFileURL(),
             maxRecentCount: loadedSettings.historyLimit
@@ -55,7 +57,8 @@ final class AppState {
         ) { [weak self] _ in
             Task { @MainActor in self?.reloadConfiguration() }
         }
-        log("App started. Microphone: \(microphoneName)")
+        log("App started. \(Self.runtimeIdentityDescription())")
+        log("Microphone: \(microphoneName), permission=\(microphonePermissionStatus)")
         Task { await bootstrap() }
     }
 
@@ -83,8 +86,9 @@ final class AppState {
         let loadedSettings = settingsStore.load()
         settings = loadedSettings
         microphoneName = Self.defaultMicrophoneName()
+        microphonePermissionStatus = Self.microphoneAuthorizationStatusTitle()
         log(
-            "Settings loaded: shortcut=\(loadedSettings.shortcut.rawValue), language=\(loadedSettings.language.rawValue), cleanup=\(loadedSettings.cleanupMode.rawValue), paste=\(loadedSettings.pasteAutomatically), hud=\(loadedSettings.showHUD)"
+            "Settings loaded: shortcut=\(loadedSettings.shortcut.rawValue), language=\(loadedSettings.language.rawValue), cleanup=\(loadedSettings.cleanupMode.rawValue), paste=\(loadedSettings.pasteAutomatically), hud=\(loadedSettings.showHUD), microphonePermission=\(microphonePermissionStatus)"
         )
         historyStore = DictationHistoryStore(
             fileURL: Self.defaultHistoryFileURL(),
@@ -100,7 +104,12 @@ final class AppState {
     private func loadAPIKey() -> Bool {
         do {
             let key = try resolveElevenLabsAPIKey()
-            let backend = ScribeRealtimeBackend(apiKey: key)
+            let backend = ScribeRealtimeBackend(
+                apiKey: key,
+                diagnosticLog: { [weak self] message in
+                    await MainActor.run { self?.log(message) }
+                }
+            )
             self.backend = backend
             dictationSession = makeDictationSession(backend: backend)
             lastError = nil
@@ -129,7 +138,13 @@ final class AppState {
     @discardableResult
     func requestAccessibilityPermission() -> Bool {
         log("User requested Accessibility permission check")
-        return ensureAccessibility(prompt: true)
+        let granted = ensureAccessibility(prompt: true)
+        if granted {
+            log("Accessibility is granted; installing hotkey from permission check")
+            _ = loadAPIKey()
+            installHotkey()
+        }
+        return granted
     }
 
     @discardableResult
@@ -171,13 +186,24 @@ final class AppState {
         let languageCode = settings.language.languageCode
         let pasteAutomatically = settings.pasteAutomatically
         let pendingHistory = pendingHistory
+        let instrumentAudio: @Sendable (SpeechToTextAudio) -> SpeechToTextAudio = { [weak self] audio in
+            Self.instrument(audio: audio) { message in
+                await MainActor.run { self?.log(message) }
+            }
+        }
 
         return DictationSession(
             mode: .pushToTalk,
             recorder: MicrophoneDictationAudioRecorder(),
             languageCode: languageCode,
             transcribe: { request in
-                let rawResult = try await backend.transcribe(request)
+                let instrumentedRequest = SpeechToTextRequest(
+                    audio: instrumentAudio(request.audio),
+                    languageCode: request.languageCode
+                )
+                let rawResult = try await Self.withTimeout(seconds: 30) {
+                    try await backend.transcribe(instrumentedRequest)
+                }
                 let cleanupResult = try await cleanupProvider.cleanup(
                     TranscriptCleanupRequest(rawText: rawResult.text, mode: cleanupMode)
                 )
@@ -256,6 +282,10 @@ final class AppState {
             reloadConfiguration()
             return
         }
+        guard ensureMicrophonePermissionBeforeRecording() else {
+            return
+        }
+        statusMessage = "Starting microphone…"
         log("Begin dictation interaction")
         Task { @MainActor [weak self] in
             let result = await dictationSession.beginInteraction()
@@ -311,6 +341,7 @@ final class AppState {
                 hideHUDAfterDelay()
             } else {
                 log("Dictation completed with empty transcript")
+                statusMessage = "No speech detected"
                 hideHUD()
             }
         case .failed(let message):
@@ -320,6 +351,47 @@ final class AppState {
             statusMessage = "Error"
             log("Dictation failed: \(message)")
             showHUD(phase: .error, transcriptPreview: message)
+        }
+    }
+
+    @discardableResult
+    private func ensureMicrophonePermissionBeforeRecording() -> Bool {
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        microphonePermissionStatus = Self.microphoneAuthorizationStatusTitle(status)
+        log("Microphone permission check: \(microphonePermissionStatus)")
+
+        switch status {
+        case .authorized:
+            return true
+        case .notDetermined:
+            statusMessage = "Grant Microphone permission"
+            log("Requesting Microphone permission")
+            Task { @MainActor [weak self] in
+                let granted = await AVCaptureDevice.requestAccess(for: .audio)
+                self?.microphonePermissionStatus = Self.microphoneAuthorizationStatusTitle()
+                self?.log("Microphone permission response: granted=\(granted)")
+                if granted {
+                    self?.statusMessage = "Microphone ready. Press Start again."
+                } else {
+                    self?.statusMessage = "Grant Microphone in System Settings"
+                }
+            }
+            return false
+        case .denied:
+            statusMessage = "Grant Microphone in System Settings"
+            lastError = "Microphone permission is denied for this Lstnr.app build."
+            log("Microphone permission denied")
+            return false
+        case .restricted:
+            statusMessage = "Microphone restricted"
+            lastError = "Microphone permission is restricted by macOS."
+            log("Microphone permission restricted")
+            return false
+        @unknown default:
+            statusMessage = "Microphone unavailable"
+            lastError = "Unknown Microphone permission state."
+            log("Microphone permission unknown status")
+            return false
         }
     }
 
@@ -439,6 +511,119 @@ final class AppState {
 
     private static func defaultMicrophoneName() -> String {
         AVCaptureDevice.default(for: .audio)?.localizedName ?? "macOS System Default"
+    }
+
+    private static func microphoneAuthorizationStatusTitle(
+        _ status: AVAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+    ) -> String {
+        switch status {
+        case .authorized: "authorized"
+        case .denied: "denied"
+        case .notDetermined: "notDetermined"
+        case .restricted: "restricted"
+        @unknown default: "unknown"
+        }
+    }
+
+    private static func runtimeIdentityDescription() -> String {
+        let bundleID = Bundle.main.bundleIdentifier ?? "unknown-bundle-id"
+        let bundlePath = Bundle.main.bundleURL.path
+        let executablePath = Bundle.main.executableURL?.path ?? CommandLine.arguments.first ?? "unknown-executable"
+        return "Runtime identity: bundleID=\(bundleID), bundlePath=\(bundlePath), executablePath=\(executablePath), pid=\(ProcessInfo.processInfo.processIdentifier)"
+    }
+
+    nonisolated private static func instrument(
+        audio: SpeechToTextAudio,
+        log: @escaping @Sendable (String) async -> Void
+    ) -> SpeechToTextAudio {
+        switch audio {
+        case .file:
+            return audio
+        case .pcm16Stream(let stream, let sampleRate):
+            let streamID = String(UUID().uuidString.prefix(8))
+            let (instrumentedStream, continuation) = AsyncStream<Data>.makeStream(bufferingPolicy: .unbounded)
+            Task.detached {
+                await log("Audio stream \(streamID) opened. sampleRate=\(sampleRate)")
+                var chunks = 0
+                var bytes = 0
+                var peak = 0
+                var nonZeroBytes = 0
+
+                for await chunk in stream {
+                    chunks += 1
+                    bytes += chunk.count
+                    let chunkStats = pcm16Stats(chunk)
+                    peak = max(peak, chunkStats.peak)
+                    nonZeroBytes += chunkStats.nonZeroBytes
+
+                    if chunks == 1 || chunks % 20 == 0 {
+                        await log(
+                            "Audio stream \(streamID) chunk=\(chunks), totalBytes=\(bytes), chunkBytes=\(chunk.count), peak=\(peak), nonZeroBytes=\(nonZeroBytes)"
+                        )
+                    }
+
+                    continuation.yield(chunk)
+                }
+
+                continuation.finish()
+                let duration = sampleRate > 0 ? Double(bytes / 2) / Double(sampleRate) : 0
+                let durationText = String(format: "%.2f", duration)
+                await log(
+                    "Audio stream \(streamID) finished. chunks=\(chunks), bytes=\(bytes), duration=\(durationText)s, peak=\(peak), nonZeroBytes=\(nonZeroBytes)"
+                )
+            }
+            return .pcm16Stream(instrumentedStream, sampleRate: sampleRate)
+        }
+    }
+
+    nonisolated private static func pcm16Stats(_ data: Data) -> (peak: Int, nonZeroBytes: Int) {
+        var peak = 0
+        var nonZeroBytes = 0
+        let bytes = [UInt8](data)
+
+        for byte in bytes where byte != 0 {
+            nonZeroBytes += 1
+        }
+
+        var index = 0
+        while index + 1 < bytes.count {
+            let unsignedSample = UInt16(bytes[index]) | (UInt16(bytes[index + 1]) << 8)
+            let sample = Int16(bitPattern: unsignedSample)
+            let magnitude = sample == Int16.min ? Int(Int16.max) + 1 : abs(Int(sample))
+            peak = max(peak, magnitude)
+            index += 2
+        }
+
+        return (peak: peak, nonZeroBytes: nonZeroBytes)
+    }
+
+    nonisolated private static func withTimeout<T: Sendable>(
+        seconds: Double,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+            group.addTask {
+                try await Task.sleep(for: .seconds(seconds))
+                throw AppStateTimeoutError(seconds: seconds)
+            }
+
+            guard let result = try await group.next() else {
+                throw AppStateTimeoutError(seconds: seconds)
+            }
+            group.cancelAll()
+            return result
+        }
+    }
+}
+
+private struct AppStateTimeoutError: Error, CustomStringConvertible, Sendable {
+    let seconds: Double
+
+    var description: String {
+        "Operation timed out after \(String(format: "%.0f", seconds)) seconds"
     }
 }
 

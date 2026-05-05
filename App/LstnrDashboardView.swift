@@ -88,6 +88,11 @@ struct LstnrDashboardView: View {
                     .multilineTextAlignment(.trailing)
             }
 
+            LabeledContent("Mic Access") {
+                Text(state.microphonePermissionStatus)
+                    .foregroundStyle(.secondary)
+            }
+
             Button {
                 _ = state.requestAccessibilityPermission()
             } label: {

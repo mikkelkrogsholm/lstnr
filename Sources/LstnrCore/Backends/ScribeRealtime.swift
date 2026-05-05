@@ -6,6 +6,7 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
     public let baseURL: URL
     public let modelID: String
     public let chunkMilliseconds: Int
+    public let diagnosticLog: (@Sendable (String) async -> Void)?
 
     static let sampleRate = 16_000
 
@@ -13,13 +14,15 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
         apiKey: String,
         baseURL: URL = URL(string: "wss://api.elevenlabs.io")!,
         modelID: String = "scribe_v2_realtime",
-        chunkMilliseconds: Int = 200
+        chunkMilliseconds: Int = 200,
+        diagnosticLog: (@Sendable (String) async -> Void)? = nil
     ) {
         self.name = "scribe-realtime"
         self.apiKey = apiKey
         self.baseURL = baseURL
         self.modelID = modelID
         self.chunkMilliseconds = chunkMilliseconds
+        self.diagnosticLog = diagnosticLog
     }
 
     public var id: String { name }
@@ -94,6 +97,7 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
         let start = Date()
 
         do {
+            await diagnosticLog?("Scribe Realtime websocket opened. language=\(language ?? "automatic")")
             async let reader = readUntilCommitted(task: task)
 
             // Server requires ≥0.3s uncommitted audio before it accepts commit.
@@ -113,10 +117,12 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
             if totalBytes < minCommitBytes {
                 finalChunk.append(Data(count: minCommitBytes - totalBytes))
             }
+            await diagnosticLog?("Scribe Realtime committing. totalBytes=\(totalBytes), finalChunkBytes=\(finalChunk.count)")
             try await send(task: task, data: finalChunk, commit: true)
 
             let (text, detected) = try await reader
             task.cancel(with: .normalClosure, reason: nil)
+            await diagnosticLog?("Scribe Realtime committed. textLength=\(text.count), language=\(detected ?? "unknown")")
 
             let duration = Double(totalBytes / 2) / Double(Self.sampleRate)
             return TranscriptionResult(
@@ -187,8 +193,10 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
                 let evt = try decoder.decode(RealtimeIn.self, from: data)
                 switch evt.message_type {
                 case "session_started", "partial_transcript":
+                    await diagnosticLog?("Scribe Realtime event: \(evt.message_type), textLength=\(evt.text?.count ?? 0)")
                     continue
                 case "committed_transcript", "committed_transcript_with_timestamps":
+                    await diagnosticLog?("Scribe Realtime event: \(evt.message_type), textLength=\(evt.text?.count ?? 0)")
                     if let text = evt.text {
                         if !collected.isEmpty && !collected.hasSuffix(" ") { collected += " " }
                         collected += text
@@ -197,6 +205,7 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
                     return (collected, detectedLanguage)
                 default:
                     if evt.message_type.contains("error") || evt.error != nil {
+                        await diagnosticLog?("Scribe Realtime error event: \(evt.message_type), detail=\(evt.error ?? "")")
                         throw ScribeRealtimeError.serverError(type: evt.message_type, detail: evt.error ?? "")
                     }
                 }
