@@ -161,7 +161,7 @@ final class AppState {
         log("Installing hotkey: \(settings.shortcut.rawValue)")
         hotkey?.uninstall()
         let hotkey = GlobalHotkey(
-            key: settings.shortcut.globalHotkeyKey,
+            shortcut: settings.shortcut.globalHotkeyShortcut,
             onDown: { [weak self] in
                 Task { @MainActor in self?.beginDictationInteraction() }
             },
@@ -748,26 +748,6 @@ private extension LstnrLanguageChoice {
         case .automatic: nil
         case .danish: "da"
         case .english: "en"
-        }
-    }
-}
-
-private extension LstnrShortcutChoice {
-    var globalHotkeyKey: GlobalHotkey.Key {
-        switch self {
-        case .rightCommand: .rightCommand
-        case .rightOption: .rightOption
-        case .leftOption: .leftOption
-        case .functionKey: .function
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .rightCommand: "⌘"
-        case .rightOption: "⌥"
-        case .leftOption: "⌥"
-        case .functionKey: "fn"
         }
     }
 }

@@ -1,3 +1,5 @@
+import AppKit
+import LstnrCore
 import Security
 import SwiftUI
 
@@ -68,6 +70,8 @@ struct LstnrSettingsView: View {
                     Text(shortcut.title).tag(shortcut)
                 }
             }
+
+            ShortcutRecorderButton(shortcut: $draft.shortcut)
 
             Picker("Language", selection: $draft.language) {
                 ForEach(LstnrLanguageChoice.allCases) { language in
@@ -460,18 +464,228 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
 
 enum LstnrShortcutChoice: String, CaseIterable, Codable, Identifiable {
     case rightCommand
+    case leftCommand
     case rightOption
     case leftOption
     case functionKey
+    case leftCommandLeftOption
+    case leftCommandRightOption
+    case rightCommandLeftOption
+    case rightCommandRightOption
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .rightCommand: "Right Command"
+        case .leftCommand: "Left Command"
         case .rightOption: "Right Option"
         case .leftOption: "Left Option"
         case .functionKey: "Function key (best effort)"
+        case .leftCommandLeftOption: "Left Command + Left Option"
+        case .leftCommandRightOption: "Left Command + Right Option"
+        case .rightCommandLeftOption: "Right Command + Left Option"
+        case .rightCommandRightOption: "Right Command + Right Option"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .rightCommand, .leftCommand: "⌘"
+        case .rightOption, .leftOption: "⌥"
+        case .functionKey: "fn"
+        case .leftCommandLeftOption,
+             .leftCommandRightOption,
+             .rightCommandLeftOption,
+             .rightCommandRightOption:
+            "⌘⌥"
+        }
+    }
+
+    var globalHotkeyShortcut: GlobalHotkey.Shortcut {
+        GlobalHotkey.Shortcut(keys: shortcutKeys)
+    }
+
+    static let recordableKeys: Set<GlobalHotkey.Key> = [
+        .leftCommand,
+        .rightCommand,
+        .leftOption,
+        .rightOption,
+        .function
+    ]
+
+    init?(keys: Set<GlobalHotkey.Key>) {
+        switch keys {
+        case Set<GlobalHotkey.Key>([.rightCommand]):
+            self = .rightCommand
+        case Set<GlobalHotkey.Key>([.leftCommand]):
+            self = .leftCommand
+        case Set<GlobalHotkey.Key>([.rightOption]):
+            self = .rightOption
+        case Set<GlobalHotkey.Key>([.leftOption]):
+            self = .leftOption
+        case Set<GlobalHotkey.Key>([.function]):
+            self = .functionKey
+        case Set<GlobalHotkey.Key>([.leftCommand, .leftOption]):
+            self = .leftCommandLeftOption
+        case Set<GlobalHotkey.Key>([.leftCommand, .rightOption]):
+            self = .leftCommandRightOption
+        case Set<GlobalHotkey.Key>([.rightCommand, .leftOption]):
+            self = .rightCommandLeftOption
+        case Set<GlobalHotkey.Key>([.rightCommand, .rightOption]):
+            self = .rightCommandRightOption
+        default:
+            return nil
+        }
+    }
+
+    private var shortcutKeys: Set<GlobalHotkey.Key> {
+        switch self {
+        case .rightCommand:
+            [.rightCommand]
+        case .leftCommand:
+            [.leftCommand]
+        case .rightOption:
+            [.rightOption]
+        case .leftOption:
+            [.leftOption]
+        case .functionKey:
+            [.function]
+        case .leftCommandLeftOption:
+            [.leftCommand, .leftOption]
+        case .leftCommandRightOption:
+            [.leftCommand, .rightOption]
+        case .rightCommandLeftOption:
+            [.rightCommand, .leftOption]
+        case .rightCommandRightOption:
+            [.rightCommand, .rightOption]
+        }
+    }
+}
+
+private struct ShortcutRecorderButton: View {
+    @Binding var shortcut: LstnrShortcutChoice
+    @State private var activeKeys: Set<GlobalHotkey.Key> = []
+    @State private var capturedKeys: Set<GlobalHotkey.Key> = []
+    @State private var eventMonitor: Any?
+    @State private var isRecording = false
+    @State private var status: String = "Press record, then press and release a shortcut."
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                LabeledContent("Recorded shortcut") {
+                    Text(shortcut.title)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button(isRecording ? "Cancel" : "Record Shortcut") {
+                    if isRecording {
+                        stopRecording(status: "Recording cancelled.")
+                    } else {
+                        startRecording()
+                    }
+                }
+            }
+
+            Text(statusText)
+                .font(.caption)
+                .foregroundStyle(isRecording ? .primary : .secondary)
+        }
+        .onDisappear {
+            stopRecording(status: status)
+        }
+    }
+
+    private var statusText: String {
+        if isRecording, !capturedKeys.isEmpty {
+            return "Recording \(Self.title(for: capturedKeys)). Release all keys to save."
+        }
+        if isRecording {
+            return "Press a modifier key, or Command + Option together."
+        }
+        return status
+    }
+
+    private func startRecording() {
+        removeEventMonitor()
+        activeKeys = []
+        capturedKeys = []
+        status = "Press a modifier key, or Command + Option together."
+        isRecording = true
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { event in
+            record(event: event)
+            return nil
+        }
+    }
+
+    private func record(event: NSEvent) {
+        guard isRecording else { return }
+        guard let key = GlobalHotkey.Key(rawValue: UInt16(event.keyCode)) else { return }
+        guard LstnrShortcutChoice.recordableKeys.contains(key) else { return }
+
+        if activeKeys.contains(key) {
+            activeKeys.remove(key)
+        } else {
+            activeKeys.insert(key)
+        }
+        capturedKeys.insert(key)
+        capturedKeys.formUnion(activeKeys)
+
+        guard activeKeys.isEmpty else { return }
+        guard let recordedShortcut = LstnrShortcutChoice(keys: capturedKeys) else {
+            stopRecording(status: "Unsupported shortcut: \(Self.title(for: capturedKeys)).")
+            return
+        }
+
+        shortcut = recordedShortcut
+        stopRecording(status: "Recorded \(recordedShortcut.title).")
+    }
+
+    private func stopRecording(status newStatus: String) {
+        removeEventMonitor()
+        activeKeys = []
+        capturedKeys = []
+        isRecording = false
+        status = newStatus
+    }
+
+    private func removeEventMonitor() {
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+        }
+        eventMonitor = nil
+    }
+
+    private static func title(for keys: Set<GlobalHotkey.Key>) -> String {
+        keys.sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.displayTitle)
+            .joined(separator: " + ")
+    }
+}
+
+private extension GlobalHotkey.Key {
+    var displayTitle: String {
+        switch self {
+        case .leftCommand: "Left Command"
+        case .rightCommand: "Right Command"
+        case .leftOption: "Left Option"
+        case .rightOption: "Right Option"
+        case .rightControl: "Right Control"
+        case .function: "Function key"
+        }
+    }
+
+    var sortOrder: Int {
+        switch self {
+        case .leftCommand: 10
+        case .rightCommand: 11
+        case .leftOption: 20
+        case .rightOption: 21
+        case .rightControl: 30
+        case .function: 40
         }
     }
 }

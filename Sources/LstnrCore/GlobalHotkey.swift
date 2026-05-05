@@ -29,24 +29,20 @@ public enum HotkeyError: Error, CustomStringConvertible {
 /// Re-enables the tap on timeout / user-input-secure-input interruptions, and
 /// after sleep/wake and lock/unlock.
 public final class GlobalHotkey: @unchecked Sendable {
-    public enum Key: UInt16, Sendable {
+    public enum Key: UInt16, CaseIterable, Sendable {
         case rightOption = 61
         case leftOption = 58
         case rightCommand = 54
+        case leftCommand = 55
         case rightControl = 62
         case function = 63
+    }
 
-        public var modifierFlag: CGEventFlags? {
-            switch self {
-            case .rightOption, .leftOption:
-                return .maskAlternate
-            case .rightCommand:
-                return .maskCommand
-            case .rightControl:
-                return .maskControl
-            case .function:
-                return nil
-            }
+    public struct Shortcut: Sendable, Hashable {
+        public let keys: Set<Key>
+
+        public init(keys: Set<Key>) {
+            self.keys = keys
         }
     }
 
@@ -54,8 +50,9 @@ public final class GlobalHotkey: @unchecked Sendable {
     private var runLoopSource: CFRunLoopSource?
     private var wakeObserver: NSObjectProtocol?
     private var unlockObserver: NSObjectProtocol?
+    private var pressedKeys: Set<Key> = []
     private var isDown = false
-    let key: Key
+    let shortcut: Shortcut
     let onDown: @Sendable () -> Void
     let onUp: @Sendable () -> Void
 
@@ -64,7 +61,17 @@ public final class GlobalHotkey: @unchecked Sendable {
         onDown: @escaping @Sendable () -> Void,
         onUp: @escaping @Sendable () -> Void
     ) {
-        self.key = key
+        self.shortcut = Shortcut(keys: [key])
+        self.onDown = onDown
+        self.onUp = onUp
+    }
+
+    public init(
+        shortcut: Shortcut,
+        onDown: @escaping @Sendable () -> Void,
+        onUp: @escaping @Sendable () -> Void
+    ) {
+        self.shortcut = shortcut
         self.onDown = onDown
         self.onUp = onUp
     }
@@ -136,34 +143,41 @@ public final class GlobalHotkey: @unchecked Sendable {
         runLoopSource = nil
         wakeObserver = nil
         unlockObserver = nil
+        pressedKeys = []
+        isDown = false
     }
 
     private func rearm() {
         guard let tap = eventTap else { return }
         if !CGEvent.tapIsEnabled(tap: tap) {
+            pressedKeys = []
+            isDown = false
             CGEvent.tapEnable(tap: tap, enable: true)
         }
     }
 
     private func handle(type: CGEventType, event: CGEvent) {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            pressedKeys = []
+            isDown = false
             rearm()
             return
         }
         guard type == .flagsChanged else { return }
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
-        guard keyCode == key.rawValue else { return }
-        guard let modifierFlag = key.modifierFlag else {
-            // Fallback for Fn which lacks a side bit: use transition toggle.
-            isDown.toggle()
-            if isDown { onDown() } else { onUp() }
-            return
+        guard let changedKey = Key(rawValue: keyCode) else { return }
+
+        if pressedKeys.contains(changedKey) {
+            pressedKeys.remove(changedKey)
+        } else {
+            pressedKeys.insert(changedKey)
         }
-        let isCurrentlyDown = event.flags.contains(modifierFlag)
-        if isCurrentlyDown && !isDown {
+
+        let isCurrentlyDown = !shortcut.keys.isEmpty && shortcut.keys.isSubset(of: pressedKeys)
+        if isCurrentlyDown, !isDown {
             isDown = true
             onDown()
-        } else if !isCurrentlyDown && isDown {
+        } else if !isCurrentlyDown, isDown {
             isDown = false
             onUp()
         }
