@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ScribeRealtimeBackend: ASRBackend {
+public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
     public let name: String
     public let apiKey: String
     public let baseURL: URL
@@ -20,6 +20,38 @@ public struct ScribeRealtimeBackend: ASRBackend {
         self.baseURL = baseURL
         self.modelID = modelID
         self.chunkMilliseconds = chunkMilliseconds
+    }
+
+    public var id: String { name }
+
+    public var displayName: String { "ElevenLabs Scribe v2 Realtime" }
+
+    public var capabilities: SpeechToTextBackendCapabilities {
+        SpeechToTextBackendCapabilities(
+            supportsFileTranscription: true,
+            supportsStreamingTranscription: true,
+            supportsLanguageHints: true,
+            supportsTimestamps: true,
+            runsLocally: false,
+            requiresNetwork: true,
+            requiredCredentialKeys: ["ELEVENLABS_API_KEY"],
+            supportedSampleRates: [Self.sampleRate]
+        )
+    }
+
+    public func transcribe(_ request: SpeechToTextRequest) async throws -> TranscriptionResult {
+        switch request.audio {
+        case .file(let url):
+            return try await transcribe(audio: url, language: request.languageCode)
+        case .pcm16Stream(let stream, let sampleRate):
+            guard sampleRate == Self.sampleRate else {
+                throw SpeechToTextBackendError.unsupportedAudio(
+                    backendID: id,
+                    reason: "Scribe realtime expects PCM s16le mono at \(Self.sampleRate) Hz; received \(sampleRate) Hz."
+                )
+            }
+            return try await transcribe(pcmChunks: stream, language: request.languageCode)
+        }
     }
 
     /// File-based convenience: reads the whole file, converts to PCM s16le 16kHz mono,

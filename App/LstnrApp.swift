@@ -14,5 +14,9 @@ struct LstnrApp: App {
             )
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            LstnrSettingsView()
+        }
     }
 }

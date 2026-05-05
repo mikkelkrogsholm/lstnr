@@ -40,6 +40,10 @@ struct MenuBarContent: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Spacer()
+                SettingsLink {
+                    Text("Settings")
+                }
+                .buttonStyle(.borderless)
                 Button("Quit") { NSApplication.shared.terminate(nil) }
                     .buttonStyle(.borderless)
                     .keyboardShortcut("q")

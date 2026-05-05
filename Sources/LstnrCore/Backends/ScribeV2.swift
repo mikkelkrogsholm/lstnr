@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ScribeV2Backend: ASRBackend {
+public struct ScribeV2Backend: ASRBackend, SpeechToTextBackend {
     public let name: String
     public let apiKey: String
     public let baseURL: URL
@@ -24,6 +24,35 @@ public struct ScribeV2Backend: ASRBackend {
         self.noVerbatim = noVerbatim
         self.tagAudioEvents = tagAudioEvents
         self.diarize = diarize
+    }
+
+    public var id: String { name }
+
+    public var displayName: String { "ElevenLabs Scribe v2" }
+
+    public var capabilities: SpeechToTextBackendCapabilities {
+        SpeechToTextBackendCapabilities(
+            supportsFileTranscription: true,
+            supportsStreamingTranscription: false,
+            supportsLanguageHints: true,
+            supportsTimestamps: true,
+            runsLocally: false,
+            requiresNetwork: true,
+            requiredCredentialKeys: ["ELEVENLABS_API_KEY"],
+            supportedSampleRates: []
+        )
+    }
+
+    public func transcribe(_ request: SpeechToTextRequest) async throws -> TranscriptionResult {
+        switch request.audio {
+        case .file(let url):
+            return try await transcribe(audio: url, language: request.languageCode)
+        case .pcm16Stream:
+            throw SpeechToTextBackendError.unsupportedAudio(
+                backendID: id,
+                reason: "Scribe v2 batch transcription accepts file audio only."
+            )
+        }
     }
 
     public func transcribe(audio: URL, language: String?) async throws -> TranscriptionResult {

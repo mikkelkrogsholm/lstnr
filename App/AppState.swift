@@ -13,11 +13,19 @@ final class AppState {
     var statusMessage: String = "Starting…"
 
     private var backend: ScribeRealtimeBackend?
+    private var dictationSession: DictationSession?
     private var hotkey: GlobalHotkey?
-    private var recorder: AudioRecorder?
-    private var currentTask: Task<Void, Never>?
+    private let credentialStore = LstnrKeychainCredentialStore()
+    private var credentialsObserver: NSObjectProtocol?
 
     init() {
+        credentialsObserver = NotificationCenter.default.addObserver(
+            forName: .lstnrCredentialsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.reloadConfiguration() }
+        }
         Task { await bootstrap() }
     }
 
@@ -27,17 +35,37 @@ final class AppState {
         installHotkey()
     }
 
+    private func reloadConfiguration() {
+        guard loadAPIKey() else { return }
+        if hotkey == nil, ensureAccessibility() {
+            installHotkey()
+        } else {
+            statusMessage = "Hold ⌥ to dictate"
+        }
+    }
+
     @discardableResult
     private func loadAPIKey() -> Bool {
         do {
-            let key = try EnvLoader.resolveForApp("ELEVENLABS_API_KEY")
-            backend = ScribeRealtimeBackend(apiKey: key)
+            let key = try resolveElevenLabsAPIKey()
+            let backend = ScribeRealtimeBackend(apiKey: key)
+            self.backend = backend
+            dictationSession = makeDictationSession(backend: backend)
+            lastError = nil
             return true
         } catch {
-            statusMessage = "Missing ELEVENLABS_API_KEY"
+            statusMessage = "Add ElevenLabs API key in Settings"
             lastError = "\(error)"
             return false
         }
+    }
+
+    private func resolveElevenLabsAPIKey() throws -> String {
+        if let key = try credentialStore.credential(for: .elevenLabs), !key.isEmpty {
+            return key
+        }
+
+        return try EnvLoader.resolveForApp("ELEVENLABS_API_KEY")
     }
 
     @discardableResult
@@ -51,10 +79,10 @@ final class AppState {
         let hotkey = GlobalHotkey(
             key: .rightOption,
             onDown: { [weak self] in
-                Task { @MainActor in self?.startRecording() }
+                Task { @MainActor in self?.beginDictationInteraction() }
             },
             onUp: { [weak self] in
-                Task { @MainActor in self?.stopRecording() }
+                Task { @MainActor in self?.endDictationInteraction() }
             }
         )
         do {
@@ -67,55 +95,60 @@ final class AppState {
         }
     }
 
-    private func startRecording() {
-        guard !isRecording, currentTask == nil, let backend else { return }
-        let recorder: AudioRecorder
-        let stream: AsyncStream<Data>
-        do {
-            recorder = try AudioRecorder()
-            stream = try recorder.start()
-        } catch {
-            lastError = "\(error)"
-            statusMessage = "Mic failed"
-            return
-        }
-        self.recorder = recorder
-        isRecording = true
-        lastError = nil
-        statusMessage = "Recording…"
-
-        currentTask = Task { @MainActor [weak self] in
-            do {
-                let result = try await backend.transcribe(pcmChunks: stream, language: nil)
-                self?.complete(result: result)
-            } catch {
-                self?.fail(error: error)
+    private func makeDictationSession(backend: ScribeRealtimeBackend) -> DictationSession {
+        DictationSession(
+            mode: .pushToTalk,
+            recorder: MicrophoneDictationAudioRecorder(),
+            transcribe: { request in
+                try await backend.transcribe(request)
+            },
+            textSink: { text in
+                await MainActor.run {
+                    ClipboardPaster.pasteAtCursor(text: text)
+                }
             }
-            self?.currentTask = nil
+        )
+    }
+
+    private func beginDictationInteraction() {
+        guard let dictationSession else { return }
+        Task { @MainActor [weak self] in
+            let result = await dictationSession.beginInteraction()
+            self?.apply(commandResult: result)
         }
     }
 
-    private func stopRecording() {
-        guard isRecording else { return }
+    private func endDictationInteraction() {
+        guard let dictationSession else { return }
+        if isRecording {
+            statusMessage = "Transcribing…"
+        }
         isRecording = false
-        recorder?.stop()
-        recorder = nil
-        statusMessage = "Transcribing…"
+        Task { @MainActor [weak self] in
+            let result = await dictationSession.endInteraction()
+            self?.apply(commandResult: result)
+        }
     }
 
-    private func complete(result: TranscriptionResult) {
-        let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        lastTranscript = text
-        statusMessage = "Hold ⌥ to dictate"
-        guard !text.isEmpty else { return }
-
-        ClipboardPaster.pasteAtCursor(text: text)
-    }
-
-    private func fail(error: Error) {
-        lastError = "\(error)"
-        statusMessage = "Error"
-        isRecording = false
+    private func apply(commandResult: DictationSessionCommandResult) {
+        switch commandResult {
+        case .startedRecording:
+            isRecording = true
+            lastError = nil
+            statusMessage = "Recording…"
+        case .ignored:
+            return
+        case .completed(let insertedText):
+            if let insertedText {
+                lastTranscript = insertedText
+            }
+            isRecording = false
+            statusMessage = "Hold ⌥ to dictate"
+        case .failed(let message):
+            isRecording = false
+            lastError = message
+            statusMessage = "Error"
+        }
     }
 }
 
