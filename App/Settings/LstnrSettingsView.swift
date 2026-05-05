@@ -3,6 +3,7 @@ import SwiftUI
 
 extension Notification.Name {
     static let lstnrCredentialsDidChange = Notification.Name("dk.56n.lstnr.credentialsDidChange")
+    static let lstnrSettingsDidChange = Notification.Name("dk.56n.lstnr.settingsDidChange")
 }
 
 struct LstnrSettingsView: View {
@@ -51,7 +52,9 @@ struct LstnrSettingsView: View {
         }
         .frame(minWidth: 680, idealWidth: 720, minHeight: 420, idealHeight: 460)
         .onChange(of: draft) { _, newDraft in
-            try? store?.save(LstnrAppSettings(draft: newDraft))
+            guard let store else { return }
+            try? store.save(LstnrAppSettings(draft: newDraft))
+            NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
         }
         .onAppear {
             loadCredentials()
@@ -72,12 +75,18 @@ struct LstnrSettingsView: View {
                 }
             }
 
+            Picker("Cleanup", selection: $draft.cleanupMode) {
+                ForEach(LstnrCleanupModeChoice.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+
             Toggle("Paste transcript automatically", isOn: $draft.pasteAutomatically)
             Toggle("Show floating recording HUD", isOn: $draft.showHUD)
         } header: {
             Text("Dictation")
         } footer: {
-            Text("Preferences are saved locally and are not wired into dictation runtime behavior yet.")
+            Text("Raw mode inserts the direct transcript. Clean mode lightly tidies spacing and punctuation before insertion.")
         }
     }
 
@@ -138,6 +147,13 @@ struct LstnrSettingsView: View {
         Section {
             Toggle("Keep recent transcript visible in menu bar", isOn: $draft.keepRecentTranscript)
 
+            Stepper(value: $draft.historyLimit, in: 10...200, step: 10) {
+                LabeledContent("History limit") {
+                    Text("\(draft.historyLimit) items")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             LabeledContent("Processing") {
                 Text("Realtime transcription service")
                     .foregroundStyle(.secondary)
@@ -150,7 +166,7 @@ struct LstnrSettingsView: View {
         } header: {
             Text("Privacy")
         } footer: {
-            Text("Privacy copy is intentionally descriptive only; backend behavior remains unchanged.")
+            Text("History is stored locally on this Mac. API keys are stored in Keychain.")
         }
     }
 
@@ -191,54 +207,64 @@ struct LstnrSettingsView: View {
 struct LstnrAppSettings: Codable, Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
+    var cleanupMode: LstnrCleanupModeChoice
     var pasteAutomatically: Bool
     var showHUD: Bool
     var inputDevice: LstnrInputDeviceChoice
     var inputGain: Double
     var reduceNoise: Bool
     var keepRecentTranscript: Bool
+    var historyLimit: Int
 
     static let defaults = LstnrAppSettings(
         shortcut: .rightOption,
         language: .automatic,
+        cleanupMode: .raw,
         pasteAutomatically: true,
         showHUD: true,
         inputDevice: .previewDevices[0],
         inputGain: 0.72,
         reduceNoise: true,
-        keepRecentTranscript: true
+        keepRecentTranscript: true,
+        historyLimit: 100
     )
 
     init(
         shortcut: LstnrShortcutChoice,
         language: LstnrLanguageChoice,
+        cleanupMode: LstnrCleanupModeChoice,
         pasteAutomatically: Bool,
         showHUD: Bool,
         inputDevice: LstnrInputDeviceChoice,
         inputGain: Double,
         reduceNoise: Bool,
-        keepRecentTranscript: Bool
+        keepRecentTranscript: Bool,
+        historyLimit: Int
     ) {
         self.shortcut = shortcut
         self.language = language
+        self.cleanupMode = cleanupMode
         self.pasteAutomatically = pasteAutomatically
         self.showHUD = showHUD
         self.inputDevice = inputDevice
         self.inputGain = inputGain
         self.reduceNoise = reduceNoise
         self.keepRecentTranscript = keepRecentTranscript
+        self.historyLimit = historyLimit
     }
 
     init(draft: LstnrSettingsDraft) {
         self.init(
             shortcut: draft.shortcut,
             language: draft.language,
+            cleanupMode: draft.cleanupMode,
             pasteAutomatically: draft.pasteAutomatically,
             showHUD: draft.showHUD,
             inputDevice: draft.inputDevice,
             inputGain: draft.inputGain,
             reduceNoise: draft.reduceNoise,
-            keepRecentTranscript: draft.keepRecentTranscript
+            keepRecentTranscript: draft.keepRecentTranscript,
+            historyLimit: draft.historyLimit
         )
     }
 
@@ -246,12 +272,14 @@ struct LstnrAppSettings: Codable, Hashable {
         LstnrSettingsDraft(
             shortcut: shortcut,
             language: language,
+            cleanupMode: cleanupMode,
             pasteAutomatically: pasteAutomatically,
             showHUD: showHUD,
             inputDevice: inputDevice,
             inputGain: min(max(inputGain, 0), 1),
             reduceNoise: reduceNoise,
-            keepRecentTranscript: keepRecentTranscript
+            keepRecentTranscript: keepRecentTranscript,
+            historyLimit: min(max(historyLimit, 10), 200)
         )
     }
 }
@@ -392,12 +420,14 @@ enum LstnrKeychainError: Error, Equatable {
 struct LstnrSettingsDraft: Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
+    var cleanupMode: LstnrCleanupModeChoice
     var pasteAutomatically: Bool
     var showHUD: Bool
     var inputDevice: LstnrInputDeviceChoice
     var inputGain: Double
     var reduceNoise: Bool
     var keepRecentTranscript: Bool
+    var historyLimit: Int
 
     static let preview = LstnrAppSettings.defaults.draft
 }
@@ -457,6 +487,20 @@ enum LstnrLanguageChoice: String, CaseIterable, Codable, Identifiable {
         case .automatic: "Automatic"
         case .danish: "Danish"
         case .english: "English"
+        }
+    }
+}
+
+enum LstnrCleanupModeChoice: String, CaseIterable, Codable, Identifiable {
+    case raw
+    case clean
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .raw: "Raw"
+        case .clean: "Clean"
         }
     }
 }

@@ -61,6 +61,7 @@ struct RecordingHUDModel: Hashable {
         case .idle: "Ready to dictate"
         case .recording: "Listening"
         case .transcribing: "Transcribing"
+        case .inserted: "Inserted"
         case .error: "Needs attention"
         }
     }
@@ -74,6 +75,7 @@ struct RecordingHUDModel: Hashable {
         case .idle: "Hold Right Option to start"
         case .recording: "Release to finish"
         case .transcribing: "Preparing text"
+        case .inserted: "Saved to history"
         case .error: "Check microphone and permissions"
         }
     }
@@ -89,6 +91,7 @@ enum RecordingHUDPhase: Hashable {
     case idle
     case recording
     case transcribing
+    case inserted
     case error
 
     var systemImage: String {
@@ -96,6 +99,7 @@ enum RecordingHUDPhase: Hashable {
         case .idle: "mic"
         case .recording: "mic.fill"
         case .transcribing: "text.bubble"
+        case .inserted: "checkmark"
         case .error: "exclamationmark.triangle"
         }
     }
@@ -105,6 +109,7 @@ enum RecordingHUDPhase: Hashable {
         case .idle: .secondary
         case .recording: .red
         case .transcribing: .blue
+        case .inserted: .green
         case .error: .orange
         }
     }
