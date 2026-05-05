@@ -1,16 +1,25 @@
 import Security
 import SwiftUI
 
+extension Notification.Name {
+    static let lstnrCredentialsDidChange = Notification.Name("dk.56n.lstnr.credentialsDidChange")
+}
+
 struct LstnrSettingsView: View {
     @State private var draft: LstnrSettingsDraft
     @State private var selectedSection: LstnrSettingsSection = .dictation
+    @State private var elevenLabsAPIKey: String = ""
+    @State private var credentialStatus: String?
     private let store: LstnrSettingsStore?
+    private let credentialStore: LstnrCredentialStoring?
 
     init(
         draft: LstnrSettingsDraft? = nil,
-        store: LstnrSettingsStore? = LstnrSettingsStore()
+        store: LstnrSettingsStore? = LstnrSettingsStore(),
+        credentialStore: LstnrCredentialStoring? = LstnrKeychainCredentialStore()
     ) {
         self.store = store
+        self.credentialStore = credentialStore
         let initialDraft = draft ?? store?.load().draft ?? .preview
         _draft = State(initialValue: initialDraft)
     }
@@ -27,6 +36,8 @@ struct LstnrSettingsView: View {
                 switch selectedSection {
                 case .dictation:
                     dictationSection
+                case .providers:
+                    providersSection
                 case .audio:
                     audioSection
                 case .privacy:
@@ -41,6 +52,9 @@ struct LstnrSettingsView: View {
         .frame(minWidth: 680, idealWidth: 720, minHeight: 420, idealHeight: 460)
         .onChange(of: draft) { _, newDraft in
             try? store?.save(LstnrAppSettings(draft: newDraft))
+        }
+        .onAppear {
+            loadCredentials()
         }
     }
 
@@ -64,6 +78,36 @@ struct LstnrSettingsView: View {
             Text("Dictation")
         } footer: {
             Text("Preferences are saved locally and are not wired into dictation runtime behavior yet.")
+        }
+    }
+
+    private var providersSection: some View {
+        Section {
+            SecureField("API key", text: $elevenLabsAPIKey)
+                .textContentType(.password)
+
+            HStack {
+                Button("Save Key") {
+                    saveElevenLabsAPIKey()
+                }
+
+                Button("Remove Key") {
+                    deleteElevenLabsAPIKey()
+                }
+                .disabled(elevenLabsAPIKey.isEmpty)
+
+                Spacer()
+
+                if let credentialStatus {
+                    Text(credentialStatus)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text("ElevenLabs")
+        } footer: {
+            Text("Keys are stored in Keychain. If no key is saved here, lstnr falls back to ELEVENLABS_API_KEY from the environment for development.")
         }
     }
 
@@ -107,6 +151,39 @@ struct LstnrSettingsView: View {
             Text("Privacy")
         } footer: {
             Text("Privacy copy is intentionally descriptive only; backend behavior remains unchanged.")
+        }
+    }
+
+    private func loadCredentials() {
+        do {
+            elevenLabsAPIKey = try credentialStore?.credential(for: .elevenLabs) ?? ""
+            credentialStatus = elevenLabsAPIKey.isEmpty ? "No saved key" : "Saved in Keychain"
+        } catch {
+            credentialStatus = "Keychain read failed"
+        }
+    }
+
+    private func saveElevenLabsAPIKey() {
+        let trimmedKey = elevenLabsAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        do {
+            try credentialStore?.saveCredential(trimmedKey, for: .elevenLabs)
+            elevenLabsAPIKey = trimmedKey
+            credentialStatus = trimmedKey.isEmpty ? "Removed" : "Saved"
+            NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
+        } catch {
+            credentialStatus = "Save failed"
+        }
+    }
+
+    private func deleteElevenLabsAPIKey() {
+        do {
+            try credentialStore?.deleteCredential(for: .elevenLabs)
+            elevenLabsAPIKey = ""
+            credentialStatus = "Removed"
+            NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
+        } catch {
+            credentialStatus = "Remove failed"
         }
     }
 }
@@ -327,6 +404,7 @@ struct LstnrSettingsDraft: Hashable {
 
 enum LstnrSettingsSection: String, CaseIterable, Identifiable {
     case dictation
+    case providers
     case audio
     case privacy
 
@@ -335,6 +413,7 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .dictation: "Dictation"
+        case .providers: "Providers"
         case .audio: "Audio"
         case .privacy: "Privacy"
         }
@@ -343,6 +422,7 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .dictation: "text.bubble"
+        case .providers: "key"
         case .audio: "waveform"
         case .privacy: "lock"
         }

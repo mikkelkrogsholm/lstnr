@@ -15,8 +15,17 @@ final class AppState {
     private var backend: ScribeRealtimeBackend?
     private var dictationSession: DictationSession?
     private var hotkey: GlobalHotkey?
+    private let credentialStore = LstnrKeychainCredentialStore()
+    private var credentialsObserver: NSObjectProtocol?
 
     init() {
+        credentialsObserver = NotificationCenter.default.addObserver(
+            forName: .lstnrCredentialsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.reloadConfiguration() }
+        }
         Task { await bootstrap() }
     }
 
@@ -26,19 +35,37 @@ final class AppState {
         installHotkey()
     }
 
+    private func reloadConfiguration() {
+        guard loadAPIKey() else { return }
+        if hotkey == nil, ensureAccessibility() {
+            installHotkey()
+        } else {
+            statusMessage = "Hold ⌥ to dictate"
+        }
+    }
+
     @discardableResult
     private func loadAPIKey() -> Bool {
         do {
-            let key = try EnvLoader.resolveForApp("ELEVENLABS_API_KEY")
+            let key = try resolveElevenLabsAPIKey()
             let backend = ScribeRealtimeBackend(apiKey: key)
             self.backend = backend
             dictationSession = makeDictationSession(backend: backend)
+            lastError = nil
             return true
         } catch {
-            statusMessage = "Missing ELEVENLABS_API_KEY"
+            statusMessage = "Add ElevenLabs API key in Settings"
             lastError = "\(error)"
             return false
         }
+    }
+
+    private func resolveElevenLabsAPIKey() throws -> String {
+        if let key = try credentialStore.credential(for: .elevenLabs), !key.isEmpty {
+            return key
+        }
+
+        return try EnvLoader.resolveForApp("ELEVENLABS_API_KEY")
     }
 
     @discardableResult
