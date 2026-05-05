@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		125118DFF0B8EE5CA411C417 /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFBE7C7257E13EF3CDD18D8 /* MenuBarContent.swift */; };
 		323C991EFD0403CB7CF0BBCA /* LstnrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB6B752EFA931FD73E0B470 /* LstnrApp.swift */; };
+		439E24A1B0278E53516FF315 /* RecordingHUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A594BD6DDABAA86BC3D889 /* RecordingHUDView.swift */; };
+		4D5DC32033CAA01025B91C43 /* LstnrSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCD70FABA02D9D3CD4084EC /* LstnrSettingsView.swift */; };
 		5E5E7123722CEDDA04C69697 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F68B11D180048D181E993725 /* AppState.swift */; };
 		D0DA021F2B5E7803A8C0D90A /* LstnrCore in Frameworks */ = {isa = PBXBuildFile; productRef = E5CCDA942FEBACA48FD73A69 /* LstnrCore */; };
 /* End PBXBuildFile section */
@@ -16,7 +18,9 @@
 /* Begin PBXFileReference section */
 		74AA25301FFD05281544A7B2 /* Lstnr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lstnr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		83295DCFDF515B867BBE092B /* Lstnr.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lstnr.entitlements; sourceTree = "<group>"; };
+		8CCD70FABA02D9D3CD4084EC /* LstnrSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LstnrSettingsView.swift; sourceTree = "<group>"; };
 		A2AE6F92CDDDDE51E4539076 /* lstnr */ = {isa = PBXFileReference; lastKnownFileType = folder; name = lstnr; path = .; sourceTree = SOURCE_ROOT; };
+		C9A594BD6DDABAA86BC3D889 /* RecordingHUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHUDView.swift; sourceTree = "<group>"; };
 		CBFBE7C7257E13EF3CDD18D8 /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
 		F68B11D180048D181E993725 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		F8CA79A95AE85C1A18B40A70 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -38,6 +42,8 @@
 		22D2D1B19A11BF294296F763 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				43D9A7A182334713F884469A /* HUD */,
+				2B41AACC7709B577C6783499 /* Settings */,
 				F68B11D180048D181E993725 /* AppState.swift */,
 				F8CA79A95AE85C1A18B40A70 /* Info.plist */,
 				83295DCFDF515B867BBE092B /* Lstnr.entitlements */,
@@ -45,6 +51,22 @@
 				CBFBE7C7257E13EF3CDD18D8 /* MenuBarContent.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		2B41AACC7709B577C6783499 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				8CCD70FABA02D9D3CD4084EC /* LstnrSettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		43D9A7A182334713F884469A /* HUD */ = {
+			isa = PBXGroup;
+			children = (
+				C9A594BD6DDABAA86BC3D889 /* RecordingHUDView.swift */,
+			);
+			path = HUD;
 			sourceTree = "<group>";
 		};
 		987F06B4C84CA46EE1F67755 = {
@@ -137,7 +159,9 @@
 			files = (
 				5E5E7123722CEDDA04C69697 /* AppState.swift in Sources */,
 				323C991EFD0403CB7CF0BBCA /* LstnrApp.swift in Sources */,
+				4D5DC32033CAA01025B91C43 /* LstnrSettingsView.swift in Sources */,
 				125118DFF0B8EE5CA411C417 /* MenuBarContent.swift in Sources */,
+				439E24A1B0278E53516FF315 /* RecordingHUDView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
