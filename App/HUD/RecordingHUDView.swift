@@ -4,47 +4,47 @@ struct RecordingHUDView: View {
     let model: RecordingHUDModel
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             statusGlyph
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(model.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.primary)
 
                 Text(model.subtitle)
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
 
-            Spacer(minLength: 12)
+            Spacer(minLength: 6)
 
             if model.phase == .recording {
                 AudioLevelMeter(level: model.level)
-                    .frame(width: 72, height: 18)
+                    .frame(width: 48, height: 16)
                     .accessibilityLabel("Input level")
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(width: 320)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(width: 208)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.08))
         }
-        .shadow(color: .black.opacity(0.18), radius: 22, y: 10)
+        .shadow(color: .black.opacity(0.16), radius: 16, y: 8)
     }
 
     private var statusGlyph: some View {
         ZStack {
             Circle()
                 .fill(model.phase.tint.opacity(0.14))
-                .frame(width: 34, height: 34)
+                .frame(width: 28, height: 28)
 
             Image(systemName: model.phase.systemImage)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(model.phase.tint)
         }
         .accessibilityHidden(true)

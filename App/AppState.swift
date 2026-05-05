@@ -30,7 +30,7 @@ final class AppState {
     private let settingsStore = LstnrSettingsStore()
     private var historyStore: DictationHistoryStore
     private let pendingHistory = PendingDictationHistoryStore()
-    private let hudController = RecordingHUDWindowController()
+    private let hudController = RecordingHUDWindowController(placement: .insertionPoint)
     private var credentialsObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
 
