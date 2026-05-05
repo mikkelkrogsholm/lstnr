@@ -30,6 +30,10 @@ struct LstnrDashboardView: View {
         .onAppear {
             scratchpadIsFocused = true
         }
+        .onChange(of: state.latestTextInsertion?.id) { _, _ in
+            guard scratchpadIsFocused, let insertion = state.latestTextInsertion else { return }
+            insertIntoScratchpad(insertion.text)
+        }
     }
 
     private var sidebar: some View {
@@ -189,6 +193,15 @@ struct LstnrDashboardView: View {
             }
         }
         .padding(18)
+    }
+
+    private func insertIntoScratchpad(_ text: String) {
+        if scratchpadText.isEmpty || scratchpadText.hasSuffix("\n") {
+            scratchpadText += text
+        } else {
+            scratchpadText += "\n" + text
+        }
+        scratchpadIsFocused = true
     }
 
     private var historyPanel: some View {

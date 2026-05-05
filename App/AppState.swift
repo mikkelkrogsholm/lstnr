@@ -17,6 +17,7 @@ final class AppState {
     var settings: LstnrAppSettings
     var microphoneName: String
     var microphonePermissionStatus: String
+    var latestTextInsertion: AppTextInsertion?
     var debugLogEntries: [AppDebugLogEntry] = []
 
     var debugLogFilePath: String {
@@ -249,6 +250,7 @@ final class AppState {
     func reinsertTranscript(_ item: DictationHistoryItem) {
         ClipboardPaster.pasteAtCursor(text: item.displayTranscript)
         lastTranscript = item.displayTranscript
+        latestTextInsertion = AppTextInsertion(text: item.displayTranscript)
         statusMessage = "Reinserted from history"
     }
 
@@ -327,6 +329,7 @@ final class AppState {
         case .completed(let insertedText):
             if let insertedText {
                 lastTranscript = insertedText
+                latestTextInsertion = AppTextInsertion(text: insertedText)
             }
             isRecording = false
             isTranscribing = false
@@ -638,6 +641,11 @@ struct AppDebugLogEntry: Identifiable, Hashable {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return "\(formatter.string(from: createdAt)) \(message)"
     }
+}
+
+struct AppTextInsertion: Identifiable, Hashable {
+    let id = UUID()
+    let text: String
 }
 
 /// Copies text to the clipboard and simulates ⌘V into the frontmost app.
