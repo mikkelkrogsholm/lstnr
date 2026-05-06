@@ -45,8 +45,8 @@ public enum EnvLoader {
         throw EnvError.notSet(key)
     }
 
-    /// Resolve for an .app bundle context: checks env, then `~/.lstnr/.env`,
-    /// then `~/.config/lstnr/.env`. The working directory is irrelevant for bundles.
+    /// Resolve for an .app bundle context: checks env, user config env files,
+    /// then the current working directory for development launches.
     public static func resolveForApp(_ key: String) throws -> String {
         if let val = ProcessInfo.processInfo.environment[key], !val.isEmpty {
             return val
@@ -55,6 +55,8 @@ public enum EnvLoader {
         let candidates = [
             home.appendingPathComponent(".lstnr/.env"),
             home.appendingPathComponent(".config/lstnr/.env"),
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent(".env"),
         ]
         for path in candidates {
             if FileManager.default.fileExists(atPath: path.path),

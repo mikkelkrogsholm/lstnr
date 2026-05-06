@@ -105,6 +105,8 @@ final class AppState {
         switch settings.speechBackend {
         case .elevenLabsScribe:
             return configureElevenLabsBackend()
+        case .groqWhisper:
+            return configureGroqBackend()
         case .localHviske:
             return configureLocalHviskeBackend()
         }
@@ -133,6 +135,29 @@ final class AppState {
             statusMessage = "Add ElevenLabs API key in Settings"
             lastError = "\(error)"
             log("API key/backend setup failed: \(error)")
+            return false
+        }
+    }
+
+    @discardableResult
+    private func configureGroqBackend() -> Bool {
+        do {
+            let key = try resolveGroqAPIKey()
+            let backend = GroqWhisperBackend(apiKey: key)
+            self.backend = backend
+            dictationSession = makeDictationSession(backend: backend)
+            lastError = nil
+            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            log("Groq Whisper backend ready. API key source resolved without exposing key.")
+            return true
+        } catch {
+            backend = nil
+            dictationSession = nil
+            hotkey?.uninstall()
+            hotkey = nil
+            statusMessage = "Add Groq API key in Settings"
+            lastError = "\(error)"
+            log("Groq API key/backend setup failed: \(error)")
             return false
         }
     }
@@ -170,6 +195,14 @@ final class AppState {
         }
 
         return try EnvLoader.resolveForApp("ELEVENLABS_API_KEY")
+    }
+
+    private func resolveGroqAPIKey() throws -> String {
+        if let key = try credentialStore.credential(for: .groq), !key.isEmpty {
+            return key
+        }
+
+        return try EnvLoader.resolveForApp("GROQ_API_KEY")
     }
 
     @discardableResult
@@ -227,7 +260,9 @@ final class AppState {
         let languageCode = settings.language.languageCode
         let pasteAutomatically = settings.pasteAutomatically
         let pendingHistory = pendingHistory
-        let timeoutSeconds = backend.capabilities.runsLocally ? 180.0 : 30.0
+        let timeoutSeconds = backend.capabilities.runsLocally
+            ? 180.0
+            : (backend.capabilities.supportsStreamingTranscription ? 30.0 : 120.0)
         let instrumentAudio: @Sendable (SpeechToTextAudio) -> SpeechToTextAudio = { [weak self] audio in
             Self.instrument(audio: audio) { message in
                 await MainActor.run { self?.log(message) }
