@@ -14,6 +14,9 @@ struct LstnrSettingsView: View {
     @State private var elevenLabsAPIKey: String = ""
     @State private var credentialStatus: String?
     @State private var accessibilityGranted = false
+    @State private var localHviskeStatus = LocalHviskeBackend.runtimeStatus()
+    @State private var localHviskeInstallStatus: String?
+    @State private var isInstallingLocalHviske = false
     private let store: LstnrSettingsStore?
     private let credentialStore: LstnrCredentialStoring?
 
@@ -62,6 +65,7 @@ struct LstnrSettingsView: View {
         .onAppear {
             loadCredentials()
             refreshAccessibility(prompt: false)
+            refreshLocalHviskeStatus()
         }
     }
 
@@ -85,6 +89,12 @@ struct LstnrSettingsView: View {
                 }
             }
 
+            Picker("Backend", selection: $draft.speechBackend) {
+                ForEach(LstnrSpeechBackendChoice.allCases) { backend in
+                    Text(backend.title).tag(backend)
+                }
+            }
+
             Picker("Cleanup", selection: $draft.cleanupMode) {
                 ForEach(LstnrCleanupModeChoice.allCases) { mode in
                     Text(mode.title).tag(mode)
@@ -101,32 +111,88 @@ struct LstnrSettingsView: View {
     }
 
     private var providersSection: some View {
-        Section {
-            SecureField("API key", text: $elevenLabsAPIKey)
-                .textContentType(.password)
+        Group {
+            Section {
+                SecureField("API key", text: $elevenLabsAPIKey)
+                    .textContentType(.password)
 
-            HStack {
-                Button("Save Key") {
-                    saveElevenLabsAPIKey()
+                HStack {
+                    Button("Save Key") {
+                        saveElevenLabsAPIKey()
+                    }
+
+                    Button("Remove Key") {
+                        deleteElevenLabsAPIKey()
+                    }
+                    .disabled(elevenLabsAPIKey.isEmpty)
+
+                    Spacer()
+
+                    if let credentialStatus {
+                        Text(credentialStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("ElevenLabs")
+            } footer: {
+                Text("Keys are stored in Keychain. If no key is saved here, lstnr falls back to ELEVENLABS_API_KEY from the environment for development.")
+            }
+
+            Section {
+                LabeledContent("Runtime") {
+                    Label(
+                        localHviskeStatus.hasPythonRuntime ? "Installed" : "Not installed",
+                        systemImage: localHviskeStatus.hasPythonRuntime ? "checkmark.circle" : "arrow.down.circle"
+                    )
+                    .foregroundStyle(localHviskeStatus.hasPythonRuntime ? .green : .secondary)
                 }
 
-                Button("Remove Key") {
-                    deleteElevenLabsAPIKey()
+                LabeledContent("Model") {
+                    Label(
+                        localHviskeStatus.hasModelSnapshot ? "Downloaded" : "Not downloaded",
+                        systemImage: localHviskeStatus.hasModelSnapshot ? "checkmark.circle" : "arrow.down.circle"
+                    )
+                    .foregroundStyle(localHviskeStatus.hasModelSnapshot ? .green : .secondary)
                 }
-                .disabled(elevenLabsAPIKey.isEmpty)
 
-                Spacer()
-
-                if let credentialStatus {
-                    Text(credentialStatus)
-                        .font(.caption)
+                LabeledContent("Cache") {
+                    Text(localHviskeStatus.hfHomeURL.path)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                         .foregroundStyle(.secondary)
                 }
+
+                HStack {
+                    Button(localHviskeStatus.isReady ? "Reinstall Local Hviske" : "Install Local Hviske") {
+                        installLocalHviske()
+                    }
+                    .disabled(isInstallingLocalHviske)
+
+                    Button("Refresh") {
+                        refreshLocalHviskeStatus()
+                    }
+                    .disabled(isInstallingLocalHviske)
+
+                    Spacer()
+
+                    if isInstallingLocalHviske {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+
+                    if let localHviskeInstallStatus {
+                        Text(localHviskeInstallStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Local Hviske")
+            } footer: {
+                Text("Hviske runs locally on this Mac. The model is non-commercial only under CC BY-NC 4.0; use it only when your use complies with the model license.")
             }
-        } header: {
-            Text("ElevenLabs")
-        } footer: {
-            Text("Keys are stored in Keychain. If no key is saved here, lstnr falls back to ELEVENLABS_API_KEY from the environment for development.")
         }
     }
 
@@ -164,7 +230,7 @@ struct LstnrSettingsView: View {
             }
 
             LabeledContent("Processing") {
-                Text("Realtime transcription service")
+                Text(draft.speechBackend.processingTitle)
                     .foregroundStyle(.secondary)
             }
 
@@ -233,11 +299,43 @@ struct LstnrSettingsView: View {
             NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
         }
     }
+
+    private func refreshLocalHviskeStatus() {
+        localHviskeStatus = LocalHviskeBackend.runtimeStatus()
+    }
+
+    private func installLocalHviske() {
+        isInstallingLocalHviske = true
+        localHviskeInstallStatus = "Starting install"
+
+        Task {
+            do {
+                try await LocalHviskeBackend.installManagedRuntime { message in
+                    await MainActor.run {
+                        localHviskeInstallStatus = message
+                    }
+                }
+                await MainActor.run {
+                    isInstallingLocalHviske = false
+                    localHviskeInstallStatus = "Ready"
+                    refreshLocalHviskeStatus()
+                    NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+                }
+            } catch {
+                await MainActor.run {
+                    isInstallingLocalHviske = false
+                    localHviskeInstallStatus = String(describing: error)
+                    refreshLocalHviskeStatus()
+                }
+            }
+        }
+    }
 }
 
 struct LstnrAppSettings: Codable, Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
+    var speechBackend: LstnrSpeechBackendChoice
     var cleanupMode: LstnrCleanupModeChoice
     var pasteAutomatically: Bool
     var showHUD: Bool
@@ -250,6 +348,7 @@ struct LstnrAppSettings: Codable, Hashable {
     static let defaults = LstnrAppSettings(
         shortcut: .rightCommand,
         language: .automatic,
+        speechBackend: .elevenLabsScribe,
         cleanupMode: .raw,
         pasteAutomatically: true,
         showHUD: true,
@@ -263,6 +362,7 @@ struct LstnrAppSettings: Codable, Hashable {
     init(
         shortcut: LstnrShortcutChoice,
         language: LstnrLanguageChoice,
+        speechBackend: LstnrSpeechBackendChoice,
         cleanupMode: LstnrCleanupModeChoice,
         pasteAutomatically: Bool,
         showHUD: Bool,
@@ -274,6 +374,7 @@ struct LstnrAppSettings: Codable, Hashable {
     ) {
         self.shortcut = shortcut
         self.language = language
+        self.speechBackend = speechBackend
         self.cleanupMode = cleanupMode
         self.pasteAutomatically = pasteAutomatically
         self.showHUD = showHUD
@@ -288,6 +389,7 @@ struct LstnrAppSettings: Codable, Hashable {
         self.init(
             shortcut: draft.shortcut,
             language: draft.language,
+            speechBackend: draft.speechBackend,
             cleanupMode: draft.cleanupMode,
             pasteAutomatically: draft.pasteAutomatically,
             showHUD: draft.showHUD,
@@ -303,6 +405,7 @@ struct LstnrAppSettings: Codable, Hashable {
         LstnrSettingsDraft(
             shortcut: shortcut,
             language: language,
+            speechBackend: speechBackend,
             cleanupMode: cleanupMode,
             pasteAutomatically: pasteAutomatically,
             showHUD: showHUD,
@@ -311,6 +414,37 @@ struct LstnrAppSettings: Codable, Hashable {
             reduceNoise: reduceNoise,
             keepRecentTranscript: keepRecentTranscript,
             historyLimit: min(max(historyLimit, 10), 200)
+        )
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case shortcut
+        case language
+        case speechBackend
+        case cleanupMode
+        case pasteAutomatically
+        case showHUD
+        case inputDevice
+        case inputGain
+        case reduceNoise
+        case keepRecentTranscript
+        case historyLimit
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            shortcut: try container.decodeIfPresent(LstnrShortcutChoice.self, forKey: .shortcut) ?? Self.defaults.shortcut,
+            language: try container.decodeIfPresent(LstnrLanguageChoice.self, forKey: .language) ?? Self.defaults.language,
+            speechBackend: try container.decodeIfPresent(LstnrSpeechBackendChoice.self, forKey: .speechBackend) ?? Self.defaults.speechBackend,
+            cleanupMode: try container.decodeIfPresent(LstnrCleanupModeChoice.self, forKey: .cleanupMode) ?? Self.defaults.cleanupMode,
+            pasteAutomatically: try container.decodeIfPresent(Bool.self, forKey: .pasteAutomatically) ?? Self.defaults.pasteAutomatically,
+            showHUD: try container.decodeIfPresent(Bool.self, forKey: .showHUD) ?? Self.defaults.showHUD,
+            inputDevice: try container.decodeIfPresent(LstnrInputDeviceChoice.self, forKey: .inputDevice) ?? Self.defaults.inputDevice,
+            inputGain: try container.decodeIfPresent(Double.self, forKey: .inputGain) ?? Self.defaults.inputGain,
+            reduceNoise: try container.decodeIfPresent(Bool.self, forKey: .reduceNoise) ?? Self.defaults.reduceNoise,
+            keepRecentTranscript: try container.decodeIfPresent(Bool.self, forKey: .keepRecentTranscript) ?? Self.defaults.keepRecentTranscript,
+            historyLimit: try container.decodeIfPresent(Int.self, forKey: .historyLimit) ?? Self.defaults.historyLimit
         )
     }
 }
@@ -451,6 +585,7 @@ enum LstnrKeychainError: Error, Equatable {
 struct LstnrSettingsDraft: Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
+    var speechBackend: LstnrSpeechBackendChoice
     var cleanupMode: LstnrCleanupModeChoice
     var pasteAutomatically: Bool
     var showHUD: Bool
@@ -461,6 +596,27 @@ struct LstnrSettingsDraft: Hashable {
     var historyLimit: Int
 
     static let preview = LstnrAppSettings.defaults.draft
+}
+
+enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
+    case elevenLabsScribe
+    case localHviske
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .elevenLabsScribe: "ElevenLabs Scribe"
+        case .localHviske: "Local Hviske v5.3"
+        }
+    }
+
+    var processingTitle: String {
+        switch self {
+        case .elevenLabsScribe: "Realtime network transcription"
+        case .localHviske: "Local transcription on this Mac"
+        }
+    }
 }
 
 enum LstnrSettingsSection: String, CaseIterable, Identifiable {

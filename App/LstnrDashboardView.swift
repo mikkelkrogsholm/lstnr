@@ -71,6 +71,13 @@ struct LstnrDashboardView: View {
                     .foregroundStyle(.secondary)
             }
 
+            LabeledContent("Backend") {
+                Text(state.settings.speechBackend.title)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+            }
+
             LabeledContent("Cleanup") {
                 Text(state.settings.cleanupMode.title)
                     .foregroundStyle(.secondary)
