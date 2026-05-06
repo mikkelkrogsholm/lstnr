@@ -23,14 +23,14 @@ final class AppState {
         Self.debugLogFileURL().path
     }
 
-    private var backend: ScribeRealtimeBackend?
+    private var backend: (any SpeechToTextBackend)?
     private var dictationSession: DictationSession?
     private var hotkey: GlobalHotkey?
     private let credentialStore = LstnrKeychainCredentialStore()
     private let settingsStore = LstnrSettingsStore()
     private var historyStore: DictationHistoryStore
     private let pendingHistory = PendingDictationHistoryStore()
-    private let hudController = RecordingHUDWindowController()
+    private let hudController = RecordingHUDWindowController(placement: .insertionPoint)
     private var credentialsObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
 
@@ -66,7 +66,7 @@ final class AppState {
         log("Bootstrap started")
         reloadSettings()
         await reloadHistory()
-        guard loadAPIKey() else { return }
+        guard configureBackend() else { return }
         guard ensureAccessibility(prompt: true) else { return }
         installHotkey()
     }
@@ -74,7 +74,7 @@ final class AppState {
     private func reloadConfiguration() {
         log("Reloading configuration")
         reloadSettings()
-        guard loadAPIKey() else { return }
+        guard configureBackend() else { return }
         if ensureAccessibility(prompt: false) {
             installHotkey()
         } else {
@@ -88,7 +88,7 @@ final class AppState {
         microphoneName = Self.defaultMicrophoneName()
         microphonePermissionStatus = Self.microphoneAuthorizationStatusTitle()
         log(
-            "Settings loaded: shortcut=\(loadedSettings.shortcut.rawValue), language=\(loadedSettings.language.rawValue), cleanup=\(loadedSettings.cleanupMode.rawValue), paste=\(loadedSettings.pasteAutomatically), hud=\(loadedSettings.showHUD), microphonePermission=\(microphonePermissionStatus)"
+            "Settings loaded: shortcut=\(loadedSettings.shortcut.rawValue), language=\(loadedSettings.language.rawValue), backend=\(loadedSettings.speechBackend.rawValue), cleanup=\(loadedSettings.cleanupMode.rawValue), paste=\(loadedSettings.pasteAutomatically), hud=\(loadedSettings.showHUD), microphonePermission=\(microphonePermissionStatus)"
         )
         historyStore = DictationHistoryStore(
             fileURL: Self.defaultHistoryFileURL(),
@@ -101,7 +101,19 @@ final class AppState {
     }
 
     @discardableResult
-    private func loadAPIKey() -> Bool {
+    private func configureBackend() -> Bool {
+        switch settings.speechBackend {
+        case .elevenLabsScribe:
+            return configureElevenLabsBackend()
+        case .groqWhisper:
+            return configureGroqBackend()
+        case .localHviske:
+            return configureLocalHviskeBackend()
+        }
+    }
+
+    @discardableResult
+    private func configureElevenLabsBackend() -> Bool {
         do {
             let key = try resolveElevenLabsAPIKey()
             let backend = ScribeRealtimeBackend(
@@ -127,6 +139,56 @@ final class AppState {
         }
     }
 
+    @discardableResult
+    private func configureGroqBackend() -> Bool {
+        do {
+            let key = try resolveGroqAPIKey()
+            let backend = GroqWhisperBackend(apiKey: key)
+            self.backend = backend
+            dictationSession = makeDictationSession(backend: backend)
+            lastError = nil
+            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            log("Groq Whisper backend ready. API key source resolved without exposing key.")
+            return true
+        } catch {
+            backend = nil
+            dictationSession = nil
+            hotkey?.uninstall()
+            hotkey = nil
+            statusMessage = "Add Groq API key in Settings"
+            lastError = "\(error)"
+            log("Groq API key/backend setup failed: \(error)")
+            return false
+        }
+    }
+
+    @discardableResult
+    private func configureLocalHviskeBackend() -> Bool {
+        let runtimeStatus = LocalHviskeBackend.runtimeStatus()
+        guard runtimeStatus.isReady else {
+            backend = nil
+            dictationSession = nil
+            hotkey?.uninstall()
+            hotkey = nil
+            statusMessage = "Install Local Hviske in Settings"
+            lastError = "Local Hviske runtime or model is missing."
+            log("Local Hviske backend not ready. runtime=\(runtimeStatus.hasPythonRuntime), model=\(runtimeStatus.hasModelSnapshot), hfHome=\(runtimeStatus.hfHomeURL.path)")
+            return false
+        }
+
+        let backend = LocalHviskeBackend(
+            diagnosticLog: { [weak self] message in
+                await MainActor.run { self?.log(message) }
+            }
+        )
+        self.backend = backend
+        dictationSession = makeDictationSession(backend: backend)
+        lastError = nil
+        statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+        log("Local Hviske backend ready. hfHome=\(runtimeStatus.hfHomeURL.path)")
+        return true
+    }
+
     private func resolveElevenLabsAPIKey() throws -> String {
         if let key = try credentialStore.credential(for: .elevenLabs), !key.isEmpty {
             return key
@@ -135,14 +197,23 @@ final class AppState {
         return try EnvLoader.resolveForApp("ELEVENLABS_API_KEY")
     }
 
+    private func resolveGroqAPIKey() throws -> String {
+        if let key = try credentialStore.credential(for: .groq), !key.isEmpty {
+            return key
+        }
+
+        return try EnvLoader.resolveForApp("GROQ_API_KEY")
+    }
+
     @discardableResult
     func requestAccessibilityPermission() -> Bool {
         log("User requested Accessibility permission check")
         let granted = ensureAccessibility(prompt: true)
         if granted {
             log("Accessibility is granted; installing hotkey from permission check")
-            _ = loadAPIKey()
-            installHotkey()
+            if configureBackend() {
+                installHotkey()
+            }
         }
         return granted
     }
@@ -183,12 +254,15 @@ final class AppState {
         }
     }
 
-    private func makeDictationSession(backend: ScribeRealtimeBackend) -> DictationSession {
+    private func makeDictationSession(backend: any SpeechToTextBackend) -> DictationSession {
         let cleanupMode = settings.cleanupMode.transcriptCleanupMode
         let cleanupProvider = settings.cleanupMode.cleanupProvider
         let languageCode = settings.language.languageCode
         let pasteAutomatically = settings.pasteAutomatically
         let pendingHistory = pendingHistory
+        let timeoutSeconds = backend.capabilities.runsLocally
+            ? 180.0
+            : (backend.capabilities.supportsStreamingTranscription ? 30.0 : 120.0)
         let instrumentAudio: @Sendable (SpeechToTextAudio) -> SpeechToTextAudio = { [weak self] audio in
             Self.instrument(audio: audio) { message in
                 await MainActor.run { self?.log(message) }
@@ -204,7 +278,7 @@ final class AppState {
                     audio: instrumentAudio(request.audio),
                     languageCode: request.languageCode
                 )
-                let rawResult = try await Self.withTimeout(seconds: 30) {
+                let rawResult = try await Self.withTimeout(seconds: timeoutSeconds) {
                     try await backend.transcribe(instrumentedRequest)
                 }
                 let cleanupResult = try await cleanupProvider.cleanup(

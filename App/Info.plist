@@ -25,6 +25,6 @@
 	<key>LSUIElement</key>
 	<false/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>lstnr listens to your voice and sends audio to ElevenLabs Scribe for live transcription.</string>
+	<string>lstnr listens to your voice and sends audio to your selected transcription provider.</string>
 </dict>
 </plist>
