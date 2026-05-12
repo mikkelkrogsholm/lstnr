@@ -107,6 +107,18 @@ final class AppState {
             return configureElevenLabsBackend()
         case .groqWhisper:
             return configureGroqBackend()
+        case .openAIRealtimeWhisper:
+            return configureOpenAIRealtimeWhisperBackend()
+        case .openAIGPT4OTranscribe:
+            return configureOpenAIAudioTranscriptionBackend(
+                modelID: "gpt-4o-transcribe",
+                displayName: "OpenAI GPT-4o Transcribe"
+            )
+        case .openAIGPT4OMiniTranscribe20251215:
+            return configureOpenAIAudioTranscriptionBackend(
+                modelID: "gpt-4o-mini-transcribe-2025-12-15",
+                displayName: "OpenAI GPT-4o Mini Transcribe 2025-12-15"
+            )
         case .localHviske:
             return configureLocalHviskeBackend()
         }
@@ -163,6 +175,61 @@ final class AppState {
     }
 
     @discardableResult
+    private func configureOpenAIAudioTranscriptionBackend(modelID: String, displayName: String) -> Bool {
+        do {
+            let key = try resolveOpenAIAPIKey()
+            let backend = OpenAIAudioTranscriptionBackend(
+                apiKey: key,
+                modelID: modelID,
+                displayName: displayName
+            )
+            self.backend = backend
+            dictationSession = makeDictationSession(backend: backend)
+            lastError = nil
+            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            log("\(displayName) backend ready. API key source resolved without exposing key.")
+            return true
+        } catch {
+            backend = nil
+            dictationSession = nil
+            hotkey?.uninstall()
+            hotkey = nil
+            statusMessage = "Add OpenAI API key in Settings"
+            lastError = "\(error)"
+            log("OpenAI API key/backend setup failed: \(error)")
+            return false
+        }
+    }
+
+    @discardableResult
+    private func configureOpenAIRealtimeWhisperBackend() -> Bool {
+        do {
+            let key = try resolveOpenAIAPIKey()
+            let backend = OpenAIRealtimeWhisperBackend(
+                apiKey: key,
+                diagnosticLog: { [weak self] message in
+                    await MainActor.run { self?.log(message) }
+                }
+            )
+            self.backend = backend
+            dictationSession = makeDictationSession(backend: backend)
+            lastError = nil
+            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            log("OpenAI GPT Realtime Whisper backend ready. API key source resolved without exposing key.")
+            return true
+        } catch {
+            backend = nil
+            dictationSession = nil
+            hotkey?.uninstall()
+            hotkey = nil
+            statusMessage = "Add OpenAI API key in Settings"
+            lastError = "\(error)"
+            log("OpenAI Realtime API key/backend setup failed: \(error)")
+            return false
+        }
+    }
+
+    @discardableResult
     private func configureLocalHviskeBackend() -> Bool {
         let runtimeStatus = LocalHviskeBackend.runtimeStatus()
         guard runtimeStatus.isReady else {
@@ -203,6 +270,14 @@ final class AppState {
         }
 
         return try EnvLoader.resolveForApp("GROQ_API_KEY")
+    }
+
+    private func resolveOpenAIAPIKey() throws -> String {
+        if let key = try credentialStore.credential(for: .openAI), !key.isEmpty {
+            return key
+        }
+
+        return try EnvLoader.resolveForApp("OPENAI_API_KEY")
     }
 
     @discardableResult

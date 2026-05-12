@@ -15,6 +15,8 @@ struct LstnrSettingsView: View {
     @State private var elevenLabsCredentialStatus: String?
     @State private var groqAPIKey: String = ""
     @State private var groqCredentialStatus: String?
+    @State private var openAIAPIKey: String = ""
+    @State private var openAICredentialStatus: String?
     @State private var accessibilityGranted = false
     @State private var localHviskeStatus = LocalHviskeBackend.runtimeStatus()
     @State private var localHviskeInstallStatus: String?
@@ -171,6 +173,34 @@ struct LstnrSettingsView: View {
             }
 
             Section {
+                SecureField("API key", text: $openAIAPIKey)
+                    .textContentType(.password)
+
+                HStack {
+                    Button("Save Key") {
+                        saveOpenAIAPIKey()
+                    }
+
+                    Button("Remove Key") {
+                        deleteOpenAIAPIKey()
+                    }
+                    .disabled(openAIAPIKey.isEmpty)
+
+                    Spacer()
+
+                    if let openAICredentialStatus {
+                        Text(openAICredentialStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("OpenAI")
+            } footer: {
+                Text("Keys are stored in Keychain. If no key is saved here, lstnr falls back to OPENAI_API_KEY from the environment for development.")
+            }
+
+            Section {
                 LabeledContent("Runtime") {
                     Label(
                         localHviskeStatus.hasPythonRuntime ? "Installed" : "Not installed",
@@ -289,6 +319,13 @@ struct LstnrSettingsView: View {
         } catch {
             groqCredentialStatus = "Keychain read failed"
         }
+
+        do {
+            openAIAPIKey = try credentialStore?.credential(for: .openAI) ?? ""
+            openAICredentialStatus = openAIAPIKey.isEmpty ? "No saved key" : "Saved in Keychain"
+        } catch {
+            openAICredentialStatus = "Keychain read failed"
+        }
     }
 
     private func saveElevenLabsAPIKey() {
@@ -336,6 +373,30 @@ struct LstnrSettingsView: View {
             NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
         } catch {
             groqCredentialStatus = "Remove failed"
+        }
+    }
+
+    private func saveOpenAIAPIKey() {
+        let trimmedKey = openAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        do {
+            try credentialStore?.saveCredential(trimmedKey, for: .openAI)
+            openAIAPIKey = trimmedKey
+            openAICredentialStatus = trimmedKey.isEmpty ? "Removed" : "Saved"
+            NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
+        } catch {
+            openAICredentialStatus = "Save failed"
+        }
+    }
+
+    private func deleteOpenAIAPIKey() {
+        do {
+            try credentialStore?.deleteCredential(for: .openAI)
+            openAIAPIKey = ""
+            openAICredentialStatus = "Removed"
+            NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
+        } catch {
+            openAICredentialStatus = "Remove failed"
         }
     }
 
@@ -545,6 +606,7 @@ final class LstnrSettingsStore {
 enum LstnrCredentialProvider: String, CaseIterable, Identifiable {
     case elevenLabs
     case groq
+    case openAI
 
     var id: String { rawValue }
 
@@ -552,6 +614,7 @@ enum LstnrCredentialProvider: String, CaseIterable, Identifiable {
         switch self {
         case .elevenLabs: "elevenlabs.api-key"
         case .groq: "groq.api-key"
+        case .openAI: "openai.api-key"
         }
     }
 }
@@ -664,6 +727,9 @@ struct LstnrSettingsDraft: Hashable {
 enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
     case elevenLabsScribe
     case groqWhisper
+    case openAIRealtimeWhisper
+    case openAIGPT4OTranscribe
+    case openAIGPT4OMiniTranscribe20251215
     case localHviske
 
     var id: String { rawValue }
@@ -672,6 +738,9 @@ enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .elevenLabsScribe: "ElevenLabs Scribe"
         case .groqWhisper: "Groq Whisper Large v3"
+        case .openAIRealtimeWhisper: "OpenAI GPT Realtime Whisper"
+        case .openAIGPT4OTranscribe: "OpenAI GPT-4o Transcribe"
+        case .openAIGPT4OMiniTranscribe20251215: "OpenAI GPT-4o Mini Transcribe 2025-12-15"
         case .localHviske: "Local Hviske v5.3"
         }
     }
@@ -680,6 +749,9 @@ enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .elevenLabsScribe: "Realtime network transcription"
         case .groqWhisper: "Network file transcription via Groq"
+        case .openAIRealtimeWhisper: "Realtime network transcription via OpenAI"
+        case .openAIGPT4OTranscribe: "Network file transcription via OpenAI"
+        case .openAIGPT4OMiniTranscribe20251215: "Network file transcription via OpenAI"
         case .localHviske: "Local transcription on this Mac"
         }
     }
