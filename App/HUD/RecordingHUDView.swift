@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The floating dictation HUD — Vara's face. Always dark glass, anchored near
-/// the text insertion point. Shows a live waveform while recording, a gold
-/// shimmer while "forging" (transcription + LLM cleanup), and the outcome.
+/// The floating dictation HUD — Vara's face. Always light glass (cool mist,
+/// matching vara.dk + the app's light theme), anchored near the text insertion
+/// point. Shows a live waveform while recording, a gold shimmer while "forging"
+/// (transcription + LLM cleanup), and the outcome.
 struct RecordingHUDView: View {
     let state: RecordingHUDState
 
@@ -22,11 +23,11 @@ struct RecordingHUDView: View {
         .padding(.vertical, 11)
         .frame(width: Self.size.width, height: Self.size.height, alignment: .top)
         .background(.regularMaterial, in: shape)
-        .background(HUDPalette.backdrop.opacity(0.6), in: shape)
+        .background(HUDPalette.backdrop.opacity(0.72), in: shape)
         .overlay {
             shape.strokeBorder(borderTint)
         }
-        .environment(\.colorScheme, .dark)
+        .environment(\.colorScheme, .light)
         .emberGlow(active: state.phase == .recording)
         .animation(.spring(duration: 0.32), value: state.phase)
     }
@@ -101,10 +102,10 @@ struct RecordingHUDView: View {
                     Text(state.modeTitle)
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundStyle(HUDPalette.tealLight)
+                .foregroundStyle(HUDPalette.teal)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
-                .background(HUDPalette.teal.opacity(0.18), in: Capsule())
+                .background(HUDPalette.teal.opacity(0.16), in: Capsule())
             }
 
             Spacer(minLength: 4)
@@ -184,16 +185,18 @@ struct RecordingHUDView: View {
     }
 }
 
-/// HUD-only palette: the HUD is always dark regardless of system appearance.
+/// HUD-only palette: the HUD is always LIGHT regardless of system appearance,
+/// matching vara.dk and the app's light theme (cool mist surface, ink text, teal
+/// + ember-forge accents).
 private enum HUDPalette {
-    static let backdrop = Color(hex: 0x0A0A0F)
-    static let text = Color(hex: 0xF0F0F5)
-    static let muted = Color(hex: 0x9696A6)
-    static let teal = Color(hex: 0x406E76)
-    static let tealLight = Color(hex: 0x5A9AA5)
-    static let ember = Color(hex: 0xCA8A04)
+    static let backdrop = Color(hex: 0xF5F7F9)   // vara.dk --bg, cool mist
+    static let text = Color(hex: 0x0A1E27)        // ink
+    static let muted = Color(hex: 0x5F6E76)
+    static let teal = Color(hex: 0x36636B)        // vara.dk --teal
+    static let tealLight = Color(hex: 0x5A9AA5)   // vara.dk --teal-light
+    static let ember = Color(hex: 0xCA8A04)       // forge gold (recording/forging)
     static let emberGlow = Color(hex: 0xEAB308)
-    static let amber = Color(hex: 0xE8A33D)
+    static let amber = Color(hex: 0xCA7A12)       // error glyph, darkened for light bg
 }
 
 /// Scrolling level bars; newest sample on the right. Levels are linear RMS,
