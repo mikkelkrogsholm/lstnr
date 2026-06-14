@@ -89,6 +89,17 @@
         }
       }
     },
+    "Accessibility": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilgængelighed"
+          }
+        }
+      }
+    },
     "Accessibility access granted": {
       "extractionState": "manual",
       "localizations": {
@@ -228,6 +239,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tilføj denne motors nøgle (eller installér Hviske) for at fortsætte."
+          }
+        }
+      }
+    },
+    "Add your key to continue — it is free for Groq.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj din nøgle for at fortsætte — den er gratis hos Groq."
+          }
+        }
+      }
+    },
+    "Advanced": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avanceret"
+          }
+        }
+      }
+    },
+    "Advanced integrations": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avancerede integrationer"
+          }
+        }
+      }
+    },
+    "Advanced integrations need the last bit of setup from you. ElevenLabs and OpenAI's niche engines just need a key on the Engine tab; Ollama and custom endpoints run a model on your own machine.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avancerede integrationer kræver det sidste stykke opsætning fra dig. ElevenLabs og OpenAIs nichemotorer skal bare bruge en nøgle under fanen Motor; Ollama og brugerdefinerede endpoints kører en model på din egen maskine."
           }
         }
       }
@@ -419,6 +474,17 @@
         }
       }
     },
+    "Begin": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begynd"
+          }
+        }
+      }
+    },
     "Behavior": {
       "extractionState": "manual",
       "localizations": {
@@ -518,6 +584,17 @@
         }
       }
     },
+    "Cleanup": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oprydning"
+          }
+        }
+      }
+    },
     "Clear": {
       "extractionState": "manual",
       "localizations": {
@@ -595,6 +672,28 @@
         }
       }
     },
+    "Connect": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbind"
+          }
+        }
+      }
+    },
+    "Continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortsæt"
+          }
+        }
+      }
+    },
     "Copy": {
       "extractionState": "manual",
       "localizations": {
@@ -602,6 +701,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kopiér"
+          }
+        }
+      }
+    },
+    "Copy setup command": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiér opsætningskommando"
           }
         }
       }
@@ -672,6 +782,17 @@
         }
       }
     },
+    "Detected": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fundet"
+          }
+        }
+      }
+    },
     "Diagnostics": {
       "extractionState": "manual",
       "localizations": {
@@ -738,6 +859,17 @@
         }
       }
     },
+    "Everything is connected. Let us hear your voice.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alt er forbundet. Lad os høre din stemme."
+          }
+        }
+      }
+    },
     "Everything runs on this Mac — nothing leaves the machine.": {
       "extractionState": "manual",
       "localizations": {
@@ -745,6 +877,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alt kører på denne Mac — intet forlader maskinen."
+          }
+        }
+      }
+    },
+    "Fast Whisper + Llama 3.3. No cost.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hurtig Whisper + Llama 3.3. Gratis."
           }
         }
       }
@@ -782,6 +925,17 @@
         }
       }
     },
+    "Free": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gratis"
+          }
+        }
+      }
+    },
     "Function key (best effort)": {
       "extractionState": "manual",
       "localizations": {
@@ -789,6 +943,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fn-tasten (bedst muligt)"
+          }
+        }
+      }
+    },
+    "GPT-4o transcription + cleanup.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPT-4o-transskription + oprydning."
           }
         }
       }
@@ -958,6 +1123,17 @@
         }
       }
     },
+    "Hold and speak — Vara writes it right here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold og tal — Vara skriver det lige her."
+          }
+        }
+      }
+    },
     "Hold the key while you speak, then let go.": {
       "extractionState": "manual",
       "localizations": {
@@ -965,6 +1141,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hold tasten nede, mens du taler — og slip så."
+          }
+        }
+      }
+    },
+    "Hold the key. Speak. Let go.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold tasten. Tal. Slip."
           }
         }
       }
@@ -991,6 +1178,17 @@
         }
       }
     },
+    "How to set up Hviske": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sådan sætter du Hviske op"
+          }
+        }
+      }
+    },
     "Hviske is installed and ready": {
       "extractionState": "manual",
       "localizations": {
@@ -1009,6 +1207,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hviske på denne Mac"
+          }
+        }
+      }
+    },
+    "Hviske runs Danish speech entirely on this Mac. Set it up once in Terminal, then Vara detects it here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hviske kører dansk tale udelukkende på denne Mac. Sæt det op én gang i Terminal, så finder Vara det her."
           }
         }
       }
@@ -1233,6 +1442,17 @@
         }
       }
     },
+    "Lets Vara see the key everywhere and paste at your cursor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lader Vara se tasten overalt og indsætte ved din markør."
+          }
+        }
+      }
+    },
     "Local": {
       "extractionState": "manual",
       "localizations": {
@@ -1251,6 +1471,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lokal transskription på denne Mac"
+          }
+        }
+      }
+    },
+    "Microphone": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon"
           }
         }
       }
@@ -1354,6 +1585,17 @@
         }
       }
     },
+    "Model path": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelsti"
+          }
+        }
+      }
+    },
     "Modes": {
       "extractionState": "manual",
       "localizations": {
@@ -1372,6 +1614,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tilstande, der omskriver eller svarer, bruger denne model, medmindre de har valgt deres egen. Rå virker uden model."
+          }
+        }
+      }
+    },
+    "Most people use Groq or OpenAI. ElevenLabs and on-device Hviske are advanced — set them up under the Advanced tab.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De fleste bruger Groq eller OpenAI. ElevenLabs og Hviske på enheden er avancerede — sæt dem op under fanen Avanceret."
           }
         }
       }
@@ -1519,6 +1772,17 @@
         }
       }
     },
+    "Not set up": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ikke sat op"
+          }
+        }
+      }
+    },
     "Nothing dictated yet": {
       "extractionState": "manual",
       "localizations": {
@@ -1570,6 +1834,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "På denne Mac — privat, dansk"
+          }
+        }
+      }
+    },
+    "One key, and Vara just works": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Én nøgle, og Vara virker bare"
           }
         }
       }
@@ -1739,6 +2014,17 @@
         }
       }
     },
+    "Re-check": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tjek igen"
+          }
+        }
+      }
+    },
     "Ready": {
       "extractionState": "manual",
       "localizations": {
@@ -1779,6 +2065,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Seneste"
+          }
+        }
+      }
+    },
+    "Recommended": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anbefalet"
           }
         }
       }
@@ -2080,6 +2377,17 @@
         }
       }
     },
+    "Runtime path": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runtime-sti"
+          }
+        }
+      }
+    },
     "Save": {
       "extractionState": "manual",
       "localizations": {
@@ -2153,6 +2461,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Søg"
+          }
+        }
+      }
+    },
+    "Set up Hviske in Terminal — see Settings > Advanced.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sæt Hviske op i Terminal — se Indstillinger > Avanceret."
           }
         }
       }
@@ -2487,6 +2806,17 @@
         }
       }
     },
+    "Two permissions, then you are set": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To tilladelser, så er du klar"
+          }
+        }
+      }
+    },
     "Unsupported shortcut: %@.": {
       "extractionState": "manual",
       "localizations": {
@@ -2494,6 +2824,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ikke-understøttet genvej: %@."
+          }
+        }
+      }
+    },
+    "Used only while you hold the key.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bruges kun, mens du holder tasten."
+          }
+        }
+      }
+    },
+    "Using ElevenLabs, a local engine, or your own model? Set it up later in Settings › Advanced.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bruger du ElevenLabs, en lokal motor eller din egen model? Sæt det op senere i Indstillinger › Avanceret."
           }
         }
       }
@@ -2531,6 +2883,28 @@
         }
       }
     },
+    "Vara is forged on Vár — the Norse goddess who hears every word you speak.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara er smedet på Vár — den nordiske gudinde, der hører hvert ord, du siger."
+          }
+        }
+      }
+    },
+    "Vara is forged.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara er smedet."
+          }
+        }
+      }
+    },
     "Vara is forging the text …": {
       "extractionState": "manual",
       "localizations": {
@@ -2538,6 +2912,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vara smeder teksten …"
+          }
+        }
+      }
+    },
+    "Vara is listening for the key.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara lytter efter tasten."
           }
         }
       }
@@ -2571,6 +2956,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vara er klar."
+          }
+        }
+      }
+    },
+    "Vara needs both to work everywhere on your Mac. Nothing runs in the background.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara har brug for begge for at virke overalt på din Mac. Intet kører i baggrunden."
           }
         }
       }
@@ -2619,6 +3015,17 @@
         }
       }
     },
+    "We will confirm it works in a moment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vi bekræfter, at det virker, om et øjeblik."
+          }
+        }
+      }
+    },
     "When you dictate into one of these apps, Vara switches to that mode automatically — e.g. VibeCode in your editor and Professional in Mail. A 1–9 press still wins. The app list shows currently running apps.": {
       "extractionState": "manual",
       "localizations": {
@@ -2659,6 +3066,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dine dikteringer lander her, så du kan kopiere eller genindsætte dem senere."
+          }
+        }
+      }
+    },
+    "Your key": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din nøgle"
+          }
+        }
+      }
+    },
+    "Your key powers both transcription and cleanup. Groq is free — grab a key in 30 seconds.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din nøgle driver både transskription og oprydning. Groq er gratis — hent en nøgle på 30 sekunder."
           }
         }
       }

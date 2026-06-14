@@ -94,53 +94,10 @@ public struct LocalHviskeBackend: SpeechToTextBackend {
         )
     }
 
-    public static func installManagedRuntime(
-        diagnosticLog: (@Sendable (String) async -> Void)? = nil
-    ) async throws {
-        let bootstrapPython = try resolveBootstrapPythonURL()
-        try FileManager.default.createDirectory(
-            at: applicationSupportURL,
-            withIntermediateDirectories: true
-        )
-
-        if !FileManager.default.isExecutableFile(atPath: managedVenvURL.appendingPathComponent("bin/python").path) {
-            await diagnosticLog?("Creating Local Hviske Python runtime.")
-            _ = try await runProcess(
-                executableURL: bootstrapPython,
-                arguments: ["-m", "venv", managedVenvURL.path],
-                environment: [:],
-                stdin: nil
-            )
-        }
-
-        let python = managedVenvURL.appendingPathComponent("bin/python")
-        await diagnosticLog?("Installing Local Hviske Python packages.")
-        _ = try await runProcess(
-            executableURL: python,
-            arguments: [
-                "-m", "pip", "install",
-                "transformers==5.4.0",
-                "torch",
-                "soundfile",
-                "librosa",
-                "huggingface_hub",
-                "sentencepiece",
-                "protobuf",
-                "numpy"
-            ],
-            environment: [:],
-            stdin: nil
-        )
-
-        await diagnosticLog?("Downloading Local Hviske model files.")
-        _ = try await runProcess(
-            executableURL: python,
-            arguments: ["-"],
-            environment: ["HF_HOME": managedHFHomeURL.path],
-            stdin: modelDownloadScript
-        )
-        await diagnosticLog?("Local Hviske runtime is installed.")
-    }
+    // The runtime is installed out-of-app via scripts/setup-hviske.sh (Terminal),
+    // which writes to the EXACT paths runtimeStatus() detects (managedVenvURL /
+    // managedHFHomeURL). The shipped, notarized app only detects and guides; it
+    // never downloads or executes a Python installer.
 }
 
 public struct LocalHviskeRuntimeStatus: Sendable, Hashable {
@@ -160,20 +117,17 @@ public enum LocalHviskeBackendError: Error, CustomStringConvertible, Sendable {
     case unsupportedAudio(String)
     case processFailed(exitCode: Int32, stderr: String)
     case invalidRunnerOutput(String)
-    case bootstrapPythonMissing
 
     public var description: String {
         switch self {
         case .runtimeMissing:
-            return "Local Hviske is not installed. Install it from Settings -> Providers -> Local Hviske."
+            return "Local Hviske is not set up. Run the setup script in Terminal (see Settings > Advanced), then choose Local Hviske."
         case .unsupportedAudio(let reason):
             return "Local Hviske cannot transcribe this audio: \(reason)"
         case .processFailed(let exitCode, let stderr):
             return "Local Hviske process failed with exit code \(exitCode): \(stderr)"
         case .invalidRunnerOutput(let output):
             return "Local Hviske returned invalid output: \(output)"
-        case .bootstrapPythonMissing:
-            return "Could not find python3 to create the Local Hviske runtime."
         }
     }
 }
@@ -321,24 +275,6 @@ private extension LocalHviskeBackend {
             return spikeHFHomeURL
         }
         return managedHFHomeURL
-    }
-
-    static func resolveBootstrapPythonURL() throws -> URL {
-        let candidates = [
-            ProcessInfo.processInfo.environment["LSTNR_HVISKE_BOOTSTRAP_PYTHON"],
-            "/opt/miniconda3/bin/python3",
-            "/usr/local/bin/python3",
-            "/opt/homebrew/bin/python3",
-            "/usr/bin/python3"
-        ].compactMap { $0 }
-
-        for candidate in candidates {
-            let url = URL(fileURLWithPath: NSString(string: candidate).expandingTildeInPath)
-            if FileManager.default.isExecutableFile(atPath: url.path) {
-                return url
-            }
-        }
-        throw LocalHviskeBackendError.bootstrapPythonMissing
     }
 
     static func runPythonJSON(
@@ -531,17 +467,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-"""#
-
-    static let modelDownloadScript = #"""
-from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
-
-MODEL_ID = "syvai/hviske-v5.3"
-REVISION = "574bc158f3e8ce91af7995be2928f529a05c24b6"
-
-AutoProcessor.from_pretrained(MODEL_ID, revision=REVISION, trust_remote_code=False)
-AutoModelForSpeechSeq2Seq.from_pretrained(MODEL_ID, revision=REVISION, trust_remote_code=False, dtype="auto")
-print("ok")
 """#
 }
 

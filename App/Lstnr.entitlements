@@ -16,10 +16,36 @@
 	any "Helt privat / Completely private" UI copy must be softened to
 	truthful wording (handled by the UI layer, not this entitlements file).
 
-	Only the microphone entitlement below is required.
+	HARDENED-RUNTIME RELAXATIONS (Release / notarization):
+	The two com.apple.security.cs.* keys below exist SOLELY because Vara spawns
+	a user-provided Python interpreter (the optional local Hviske Danish STT
+	runtime) as a child process:
+	  - disable-library-validation lets that python load unsigned third-party
+	    native libraries (torch / numpy / soundfile dylibs) under the hardened
+	    runtime, which would otherwise refuse to load code not signed by us or
+	    Apple.
+	  - allow-dyld-environment-variables lets the backend pass HF_HOME and
+	    PYTORCH_ENABLE_MPS_FALLBACK into the spawned python's environment.
+	Vara itself is pure Swift, so we deliberately do NOT add
+	allow-unsigned-executable-memory or allow-jit.
+
+	IMPORTANT: the Developer-ID re-sign step in scripts/build-dmg.sh MUST pass
+	the codesign entitlements flag pointing at THIS file (codesign drops
+	entitlements otherwise), so keep this committed copy in sync with
+	project.yml. XcodeGen regenerates this file from project.yml; the committed
+	copy must stay correct for that manual codesign invocation.
+	(Note: XML comments may not contain a double-hyphen, so flag names are
+	spelled out in prose here rather than with their leading dashes.)
+
+	Only the microphone entitlement is strictly required at runtime; the two
+	relaxations matter only for the notarized Release build.
 -->
 <dict>
 	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+	<key>com.apple.security.cs.allow-dyld-environment-variables</key>
 	<true/>
 </dict>
 </plist>

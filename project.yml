@@ -6,6 +6,13 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
 
+# Map the two build configurations explicitly so the Release override below
+# (hardened runtime) attaches to the right config. Debug stays relaxed for the
+# daily local build under the "Apple Development" cert; Release is notarizable.
+configs:
+  Debug: debug
+  Release: release
+
 packages:
   LstnrCore:
     path: .
@@ -21,6 +28,14 @@ settings:
     CODE_SIGNING_ALLOWED: "YES"
     ENABLE_HARDENED_RUNTIME: "NO"
     DEAD_CODE_STRIPPING: "YES"
+  configs:
+    # Notarization requires the hardened runtime, so Release flips it on. Debug
+    # leaves it off (above) so the daily build keeps working under the existing
+    # "Apple Development" cert without any extra entitlement re-signing.
+    Release:
+      ENABLE_HARDENED_RUNTIME: "YES"
+      DEBUG_INFORMATION_FORMAT: "dwarf-with-dsym"
+      COPY_PHASE_STRIP: "NO"
 
 targets:
   Lstnr:
@@ -63,6 +78,15 @@ targets:
       path: App/Lstnr.entitlements
       properties:
         com.apple.security.device.audio-input: true
+        # Hardened-runtime relaxations required ONLY because Vara spawns a
+        # user-provided Python (Hviske) as a subprocess. disable-library-validation
+        # lets that python load unsigned third-party dylibs (torch/numpy/soundfile);
+        # allow-dyld-environment-variables lets the backend set HF_HOME /
+        # PYTORCH_ENABLE_MPS_FALLBACK in the child environment (runProcess merges
+        # the parent env). Vara itself is pure Swift, so we do NOT enable
+        # allow-unsigned-executable-memory / allow-jit.
+        com.apple.security.cs.disable-library-validation: true
+        com.apple.security.cs.allow-dyld-environment-variables: true
     dependencies:
       - package: LstnrCore
         product: LstnrCore

@@ -22,8 +22,6 @@ struct LstnrSettingsView: View {
     @State private var anthropicCredentialStatus: String?
     @State private var accessibilityGranted = false
     @State private var localHviskeStatus = LocalHviskeBackend.runtimeStatus()
-    @State private var localHviskeInstallStatus: String?
-    @State private var isInstallingLocalHviske = false
     @State private var editingModeIndex: Int?
     @State private var isAddingEndpoint = false
     @State private var newEndpointName = ""
@@ -60,6 +58,8 @@ struct LstnrSettingsView: View {
                     engineSection
                 case .intelligence:
                     intelligenceSection
+                case .advanced:
+                    advancedSection
                 case .privacy:
                     privacySection
                 case .about:
@@ -173,30 +173,42 @@ struct LstnrSettingsView: View {
     private var engineSection: some View {
         Group {
             Section {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(LstnrSpeechBackendChoice.allCases) { backend in
-                        EngineCard(
-                            backend: backend,
-                            isSelected: draft.speechBackend == backend,
-                            keyStatus: engineKeyStatus(for: backend)
-                        ) {
-                            draft.speechBackend = backend
-                        }
-                    }
-                }
-                .padding(.vertical, 4)
+                engineGrid(for: .recommended)
+                    .padding(.vertical, 4)
             } header: {
-                Text("Speech engine", comment: "Settings section header")
+                Text("Recommended", comment: "Engine tier header")
+            }
+
+            Section {
+                engineGrid(for: .advanced)
+                    .padding(.vertical, 4)
+            } header: {
+                Text("Advanced integrations", comment: "Engine tier header")
             } footer: {
-                Text("The engine turns your voice into raw text. Hviske runs entirely on this Mac (CC BY-NC 4.0 — non-commercial use only).", comment: "Engine section footer")
+                Text("Most people use Groq or OpenAI. ElevenLabs and on-device Hviske are advanced — set them up under the Advanced tab.", comment: "Engine section footer")
             }
 
             if let provider = draft.speechBackend.credentialProvider {
                 apiKeySection(for: provider)
             }
+        }
+    }
 
-            if draft.speechBackend == .localHviske {
-                localHviskeSection
+    /// The engine cards for one tier. Groq leads the Recommended grid since it is
+    /// the zero-cost default; the rest keep their declaration order.
+    private func engineGrid(for tier: LstnrEngineTier) -> some View {
+        let backends = LstnrSpeechBackendChoice.allCases
+            .filter { $0.tier == tier }
+            .sorted { lhs, _ in lhs == .groqWhisper }
+        return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            ForEach(backends) { backend in
+                EngineCard(
+                    backend: backend,
+                    isSelected: draft.speechBackend == backend,
+                    keyStatus: engineKeyStatus(for: backend)
+                ) {
+                    draft.speechBackend = backend
+                }
             }
         }
     }
@@ -254,14 +266,34 @@ struct LstnrSettingsView: View {
         }
     }
 
+    // MARK: Advanced (integrations the user sets up themselves)
+
+    private var advancedSection: some View {
+        Group {
+            localHviskeSection
+
+            customEndpointsSection
+
+            Section {
+                EmptyView()
+            } footer: {
+                Text("Advanced integrations need the last bit of setup from you. ElevenLabs and OpenAI's niche engines just need a key on the Engine tab; Ollama and custom endpoints run a model on your own machine.", comment: "Advanced section footer")
+            }
+        }
+    }
+
+    /// Detect-and-guide for on-device Hviske. The shipped, notarized app never
+    /// downloads or runs a Python installer — the user runs scripts/setup-hviske.sh
+    /// in Terminal (which writes to the exact paths runtimeStatus() detects), and
+    /// Vara just reports what it finds and links to the instructions.
     private var localHviskeSection: some View {
         Section {
             LabeledContent {
                 Label(
                     localHviskeStatus.hasPythonRuntime
-                        ? String(localized: "Installed", comment: "Hviske runtime status")
-                        : String(localized: "Not installed", comment: "Hviske runtime status"),
-                    systemImage: localHviskeStatus.hasPythonRuntime ? "checkmark.circle" : "arrow.down.circle"
+                        ? String(localized: "Detected", comment: "Hviske runtime status")
+                        : String(localized: "Not set up", comment: "Hviske runtime status"),
+                    systemImage: localHviskeStatus.hasPythonRuntime ? "checkmark.circle" : "circle.dashed"
                 )
                 .foregroundStyle(localHviskeStatus.hasPythonRuntime ? .green : .secondary)
             } label: {
@@ -271,50 +303,85 @@ struct LstnrSettingsView: View {
             LabeledContent {
                 Label(
                     localHviskeStatus.hasModelSnapshot
-                        ? String(localized: "Downloaded", comment: "Hviske model status")
-                        : String(localized: "Not downloaded", comment: "Hviske model status"),
-                    systemImage: localHviskeStatus.hasModelSnapshot ? "checkmark.circle" : "arrow.down.circle"
+                        ? String(localized: "Detected", comment: "Hviske model status")
+                        : String(localized: "Not set up", comment: "Hviske model status"),
+                    systemImage: localHviskeStatus.hasModelSnapshot ? "checkmark.circle" : "circle.dashed"
                 )
                 .foregroundStyle(localHviskeStatus.hasModelSnapshot ? .green : .secondary)
             } label: {
                 Text("Model", comment: "Hviske status row label")
             }
 
-            HStack {
-                Button {
-                    installLocalHviske()
-                } label: {
-                    localHviskeStatus.isReady
-                        ? Text("Reinstall Hviske", comment: "Hviske install button")
-                        : Text("Install Hviske", comment: "Hviske install button")
-                }
-                .disabled(isInstallingLocalHviske)
+            LabeledContent {
+                Text(verbatim: localHviskeStatus.pythonURL?.path ?? localHviskeExpectedPythonPath)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            } label: {
+                Text("Runtime path", comment: "Hviske detected runtime path label")
+            }
 
+            LabeledContent {
+                Text(verbatim: localHviskeStatus.hfHomeURL.path)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            } label: {
+                Text("Model path", comment: "Hviske detected model path label")
+            }
+
+            HStack {
                 Button {
                     refreshLocalHviskeStatus()
                 } label: {
-                    Text("Refresh", comment: "Hviske refresh button")
+                    Text("Re-check", comment: "Hviske re-check status button")
                 }
-                .disabled(isInstallingLocalHviske)
+
+                Button {
+                    copyHviskeSetupCommand()
+                } label: {
+                    Text("Copy setup command", comment: "Hviske copy setup command button")
+                }
 
                 Spacer()
 
-                if isInstallingLocalHviske {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-
-                if let localHviskeInstallStatus {
-                    Text(localHviskeInstallStatus)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                Link(destination: hviskeSetupGuideURL) {
+                    Text("How to set up Hviske", comment: "Hviske setup guide link")
                 }
             }
         } header: {
             Text("Hviske on this Mac", comment: "Hviske section header")
+        } footer: {
+            Text("Hviske runs Danish speech entirely on this Mac. Set it up once in Terminal, then Vara detects it here.", comment: "Hviske detect-and-guide footer")
         }
+    }
+
+    /// The managed venv python path the setup script writes to — shown when no
+    /// runtime is detected yet so the user knows where Vara is looking.
+    private var localHviskeExpectedPythonPath: String {
+        localHviskeStatus.hfHomeURL
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("hviske-venv/bin/python")
+            .path
+    }
+
+    /// Terminal command that runs the out-of-app Hviske setup script.
+    private var hviskeSetupCommand: String {
+        "bash scripts/setup-hviske.sh"
+    }
+
+    private var hviskeSetupGuideURL: URL {
+        URL(string: "https://brokk-sindre.dk/vara/hviske")!
+    }
+
+    private func copyHviskeSetupCommand() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(hviskeSetupCommand, forType: .string)
     }
 
     // MARK: Intelligence (LLM + modes)
@@ -423,8 +490,6 @@ struct LstnrSettingsView: View {
             }
 
             appRulesSection
-
-            customEndpointsSection
         }
     }
 
@@ -776,33 +841,6 @@ struct LstnrSettingsView: View {
 
     private func refreshLocalHviskeStatus() {
         localHviskeStatus = LocalHviskeBackend.runtimeStatus()
-    }
-
-    private func installLocalHviske() {
-        isInstallingLocalHviske = true
-        localHviskeInstallStatus = String(localized: "Starting install …", comment: "Hviske install progress")
-
-        Task {
-            do {
-                try await LocalHviskeBackend.installManagedRuntime { message in
-                    await MainActor.run {
-                        localHviskeInstallStatus = message
-                    }
-                }
-                await MainActor.run {
-                    isInstallingLocalHviske = false
-                    localHviskeInstallStatus = String(localized: "Ready", comment: "Hviske install status when finished")
-                    refreshLocalHviskeStatus()
-                    NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
-                }
-            } catch {
-                await MainActor.run {
-                    isInstallingLocalHviske = false
-                    localHviskeInstallStatus = String(describing: error)
-                    refreshLocalHviskeStatus()
-                }
-            }
-        }
     }
 }
 
@@ -1182,6 +1220,7 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
     case dictation
     case engine
     case intelligence
+    case advanced
     case privacy
     case about
 
@@ -1192,6 +1231,7 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
         case .dictation: String(localized: "Dictation", comment: "Settings sidebar item")
         case .engine: String(localized: "Engine", comment: "Settings sidebar item")
         case .intelligence: String(localized: "Intelligence", comment: "Settings sidebar item")
+        case .advanced: String(localized: "Advanced", comment: "Settings sidebar item")
         case .privacy: String(localized: "Privacy", comment: "Settings sidebar item")
         case .about: String(localized: "About", comment: "Settings sidebar item")
         }
@@ -1202,6 +1242,7 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
         case .dictation: "text.bubble"
         case .engine: "waveform"
         case .intelligence: "wand.and.stars"
+        case .advanced: "slider.horizontal.3"
         case .privacy: "lock"
         case .about: "info.circle"
         }
@@ -1254,6 +1295,10 @@ struct EngineCard: View {
                             : String(localized: "Cloud", comment: "Engine badge"),
                         tint: backend.isLocal ? .green : BSTheme.teal
                     )
+
+                    if let tierBadge = backend.tier.badgeTitle {
+                        badge(tierBadge, tint: BSTheme.textMuted)
+                    }
 
                     switch keyStatus {
                     case .notNeeded:

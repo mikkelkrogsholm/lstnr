@@ -2,28 +2,43 @@ import AVFoundation
 import LstnrCore
 import SwiftUI
 
-/// Vara's first-run welcome flow: meet Vara, grant the two permissions,
-/// choose an engine and intelligence, then dictate for the first time.
+/// Vara's first-run welcome flow: meet Vara, grant the two permissions, connect
+/// one cloud key (Groq/OpenAI) that powers both transcription and cleanup, see a
+/// confirmation, then dictate for the first time. Advanced engines (ElevenLabs,
+/// on-device Hviske, your own model) live in Settings › Advanced and are pointed
+/// to from the Connect step — onboarding stays focused on the mainstream path.
 struct OnboardingView: View {
     let state: AppState
 
     private enum Step: Int, CaseIterable {
         case welcome
-        case microphone
-        case accessibility
-        case engine
-        case intelligence
+        case permissions
+        case connect
+        case ready
         case tryIt
+    }
+
+    /// The two providers the Connect step offers. Each one wires BOTH layers —
+    /// transcription and cleanup — from a single key.
+    private enum ConnectProvider: Hashable {
+        case groq
+        case openAI
+
+        var credentialProvider: LstnrCredentialProvider {
+            switch self {
+            case .groq: .groq
+            case .openAI: .openAI
+            }
+        }
     }
 
     @State private var step: Step = .welcome
     @State private var microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     @State private var accessibilityGranted = false
+    /// Which cloud provider the user is connecting. Groq is pre-selected — it is
+    /// the zero-cost default for both layers.
+    @State private var selectedProvider: ConnectProvider = .groq
     @State private var engineAPIKey = ""
-    @State private var llmAPIKey = ""
-    @State private var localHviskeStatus = LocalHviskeBackend.runtimeStatus()
-    @State private var isInstallingHviske = false
-    @State private var hviskeInstallMessage: String?
     @State private var tryItText = ""
     /// The transcript count at the moment the try-it step appeared. A real
     /// dictation increments `state.lastTranscript`; typing into the editor does
@@ -34,6 +49,14 @@ struct OnboardingView: View {
     /// Bumped whenever a key is saved so the readiness gating (which reads the
     /// keychain, not an observable property) re-evaluates immediately.
     @State private var keyStateRevision = 0
+    /// Drives the welcome step's staged reveal cascade.
+    @State private var welcomeRevealed = false
+    /// Drives the welcome medallion's slow breathing scale.
+    @State private var welcomeBreathing = false
+    /// Drives the ready step's staggered recap reveal after the ember ignites.
+    @State private var readyRevealed = false
+    /// Drives the try-it focus border breathing and the pulsing keycap.
+    @State private var tryItBreathing = false
     @FocusState private var tryItFocused: Bool
     @Environment(\.openURL) private var openURL
 
@@ -43,6 +66,8 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 56)
                 .padding(.top, 40)
+                .transition(stepTransition)
+                .id(step)
 
             controls
                 .padding(.horizontal, 32)
@@ -51,8 +76,8 @@ struct OnboardingView: View {
         .background(BSTheme.background)
         .frame(minWidth: 640, minHeight: 560)
         .task(id: step) {
-            // Live-refresh permissions while their step is visible.
-            while !Task.isCancelled, step == .microphone || step == .accessibility {
+            // Live-refresh permissions while the permissions step is visible.
+            while !Task.isCancelled, step == .permissions {
                 microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
                 accessibilityGranted = state.checkAccessibilityGranted()
                 try? await Task.sleep(for: .seconds(1))
@@ -60,18 +85,25 @@ struct OnboardingView: View {
         }
         .onAppear {
             accessibilityGranted = state.checkAccessibilityGranted()
-            engineAPIKey = currentEngineKey()
+            engineAPIKey = currentProviderKey()
         }
+    }
+
+    /// Asymmetric slide+fade so forward and back feel directional.
+    private var stepTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        )
     }
 
     @ViewBuilder
     private var stepContent: some View {
         switch step {
         case .welcome: welcomeStep
-        case .microphone: microphoneStep
-        case .accessibility: accessibilityStep
-        case .engine: engineStep
-        case .intelligence: intelligenceStep
+        case .permissions: permissionsStep
+        case .connect: connectStep
+        case .ready: readyStep
         case .tryIt: tryItStep
         }
     }
@@ -91,281 +123,303 @@ struct OnboardingView: View {
                         .foregroundStyle(BSTheme.tealLight)
                 }
                 .emberGlow(active: true)
+                .scaleEffect(welcomeBreathing ? 1.03 : 1.0)
+                .opacity(welcomeRevealed ? 1 : 0)
 
             Text(verbatim: "Vara")
                 .font(BSTheme.display(46, weight: .semibold))
                 .foregroundStyle(BSTheme.textPrimary)
+                .opacity(welcomeRevealed ? 1 : 0)
+                .offset(y: welcomeRevealed ? 0 : 8)
 
-            Text("Vara hears your words — hold the key, speak, let go.", comment: "Onboarding welcome tagline")
+            Text("Hold the key. Speak. Let go.", comment: "Onboarding welcome tagline")
                 .font(.system(size: 16))
                 .foregroundStyle(BSTheme.textMuted)
                 .multilineTextAlignment(.center)
+                .opacity(welcomeRevealed ? 1 : 0)
+                .offset(y: welcomeRevealed ? 0 : 8)
+
+            Text("Vara is forged on Vár — the Norse goddess who hears every word you speak.", comment: "Onboarding welcome persona subline")
+                .font(.system(size: 13))
+                .foregroundStyle(BSTheme.textMuted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 420)
+                .fixedSize(horizontal: false, vertical: true)
+                .opacity(welcomeRevealed ? 0.85 : 0)
+                .offset(y: welcomeRevealed ? 0 : 8)
 
             KeyCapView(keys: [state.settings.shortcut.symbol], size: 40)
                 .padding(.top, 6)
+                .opacity(welcomeRevealed ? 1 : 0)
+                .offset(y: welcomeRevealed ? 0 : 8)
 
             Spacer()
 
             Text("Forged by Brokk & Sindre", comment: "Onboarding welcome footer")
                 .font(BSTheme.display(12, weight: .medium))
                 .foregroundStyle(BSTheme.textMuted)
+                .opacity(welcomeRevealed ? 1 : 0)
         }
-    }
-
-    // MARK: Step 2 — Microphone
-
-    private var microphoneStep: some View {
-        permissionStep(
-            systemImage: "mic.fill",
-            title: String(localized: "Vara needs to hear you", comment: "Onboarding microphone title"),
-            explanation: String(localized: "The microphone is only used while you hold the dictation key. Nothing is recorded in the background.", comment: "Onboarding microphone explanation"),
-            granted: microphoneStatus == .authorized,
-            grantedText: String(localized: "Microphone access granted", comment: "Permission status"),
-            missingText: microphoneStatus == .denied
-                ? String(localized: "Access denied — open System Settings", comment: "Permission status")
-                : String(localized: "Microphone access not granted yet", comment: "Permission status")
-        ) {
-            if microphoneStatus == .notDetermined {
-                Button {
-                    Task { @MainActor in
-                        _ = await AVCaptureDevice.requestAccess(for: .audio)
-                        microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-                    }
-                } label: {
-                    Text("Allow microphone", comment: "Onboarding button")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(BSTheme.teal)
-            } else if microphoneStatus != .authorized {
-                Button {
-                    openURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
-                } label: {
-                    Text("Open System Settings", comment: "Onboarding button")
-                }
+        .onAppear {
+            // Staged reveal: medallion, then wordmark/tagline, persona, keycap.
+            withAnimation(.spring(duration: 0.6)) { welcomeRevealed = true }
+            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
+                welcomeBreathing = true
             }
         }
     }
 
-    // MARK: Step 3 — Accessibility
+    // MARK: Step 2 — Permissions (microphone + accessibility on one screen)
 
-    private var accessibilityStep: some View {
-        permissionStep(
-            systemImage: "lock.shield",
-            title: String(localized: "One more permission", comment: "Onboarding accessibility title"),
-            explanation: String(localized: "Accessibility lets Vara see the dictation key everywhere and paste the text where your cursor is. Without it, nothing works globally.", comment: "Onboarding accessibility explanation"),
-            granted: accessibilityGranted,
-            grantedText: String(localized: "Accessibility access granted", comment: "Permission status"),
-            missingText: String(localized: "Accessibility access not granted yet", comment: "Permission status")
-        ) {
-            if !accessibilityGranted {
-                HStack(spacing: 10) {
+    private var permissionsStep: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            stepHeader(
+                systemImage: "checkmark.shield",
+                title: String(localized: "Two permissions, then you are set", comment: "Onboarding permissions title"),
+                explanation: String(localized: "Vara needs both to work everywhere on your Mac. Nothing runs in the background.", comment: "Onboarding permissions explanation")
+            )
+
+            permissionRow(
+                systemImage: "mic.fill",
+                title: String(localized: "Microphone", comment: "Onboarding permission row title"),
+                why: String(localized: "Used only while you hold the key.", comment: "Onboarding microphone why"),
+                granted: microphoneStatus == .authorized
+            ) {
+                if microphoneStatus == .notDetermined {
                     Button {
-                        accessibilityGranted = state.requestAccessibilityPermission()
+                        Task { @MainActor in
+                            _ = await AVCaptureDevice.requestAccess(for: .audio)
+                            microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+                        }
                     } label: {
-                        Text("Request access", comment: "Onboarding button")
+                        Text("Allow microphone", comment: "Onboarding button")
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(BSTheme.teal)
-
+                } else if microphoneStatus != .authorized {
                     Button {
-                        openURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                        openURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
                     } label: {
                         Text("Open System Settings", comment: "Onboarding button")
                     }
                 }
             }
+
+            permissionRow(
+                systemImage: "lock.shield",
+                title: String(localized: "Accessibility", comment: "Onboarding permission row title"),
+                why: String(localized: "Lets Vara see the key everywhere and paste at your cursor.", comment: "Onboarding accessibility why"),
+                granted: accessibilityGranted
+            ) {
+                if !accessibilityGranted {
+                    HStack(spacing: 10) {
+                        Button {
+                            accessibilityGranted = state.requestAccessibilityPermission()
+                        } label: {
+                            Text("Request access", comment: "Onboarding button")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(BSTheme.teal)
+
+                        Button {
+                            openURL(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                        } label: {
+                            Text("Open System Settings", comment: "Onboarding button")
+                        }
+                    }
+                }
+            }
+
+            if bothPermissionsGranted {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                    Text("Vara is listening for the key.", comment: "Onboarding both permissions granted")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(BSTheme.textPrimary)
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
+
+            Spacer()
         }
+        .animation(.spring(duration: 0.4), value: bothPermissionsGranted)
     }
 
-    // MARK: Step 4 — Engine
+    // MARK: Step 3 — Connect (one key, both layers)
 
-    private var engineStep: some View {
+    private var connectStep: some View {
         VStack(alignment: .leading, spacing: 14) {
             stepHeader(
-                systemImage: "waveform",
-                title: String(localized: "Choose your speech engine", comment: "Onboarding engine title"),
-                explanation: String(localized: "The engine turns voice into text. You can switch any time in Settings.", comment: "Onboarding engine explanation")
+                systemImage: "key.horizontal",
+                title: String(localized: "One key, and Vara just works", comment: "Onboarding connect title"),
+                explanation: String(localized: "Your key powers both transcription and cleanup. Groq is free — grab a key in 30 seconds.", comment: "Onboarding connect explanation")
             )
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(LstnrSpeechBackendChoice.allCases) { backend in
-                    EngineCard(
-                        backend: backend,
-                        isSelected: state.settings.speechBackend == backend,
-                        keyStatus: backend.credentialProvider == nil
-                            ? .notNeeded
-                            : (hasEngineKey(backend) ? .present : .missing)
-                    ) {
-                        state.updateSettings { $0.speechBackend = backend }
-                        engineAPIKey = currentEngineKey()
-                    }
+            HStack(spacing: 12) {
+                ProviderChoiceCard(
+                    title: String(localized: "Groq", comment: "Onboarding provider name"),
+                    subline: String(localized: "Fast Whisper + Llama 3.3. No cost.", comment: "Onboarding Groq card subline"),
+                    symbolName: "bolt.fill",
+                    badges: [
+                        ProviderBadge(text: String(localized: "Free", comment: "Onboarding Groq badge: free"), tint: .green),
+                        ProviderBadge(text: String(localized: "Recommended", comment: "Onboarding Groq badge: recommended"), tint: BSTheme.emberGlow),
+                    ],
+                    isSelected: selectedProvider == .groq,
+                    hasKey: hasProviderKey(.groq)
+                ) {
+                    selectProvider(.groq)
+                }
+
+                ProviderChoiceCard(
+                    title: String(localized: "OpenAI", comment: "Onboarding provider name"),
+                    subline: String(localized: "GPT-4o transcription + cleanup.", comment: "Onboarding OpenAI card subline"),
+                    symbolName: "cloud",
+                    badges: [
+                        ProviderBadge(text: String(localized: "Your key", comment: "Onboarding OpenAI badge"), tint: BSTheme.teal),
+                    ],
+                    isSelected: selectedProvider == .openAI,
+                    hasKey: hasProviderKey(.openAI)
+                ) {
+                    selectProvider(.openAI)
                 }
             }
 
-            if let provider = state.settings.speechBackend.credentialProvider {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        SecureField(text: $engineAPIKey) {
-                            Text(verbatim: "\(provider.displayTitle) API key")
-                        }
-                        .textFieldStyle(.roundedBorder)
-
-                        Button {
-                            state.saveCredential(engineAPIKey, for: provider)
-                            keyStateRevision += 1
-                        } label: {
-                            Text("Save", comment: "Onboarding save key button")
-                        }
-                        .disabled(engineAPIKey.isEmpty)
-
-                        if hasEngineKey(state.settings.speechBackend) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                        }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    SecureField(text: $engineAPIKey) {
+                        Text(verbatim: "\(selectedProvider.credentialProvider.displayTitle) API key")
                     }
+                    .textFieldStyle(.roundedBorder)
 
-                    getKeyLink(for: provider)
-                }
-            }
+                    Button {
+                        state.saveCredential(engineAPIKey, for: selectedProvider.credentialProvider)
+                        keyStateRevision += 1
+                    } label: {
+                        Text("Save", comment: "Onboarding save key button")
+                    }
+                    .disabled(engineAPIKey.isEmpty)
 
-            if state.settings.speechBackend == .localHviske {
-                HStack(spacing: 10) {
-                    if localHviskeStatus.isReady {
-                        Label {
-                            Text("Hviske is installed and ready", comment: "Onboarding Hviske status")
-                        } icon: {
-                            Image(systemName: "checkmark.circle.fill")
-                        }
-                        .foregroundStyle(.green)
-                    } else {
-                        Button {
-                            installHviske()
-                        } label: {
-                            if isInstallingHviske {
-                                ProgressView().controlSize(.small)
-                            }
-                            Text("Install Hviske (downloads the model)", comment: "Onboarding Hviske install button")
-                        }
-                        .disabled(isInstallingHviske)
-
-                        if let hviskeInstallMessage {
-                            Text(hviskeInstallMessage)
-                                .font(.caption)
-                                .foregroundStyle(BSTheme.textMuted)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
+                    if hasProviderKey(selectedProvider) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
                     }
                 }
+
+                getKeyLink(for: selectedProvider.credentialProvider)
             }
 
-            // Explain why Next is held back so the gating isn't a dead end.
-            if !selectedEngineUsable {
-                Text("Add this engine's key (or install Hviske) to continue.", comment: "Onboarding engine-not-ready hint")
+            if selectedEngineUsable {
+                Text("We will confirm it works in a moment.", comment: "Onboarding connect ready note")
+                    .font(.system(size: 12))
+                    .foregroundStyle(BSTheme.textMuted)
+            } else {
+                Text("Add your key to continue — it is free for Groq.", comment: "Onboarding connect not-ready hint")
                     .font(.system(size: 12))
                     .foregroundStyle(BSTheme.stateError)
             }
 
-            Spacer()
-        }
-    }
-
-    // MARK: Step 5 — Intelligence
-
-    private var intelligenceStep: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            stepHeader(
-                systemImage: "wand.and.stars",
-                title: String(localized: "Choose Vara's intelligence", comment: "Onboarding intelligence title"),
-                explanation: String(localized: "A language model cleans up your dictation: punctuation, filler words, polish. Skip it and Vara inserts the raw transcript.", comment: "Onboarding intelligence explanation")
-            )
-
-            Form {
-                LLMSelectionPicker(
-                    selection: Binding(
-                        get: { state.settings.defaultLLM },
-                        set: { newValue in
-                            state.updateSettings { settings in
-                                settings.defaultLLM = newValue
-                                // A configured LLM makes Clean text the natural default mode.
-                                if newValue != nil, settings.selectedModeID == DictationMode.rawModeID {
-                                    settings.selectedModeID = DictationMode.cleanModeID
-                                } else if newValue == nil {
-                                    settings.selectedModeID = DictationMode.rawModeID
-                                }
-                            }
-                        }
-                    ),
-                    customEndpoints: state.settings.customEndpoints,
-                    allowsDefault: false
-                )
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-            .frame(maxHeight: 130)
-
-            if let provider = state.settings.defaultLLM?.provider {
-                switch provider {
-                case .ollama:
-                    // Only claim the local-private chain when Ollama actually
-                    // answered its reachability probe; otherwise point the user at
-                    // starting it. Wording stays truthful (the app is not
-                    // sandboxed) — "sends nothing to the cloud", not OS isolation.
-                    if state.ollamaReachable == true {
-                        Label {
-                            Text("Combined with Hviske, this runs locally on your Mac — this chain sends nothing to the cloud.", comment: "Onboarding local LLM highlight")
-                        } icon: {
-                            Image(systemName: "lock.shield.fill")
-                        }
-                        .foregroundStyle(.green)
-                    } else {
-                        Label {
-                            Text("Ollama isn't reachable yet. Start it (ollama serve) — then this chain runs locally on your Mac.", comment: "Onboarding Ollama not running hint")
-                        } icon: {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                        }
-                        .foregroundStyle(BSTheme.stateError)
-                    }
-                case .openAI, .groq, .anthropic:
-                    if let credentialProvider = onboardingCredentialProvider(provider) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 8) {
-                                SecureField(text: $llmAPIKey) {
-                                    Text(verbatim: "\(credentialProvider.displayTitle) API key")
-                                }
-                                .textFieldStyle(.roundedBorder)
-
-                                Button {
-                                    state.saveCredential(llmAPIKey, for: credentialProvider)
-                                    keyStateRevision += 1
-                                } label: {
-                                    Text("Save", comment: "Onboarding save key button")
-                                }
-                                .disabled(llmAPIKey.isEmpty)
-
-                                if !state.savedCredential(for: credentialProvider).isEmpty {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.green)
-                                }
-                            }
-
-                            getKeyLink(for: credentialProvider)
-                        }
-                    }
-                case .custom:
-                    EmptyView()
-                }
-            } else {
-                Text("No model chosen — Vara starts in Raw mode.", comment: "Onboarding no-LLM note")
+            // One quiet pointer for tech-savvy users. Onboarding stays finishable
+            // on the cloud path; advanced engines are set up later in Settings.
+            Button {
+                SettingsDeepLink.request(.advanced)
+            } label: {
+                Text("Using ElevenLabs, a local engine, or your own model? Set it up later in Settings › Advanced.", comment: "Onboarding advanced engines pointer")
                     .font(.system(size: 12))
-                    .foregroundStyle(BSTheme.textMuted)
+                    .foregroundStyle(BSTheme.tealLight)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
 
             Spacer()
         }
     }
 
-    // MARK: Step 6 — Try it
+    // MARK: Step 4 — Ready (confirmation beat)
+
+    private var readyStep: some View {
+        VStack(spacing: 18) {
+            Spacer()
+
+            EmberIgnite()
+
+            Text("Vara is forged.", comment: "Onboarding ready headline")
+                .font(BSTheme.display(30, weight: .semibold))
+                .foregroundStyle(BSTheme.textPrimary)
+
+            Text("Everything is connected. Let us hear your voice.", comment: "Onboarding ready subline")
+                .font(.system(size: 14))
+                .foregroundStyle(BSTheme.textMuted)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 10) {
+                recapRow(
+                    label: String(localized: "Engine", comment: "Onboarding recap label"),
+                    index: 0
+                ) {
+                    StatusPill(
+                        text: connectedEngineTitle,
+                        tint: BSTheme.teal,
+                        systemImage: "waveform"
+                    )
+                }
+
+                recapRow(
+                    label: String(localized: "Cleanup", comment: "Onboarding recap label"),
+                    index: 1
+                ) {
+                    StatusPill(
+                        text: cleanupTitle,
+                        tint: BSTheme.tealLight,
+                        systemImage: "wand.and.stars"
+                    )
+                }
+
+                recapRow(
+                    label: String(localized: "Shortcut", comment: "Onboarding recap label"),
+                    index: 2
+                ) {
+                    KeyCapView(keys: [state.settings.shortcut.symbol], size: 28)
+                }
+            }
+            .frame(maxWidth: 360)
+            .padding(.top, 6)
+
+            Spacer()
+        }
+        .onAppear {
+            readyRevealed = false
+            // Recap rows stagger in after the ember ignite settles.
+            withAnimation(.spring(duration: 0.5).delay(0.5)) {
+                readyRevealed = true
+            }
+        }
+    }
+
+    /// One recap row: a fixed-width label and its status control, staggered in.
+    private func recapRow(
+        label: String,
+        index: Int,
+        @ViewBuilder content: () -> some View
+    ) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(BSTheme.textMuted)
+                .frame(width: 90, alignment: .leading)
+
+            Spacer()
+
+            content()
+        }
+        .opacity(readyRevealed ? 1 : 0)
+        .offset(y: readyRevealed ? 0 : 8)
+        .animation(.spring(duration: 0.45).delay(0.5 + Double(index) * 0.1), value: readyRevealed)
+    }
+
+    // MARK: Step 5 — Try it
 
     private var tryItStep: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -384,7 +438,10 @@ struct OnboardingView: View {
                 .background(BSTheme.surface, in: RoundedRectangle(cornerRadius: BSTheme.cornerRadius, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: BSTheme.cornerRadius, style: .continuous)
-                        .strokeBorder(tryItFocused ? BSTheme.teal.opacity(0.6) : BSTheme.border)
+                        .strokeBorder(
+                            tryItFocused ? BSTheme.teal.opacity(tryItBreathing ? 0.75 : 0.4) : BSTheme.border,
+                            lineWidth: tryItFocused ? 1.5 : 1
+                        )
                 }
                 .onAppear {
                     tryItFocused = true
@@ -392,6 +449,9 @@ struct OnboardingView: View {
                     // pre-existing history or typed text) counts as success.
                     tryItBaselineTranscript = state.lastTranscript
                     didDictateSuccessfully = false
+                    withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
+                        tryItBreathing = true
+                    }
                 }
 
             // Success only lights once a real dictation produced a transcript —
@@ -405,9 +465,13 @@ struct OnboardingView: View {
                 }
                 .transition(.scale.combined(with: .opacity))
             } else {
-                Text("Hold \(state.settings.shortcut.symbol) and speak — Vara inserts the text right here.", comment: "Onboarding try-it hint before first dictation")
-                    .font(.system(size: 12))
-                    .foregroundStyle(BSTheme.textMuted)
+                HStack(spacing: 10) {
+                    KeyCapView(keys: [state.settings.shortcut.symbol], size: 26)
+                        .scaleEffect(tryItBreathing ? 1.06 : 1.0)
+                    Text("Hold and speak — Vara writes it right here.", comment: "Onboarding try-it hint before first dictation")
+                        .font(.system(size: 12))
+                        .foregroundStyle(BSTheme.textMuted)
+                }
             }
 
             Spacer()
@@ -436,20 +500,14 @@ struct OnboardingView: View {
 
             Spacer()
 
-            HStack(spacing: 6) {
-                ForEach(Step.allCases, id: \.rawValue) { dotStep in
-                    Circle()
-                        .fill(dotStep == step ? BSTheme.tealLight : BSTheme.surfaceHover)
-                        .frame(width: 7, height: 7)
-                }
-            }
+            progressRail
 
             Spacer()
 
             HStack(spacing: 10) {
                 if step != .welcome {
                     Button {
-                        withAnimation(.spring(duration: 0.3)) {
+                        withAnimation(.spring(duration: 0.35)) {
                             step = Step(rawValue: step.rawValue - 1) ?? .welcome
                         }
                     } label: {
@@ -461,31 +519,73 @@ struct OnboardingView: View {
                     Button {
                         VaraOnboarding.markCompleted()
                     } label: {
-                        Text("Done", comment: "Onboarding finish button")
+                        primaryButtonTitle
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(BSTheme.teal)
+                    .tint(BSTheme.ember)
                     .keyboardShortcut(.defaultAction)
                     // Don't let a user finish with a dead app: the chosen engine
                     // must actually be usable. "Skip" stays as the escape hatch.
                     .disabled(!selectedEngineUsable)
                 } else {
                     Button {
-                        withAnimation(.spring(duration: 0.3)) {
+                        withAnimation(.spring(duration: 0.35)) {
                             step = Step(rawValue: step.rawValue + 1) ?? .tryIt
                         }
                     } label: {
-                        Text("Next", comment: "Onboarding next button")
+                        primaryButtonTitle
                     }
-                    // Can't leave the engine step until the chosen engine can
-                    // transcribe — keeps the default Groq path the smooth one.
-                    .disabled(step == .engine && !selectedEngineUsable)
+                    // Can't leave permissions until both are granted, nor leave
+                    // Connect until the chosen engine can transcribe — keeps the
+                    // default Groq path the smooth one.
+                    .disabled(
+                        (step == .permissions && !bothPermissionsGranted)
+                            || (step == .connect && !selectedEngineUsable)
+                    )
                     .buttonStyle(.borderedProminent)
-                    .tint(BSTheme.teal)
+                    .tint(BSTheme.ember)
                     .keyboardShortcut(.defaultAction)
                 }
             }
         }
+    }
+
+    /// Per-step verb label for the primary CTA.
+    private var primaryButtonTitle: Text {
+        switch step {
+        case .welcome: Text("Begin", comment: "Onboarding primary button: welcome")
+        case .permissions: Text("Continue", comment: "Onboarding primary button: permissions")
+        case .connect: Text("Connect", comment: "Onboarding primary button: connect")
+        case .ready: Text("Try it", comment: "Onboarding primary button: ready")
+        case .tryIt: Text("Done", comment: "Onboarding primary button: finish")
+        }
+    }
+
+    /// Thin progress rail: teal track with an ember-filled portion that advances
+    /// on each step and an ember-glowing node at the active step.
+    private var progressRail: some View {
+        GeometryReader { geo in
+            let total = Step.allCases.count
+            let fraction = total > 1 ? Double(step.rawValue) / Double(total - 1) : 0
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(BSTheme.teal.opacity(0.25))
+                    .frame(height: 3)
+
+                Capsule()
+                    .fill(BSTheme.ember)
+                    .frame(width: max(6, geo.size.width * fraction), height: 3)
+
+                Circle()
+                    .fill(BSTheme.emberGlow)
+                    .frame(width: 9, height: 9)
+                    .emberGlow(active: true)
+                    .offset(x: geo.size.width * fraction - 4.5)
+            }
+            .frame(maxHeight: .infinity, alignment: .center)
+        }
+        .frame(width: 160, height: 12)
+        .animation(.spring(duration: 0.35), value: step)
     }
 
     private func stepHeader(systemImage: String, title: String, explanation: String) -> some View {
@@ -505,70 +605,114 @@ struct OnboardingView: View {
         }
     }
 
-    private func permissionStep(
+    /// One permission line: icon, title, one-line why, status, inline action.
+    private func permissionRow(
         systemImage: String,
         title: String,
-        explanation: String,
+        why: String,
         granted: Bool,
-        grantedText: String,
-        missingText: String,
         @ViewBuilder actions: () -> some View
     ) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            stepHeader(systemImage: systemImage, title: title, explanation: explanation)
+        BSCard {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(granted ? .green : BSTheme.tealLight)
+                    .frame(width: 28)
 
-            StatusPill(
-                text: granted ? grantedText : missingText,
-                tint: granted ? .green : BSTheme.stateError,
-                systemImage: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-            )
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(title)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(BSTheme.textPrimary)
 
-            actions()
+                        Spacer()
 
-            Spacer()
+                        if granted {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+
+                    Text(why)
+                        .font(.system(size: 12))
+                        .foregroundStyle(BSTheme.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if !granted {
+                        actions()
+                            .padding(.top, 2)
+                    }
+                }
+            }
         }
     }
 
     // MARK: Helpers
 
-    private func currentEngineKey() -> String {
-        guard let provider = state.settings.speechBackend.credentialProvider else { return "" }
-        return state.savedCredential(for: provider)
+    private var bothPermissionsGranted: Bool {
+        microphoneStatus == .authorized && accessibilityGranted
     }
 
-    private func hasEngineKey(_ backend: LstnrSpeechBackendChoice) -> Bool {
-        guard let provider = backend.credentialProvider else { return true }
+    /// Wires BOTH layers from one provider choice: the matching speech backend,
+    /// the matching default LLM, and Clean text as the starting mode — so a
+    /// single key makes Vara transcribe and clean up out of the box.
+    private func selectProvider(_ provider: ConnectProvider) {
+        selectedProvider = provider
+        state.updateSettings { settings in
+            switch provider {
+            case .groq:
+                settings.speechBackend = .groqWhisper
+                settings.defaultLLM = LLMSelection(provider: .groq, model: "llama-3.3-70b-versatile")
+            case .openAI:
+                settings.speechBackend = .openAIGPT4OMiniTranscribe20251215
+                settings.defaultLLM = LLMSelection(provider: .openAI, model: "gpt-4o-mini")
+            }
+            settings.selectedModeID = DictationMode.cleanModeID
+        }
+        engineAPIKey = currentProviderKey()
+    }
+
+    private func currentProviderKey() -> String {
+        state.savedCredential(for: selectedProvider.credentialProvider)
+    }
+
+    private func hasProviderKey(_ provider: ConnectProvider) -> Bool {
+        hasCredential(provider.credentialProvider)
+    }
+
+    private func hasCredential(_ provider: LstnrCredentialProvider) -> Bool {
         if !state.savedCredential(for: provider).isEmpty { return true }
         return ((try? EnvLoader.resolveForApp(provider.environmentVariableName)) ?? "").isEmpty == false
     }
 
-    /// Whether the chosen engine can actually transcribe right now: a cloud
-    /// engine needs its key saved (or in the environment); local Hviske needs
-    /// its runtime + model installed. Gates leaving the engine step and finishing
-    /// so a default-engine user can't end onboarding with a dead app.
+    /// Whether the connected cloud engine can actually transcribe right now: its
+    /// key must be saved (or in the environment). Gates leaving the Connect step
+    /// and finishing so a user can't end onboarding with a dead app.
     private var selectedEngineUsable: Bool {
         // Touch keyStateRevision so saving a key re-evaluates this gate (it reads
         // the keychain, not an observable property).
         _ = keyStateRevision
-        let backend = state.settings.speechBackend
-        if backend == .localHviske {
-            return localHviskeStatus.isReady
-        }
-        return hasEngineKey(backend)
+        return hasProviderKey(selectedProvider)
     }
 
-    private func onboardingCredentialProvider(_ provider: LLMProvider) -> LstnrCredentialProvider? {
-        switch provider {
-        case .openAI: .openAI
-        case .groq: .groq
-        case .anthropic: .anthropic
-        case .ollama, .custom: nil
-        }
+    /// Engine name for the Ready recap, read from the connected settings.
+    private var connectedEngineTitle: String {
+        state.settings.speechBackend.shortTitle
     }
 
-    /// Where to get a key for a provider, so a default-engine user isn't stuck
-    /// with a key field and no way to fill it. Groq's is free — the zero-cost
-    /// default for both layers.
+    /// Cleanup model for the Ready recap, or "Raw" when no LLM is configured.
+    private var cleanupTitle: String {
+        if let llm = state.settings.defaultLLM {
+            return "\(llm.provider.displayTitle) · \(llm.model)"
+        }
+        return String(localized: "Raw", comment: "Onboarding recap: no cleanup model")
+    }
+
+    /// Where to get a key for a provider, so a user isn't stuck with a key field
+    /// and no way to fill it. Groq's is free — the zero-cost default for both
+    /// layers.
     private func keySignupURL(for provider: LstnrCredentialProvider) -> URL? {
         switch provider {
         case .groq: URL(string: "https://console.groq.com/keys")
@@ -579,7 +723,7 @@ struct OnboardingView: View {
     }
 
     /// "Get a free key" link beside a provider's key field. Groq is highlighted
-    /// as free; the others just link to where the key is created.
+    /// as free; OpenAI just links to where the key is created.
     @ViewBuilder
     private func getKeyLink(for provider: LstnrCredentialProvider) -> some View {
         if let url = keySignupURL(for: provider) {
@@ -598,29 +742,88 @@ struct OnboardingView: View {
             }
         }
     }
+}
 
-    private func installHviske() {
-        isInstallingHviske = true
-        hviskeInstallMessage = String(localized: "Starting install …", comment: "Hviske install progress")
-        Task {
-            do {
-                try await LocalHviskeBackend.installManagedRuntime { message in
-                    await MainActor.run { hviskeInstallMessage = message }
+/// A badge shown on a provider choice card.
+private struct ProviderBadge: Identifiable {
+    let id = UUID()
+    let text: String
+    let tint: Color
+}
+
+/// One of the two cloud-provider cards on the Connect step. Unlike `EngineCard`
+/// this is keyed to a single bring-your-own-key cloud provider and shows the
+/// one-key-both-layers framing (no latency hints), with an ember-glow ring when
+/// selected.
+private struct ProviderChoiceCard: View {
+    let title: String
+    let subline: String
+    let symbolName: String
+    let badges: [ProviderBadge]
+    let isSelected: Bool
+    let hasKey: Bool
+    let select: () -> Void
+
+    var body: some View {
+        Button(action: select) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: symbolName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(isSelected ? BSTheme.cyan : BSTheme.teal)
+
+                    Spacer()
+
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(BSTheme.cyan)
+                    }
                 }
-                await MainActor.run {
-                    isInstallingHviske = false
-                    localHviskeStatus = LocalHviskeBackend.runtimeStatus()
-                    hviskeInstallMessage = nil
-                    NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+
+                Text(subline)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 5) {
+                    ForEach(badges) { badge in
+                        Text(badge.text)
+                            .font(.system(size: 9, weight: .semibold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(badge.tint.opacity(0.14), in: Capsule())
+                            .foregroundStyle(badge.tint)
+                    }
+
+                    if hasKey {
+                        Text("Key ✓", comment: "Onboarding provider badge: key present")
+                            .font(.system(size: 9, weight: .semibold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.14), in: Capsule())
+                            .foregroundStyle(.green)
+                    }
                 }
-            } catch {
-                await MainActor.run {
-                    isInstallingHviske = false
-                    hviskeInstallMessage = String(describing: error)
-                    localHviskeStatus = LocalHviskeBackend.runtimeStatus()
-                }
+                .padding(.top, 2)
             }
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 116, alignment: .topLeading)
+            .background(
+                isSelected ? BSTheme.teal.opacity(0.12) : BSTheme.surface,
+                in: RoundedRectangle(cornerRadius: BSTheme.cornerRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: BSTheme.cornerRadius, style: .continuous)
+                    .strokeBorder(isSelected ? BSTheme.ember : BSTheme.border, lineWidth: isSelected ? 1.5 : 1)
+            }
+            .emberGlow(active: isSelected)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
 
@@ -650,6 +853,45 @@ private struct EmberBurst: View {
         .onAppear {
             withAnimation(.spring(duration: 0.6)) {
                 burst = true
+            }
+        }
+    }
+}
+
+/// Larger one-shot ember ignite for the Ready confirmation beat: a glowing
+/// medallion that sparks outward once when the step appears.
+private struct EmberIgnite: View {
+    @State private var ignited = false
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<10, id: \.self) { index in
+                Circle()
+                    .fill(index.isMultiple(of: 2) ? BSTheme.emberGlow : BSTheme.ember)
+                    .frame(width: 6, height: 6)
+                    .offset(
+                        x: ignited ? cos(Double(index) / 10 * 2 * .pi) * 56 : 0,
+                        y: ignited ? sin(Double(index) / 10 * 2 * .pi) * 56 : 0
+                    )
+                    .opacity(ignited ? 0 : 1)
+            }
+
+            Circle()
+                .fill(BSTheme.ember.opacity(0.16))
+                .frame(width: 108, height: 108)
+                .overlay {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 42, weight: .bold))
+                        .foregroundStyle(BSTheme.emberGlow)
+                        .scaleEffect(ignited ? 1 : 0.3)
+                }
+                .emberGlow(active: true)
+                .scaleEffect(ignited ? 1 : 0.7)
+        }
+        .frame(width: 120, height: 120)
+        .onAppear {
+            withAnimation(.spring(duration: 0.6)) {
+                ignited = true
             }
         }
     }

@@ -378,7 +378,7 @@ final class AppState {
             dictationSession = nil
             hotkey?.uninstall()
             hotkey = nil
-            statusMessage = String(localized: "Install Hviske in Settings", comment: "Status message")
+            statusMessage = String(localized: "Set up Hviske in Terminal — see Settings > Advanced.", comment: "Status message when Hviske runtime is not set up")
             lastError = "Local Hviske runtime or model is missing."
             log("Local Hviske backend not ready. runtime=\(runtimeStatus.hasPythonRuntime), model=\(runtimeStatus.hasModelSnapshot), hfHome=\(runtimeStatus.hfHomeURL.path)")
             return false
