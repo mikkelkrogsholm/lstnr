@@ -21,19 +21,7 @@ struct LstnrSettingsView: View {
     @State private var anthropicAPIKey: String = ""
     @State private var anthropicCredentialStatus: String?
     @State private var accessibilityGranted = false
-    @State private var localHviskeStatus = LocalHviskeBackend.runtimeStatus()
     @State private var editingModeIndex: Int?
-    @State private var isAddingEndpoint = false
-    @State private var newEndpointName = ""
-    @State private var newEndpointURL = ""
-    @State private var newRuleBundleID: String?
-    @State private var newRuleModeID: UUID?
-    // WhisperKit model download flow (confirm dialog + progress).
-    @State private var whisperKitPendingModel: String?
-    @State private var whisperKitDownloadingModel: String?
-    @State private var whisperKitDownloadFraction: Double = 0
-    @State private var whisperKitDownloadError: String?
-    @State private var whisperKitDownloadTask: Task<Void, Never>?
     private let store: LstnrSettingsStore?
     private let credentialStore: LstnrCredentialStoring?
 
@@ -97,20 +85,9 @@ struct LstnrSettingsView: View {
             try? store.save(LstnrAppSettings(draft: newDraft))
             NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
         }
-        .onChange(of: draft.speechBackend) { _, backend in
-            // Prompt to download the on-device model up front instead of stalling
-            // the first dictation — only when WhisperKit is picked and its model
-            // isn't cached yet.
-            if backend == .localWhisperKit,
-               whisperKitDownloadingModel == nil,
-               !WhisperKitBackend.isModelDownloaded(draft.whisperKitModel) {
-                whisperKitPendingModel = draft.whisperKitModel
-            }
-        }
         .onAppear {
             loadCredentials()
             refreshAccessibility(prompt: false)
-            refreshLocalHviskeStatus()
             if let pendingSection = SettingsDeepLink.consumePending() {
                 selectedSection = pendingSection
             }
@@ -205,182 +182,12 @@ struct LstnrSettingsView: View {
             }
 
             if draft.speechBackend == .localWhisperKit {
-                whisperKitModelSection
+                WhisperKitModelSection(draft: $draft)
             }
 
             if let provider = draft.speechBackend.credentialProvider {
                 apiKeySection(for: provider)
             }
-        }
-    }
-
-    /// Model picker shown only when the on-device WhisperKit engine is selected.
-    /// Selecting a model that isn't cached yet prompts to download it (with a
-    /// progress bar) up front, rather than stalling the first dictation.
-    @ViewBuilder
-    private var whisperKitModelSection: some View {
-        Section {
-            Picker(selection: whisperKitModelBinding) {
-                ForEach(WhisperKitBackend.availableModelIDs, id: \.self) { modelID in
-                    Text(whisperKitModelLabel(modelID)).tag(modelID)
-                }
-            } label: {
-                Text("Model", comment: "WhisperKit model picker label")
-            }
-            .disabled(whisperKitDownloadingModel != nil)
-
-            whisperKitModelStatus
-        } header: {
-            Text("WhisperKit model", comment: "WhisperKit model section header")
-        } footer: {
-            Text("Models download once and are cached on this Mac, then run fully offline. Compressed Large v3 Turbo is the best balance for Danish; full Turbo is fastest; Small is a lightweight fallback.", comment: "WhisperKit model picker footer")
-        }
-        .alert(
-            String(localized: "Download this model?", comment: "WhisperKit download confirm title"),
-            isPresented: whisperKitConfirmPresented,
-            presenting: whisperKitPendingModel
-        ) { model in
-            Button {
-                startWhisperKitDownload(model)
-            } label: {
-                Text("Download", comment: "Confirm model download button")
-            }
-            Button(role: .cancel) {
-                whisperKitPendingModel = nil
-            } label: {
-                Text("Cancel", comment: "Cancel model download button")
-            }
-        } message: { model in
-            Text("\(whisperKitModelLabel(model)) (\(whisperKitModelApproxSize(model))) downloads to this Mac and then runs offline. It’s only downloaded once.", comment: "WhisperKit download confirm message")
-        }
-    }
-
-    /// Download progress / readiness row beneath the model picker.
-    @ViewBuilder
-    private var whisperKitModelStatus: some View {
-        if let downloading = whisperKitDownloadingModel {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Downloading \(whisperKitModelLabel(downloading))…", comment: "WhisperKit downloading label")
-                        .font(.caption)
-                    Spacer()
-                    Text(whisperKitDownloadFraction, format: .percent.precision(.fractionLength(0)))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-                ProgressView(value: whisperKitDownloadFraction)
-                Button(role: .cancel) {
-                    cancelWhisperKitDownload()
-                } label: {
-                    Text("Cancel", comment: "Cancel model download button")
-                }
-                .controlSize(.small)
-            }
-            .padding(.vertical, 2)
-        } else if let error = whisperKitDownloadError {
-            VStack(alignment: .leading, spacing: 4) {
-                Label(error, systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                Button {
-                    startWhisperKitDownload(draft.whisperKitModel)
-                } label: {
-                    Text("Try again", comment: "Retry model download button")
-                }
-                .controlSize(.small)
-            }
-        } else if !WhisperKitBackend.isModelDownloaded(draft.whisperKitModel) {
-            HStack {
-                Label {
-                    Text("Model not downloaded yet", comment: "WhisperKit model missing label")
-                } icon: {
-                    Image(systemName: "arrow.down.circle")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                Spacer()
-                Button {
-                    startWhisperKitDownload(draft.whisperKitModel)
-                } label: {
-                    Text("Download", comment: "Download model button")
-                }
-                .controlSize(.small)
-            }
-        } else {
-            Label {
-                Text("Downloaded — ready on this Mac", comment: "WhisperKit model ready label")
-            } icon: {
-                Image(systemName: "checkmark.circle")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-    }
-
-    /// Picker binding that intercepts selection: an already-cached model is applied
-    /// immediately; a missing one defers application until the user confirms the
-    /// download (`whisperKitPendingModel` drives the confirm dialog).
-    private var whisperKitModelBinding: Binding<String> {
-        Binding {
-            draft.whisperKitModel
-        } set: { newModel in
-            guard newModel != draft.whisperKitModel else { return }
-            if WhisperKitBackend.isModelDownloaded(newModel) {
-                draft.whisperKitModel = newModel
-            } else {
-                whisperKitPendingModel = newModel
-            }
-        }
-    }
-
-    private var whisperKitConfirmPresented: Binding<Bool> {
-        Binding {
-            whisperKitPendingModel != nil
-        } set: { presented in
-            if !presented { whisperKitPendingModel = nil }
-        }
-    }
-
-    /// Starts (or restarts) a model download, streaming progress into the UI and
-    /// applying the model as active once it completes.
-    private func startWhisperKitDownload(_ model: String) {
-        whisperKitPendingModel = nil
-        whisperKitDownloadError = nil
-        whisperKitDownloadFraction = 0
-        whisperKitDownloadingModel = model
-        whisperKitDownloadTask?.cancel()
-        whisperKitDownloadTask = Task { @MainActor in
-            do {
-                for try await fraction in WhisperKitBackend.downloadModel(model) {
-                    whisperKitDownloadFraction = fraction
-                }
-                whisperKitDownloadingModel = nil
-                // Apply only once the model is actually on disk; the draft change
-                // persists settings and re-configures the backend.
-                draft.whisperKitModel = model
-            } catch is CancellationError {
-                whisperKitDownloadingModel = nil
-            } catch {
-                whisperKitDownloadingModel = nil
-                whisperKitDownloadError = "\(error)"
-            }
-        }
-    }
-
-    private func cancelWhisperKitDownload() {
-        whisperKitDownloadTask?.cancel()
-        whisperKitDownloadTask = nil
-        whisperKitDownloadingModel = nil
-    }
-
-    /// Approximate on-disk download size, shown in the confirm dialog. These are
-    /// ballpark figures (turbo measured; 626MB from the variant name; small rough).
-    private func whisperKitModelApproxSize(_ model: String) -> String {
-        switch model {
-        case "large-v3-v20240930_turbo": "~1.5 GB"
-        case "large-v3-v20240930_626MB": "~630 MB"
-        case "small": "~0.5 GB"
-        default: String(localized: "varies", comment: "Unknown model download size")
         }
     }
 
@@ -460,9 +267,9 @@ struct LstnrSettingsView: View {
 
     private var advancedSection: some View {
         Group {
-            localHviskeSection
+            LocalHviskeSection()
 
-            customEndpointsSection
+            CustomEndpointsSection(draft: $draft)
 
             Section {
                 EmptyView()
@@ -470,108 +277,6 @@ struct LstnrSettingsView: View {
                 Text("Advanced integrations need the last bit of setup from you. ElevenLabs and OpenAI's niche engines just need a key on the Engine tab; Ollama and custom endpoints run a model on your own machine.", comment: "Advanced section footer")
             }
         }
-    }
-
-    /// Detect-and-guide for on-device Hviske. The shipped, notarized app never
-    /// downloads or runs a Python installer — the user runs scripts/setup-hviske.sh
-    /// in Terminal (which writes to the exact paths runtimeStatus() detects), and
-    /// Vara just reports what it finds and links to the instructions.
-    private var localHviskeSection: some View {
-        Section {
-            LabeledContent {
-                Label(
-                    localHviskeStatus.hasPythonRuntime
-                        ? String(localized: "Detected", comment: "Hviske runtime status")
-                        : String(localized: "Not set up", comment: "Hviske runtime status"),
-                    systemImage: localHviskeStatus.hasPythonRuntime ? "checkmark.circle" : "circle.dashed"
-                )
-                .foregroundStyle(localHviskeStatus.hasPythonRuntime ? .green : .secondary)
-            } label: {
-                Text("Runtime", comment: "Hviske status row label")
-            }
-
-            LabeledContent {
-                Label(
-                    localHviskeStatus.hasModelSnapshot
-                        ? String(localized: "Detected", comment: "Hviske model status")
-                        : String(localized: "Not set up", comment: "Hviske model status"),
-                    systemImage: localHviskeStatus.hasModelSnapshot ? "checkmark.circle" : "circle.dashed"
-                )
-                .foregroundStyle(localHviskeStatus.hasModelSnapshot ? .green : .secondary)
-            } label: {
-                Text("Model", comment: "Hviske status row label")
-            }
-
-            LabeledContent {
-                Text(verbatim: localHviskeStatus.pythonURL?.path ?? localHviskeExpectedPythonPath)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-            } label: {
-                Text("Runtime path", comment: "Hviske detected runtime path label")
-            }
-
-            LabeledContent {
-                Text(verbatim: localHviskeStatus.hfHomeURL.path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-            } label: {
-                Text("Model path", comment: "Hviske detected model path label")
-            }
-
-            HStack {
-                Button {
-                    refreshLocalHviskeStatus()
-                } label: {
-                    Text("Re-check", comment: "Hviske re-check status button")
-                }
-
-                Button {
-                    copyHviskeSetupCommand()
-                } label: {
-                    Text("Copy setup command", comment: "Hviske copy setup command button")
-                }
-
-                Spacer()
-
-                Link(destination: hviskeSetupGuideURL) {
-                    Text("How to set up Hviske", comment: "Hviske setup guide link")
-                }
-            }
-        } header: {
-            Text("Hviske on this Mac", comment: "Hviske section header")
-        } footer: {
-            Text("Hviske runs Danish speech entirely on this Mac. Set it up once in Terminal, then Vara detects it here.", comment: "Hviske detect-and-guide footer")
-        }
-    }
-
-    /// The managed venv python path the setup script writes to — shown when no
-    /// runtime is detected yet so the user knows where Vara is looking.
-    private var localHviskeExpectedPythonPath: String {
-        localHviskeStatus.hfHomeURL
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("hviske-venv/bin/python")
-            .path
-    }
-
-    /// Terminal command that runs the out-of-app Hviske setup script.
-    private var hviskeSetupCommand: String {
-        "bash scripts/setup-hviske.sh"
-    }
-
-    private var hviskeSetupGuideURL: URL {
-        URL(string: "https://brokk-sindre.dk/vara/hviske")!
-    }
-
-    private func copyHviskeSetupCommand() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(hviskeSetupCommand, forType: .string)
     }
 
     // MARK: Intelligence (LLM + modes)
@@ -679,91 +384,7 @@ struct LstnrSettingsView: View {
                 Text("Press 1–9 while dictating to use a mode for a single dictation.", comment: "Modes section footer")
             }
 
-            appRulesSection
-        }
-    }
-
-    // MARK: Per-app mode rules
-
-    private struct RunningAppChoice: Hashable, Identifiable {
-        let bundleID: String
-        let name: String
-        var id: String { bundleID }
-    }
-
-    private var runningAppChoices: [RunningAppChoice] {
-        var seenBundleIDs = Set<String>()
-        return NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != Bundle.main.bundleIdentifier }
-            .compactMap { app -> RunningAppChoice? in
-                guard let bundleID = app.bundleIdentifier,
-                      let name = app.localizedName,
-                      seenBundleIDs.insert(bundleID).inserted else { return nil }
-                return RunningAppChoice(bundleID: bundleID, name: name)
-            }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
-    private var appRulesSection: some View {
-        Section {
-            ForEach(draft.appModeRules) { rule in
-                HStack {
-                    Text(rule.appName)
-                    Image(systemName: "arrow.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                    Text(draft.modes.first { $0.id == rule.modeID }?.displayTitle ?? "—")
-                        .foregroundStyle(BSTheme.teal)
-                    Spacer()
-                    Button {
-                        draft.appModeRules.removeAll { $0.id == rule.id }
-                    } label: {
-                        Image(systemName: "trash")
-                    }
-                    .buttonStyle(.borderless)
-                }
-            }
-
-            HStack {
-                Picker(selection: $newRuleBundleID) {
-                    Text("Choose app", comment: "App rule picker placeholder").tag(String?.none)
-                    ForEach(runningAppChoices) { app in
-                        Text(app.name).tag(String?.some(app.bundleID))
-                    }
-                } label: {
-                    Text("App", comment: "App rule field")
-                }
-                .labelsHidden()
-
-                Picker(selection: $newRuleModeID) {
-                    Text("Choose mode", comment: "App rule picker placeholder").tag(UUID?.none)
-                    ForEach(draft.modes) { mode in
-                        Text(mode.displayTitle).tag(UUID?.some(mode.id))
-                    }
-                } label: {
-                    Text("Mode", comment: "App rule field")
-                }
-                .labelsHidden()
-
-                Button {
-                    guard let bundleID = newRuleBundleID,
-                          let modeID = newRuleModeID,
-                          let app = runningAppChoices.first(where: { $0.bundleID == bundleID }) else { return }
-                    draft.appModeRules.removeAll { $0.bundleID == bundleID }
-                    draft.appModeRules.append(
-                        AppModeRule(bundleID: bundleID, appName: app.name, modeID: modeID)
-                    )
-                    newRuleBundleID = nil
-                    newRuleModeID = nil
-                } label: {
-                    Text("Add rule", comment: "Add app rule button")
-                }
-                .disabled(newRuleBundleID == nil || newRuleModeID == nil)
-            }
-        } header: {
-            Text("Automatic modes per app", comment: "Settings section header")
-        } footer: {
-            Text("When you dictate into one of these apps, Vara switches to that mode automatically — e.g. VibeCode in your editor and Professional in Mail. A 1–9 press still wins. The app list shows currently running apps.", comment: "App rules footer")
+            AppRulesSection(draft: $draft)
         }
     }
 
@@ -790,76 +411,6 @@ struct LstnrSettingsView: View {
         switch provider {
         case .ollama, .custom: true
         case .openAI, .groq, .anthropic, .none: false
-        }
-    }
-
-    private var customEndpointsSection: some View {
-        Section {
-            ForEach(draft.customEndpoints) { endpoint in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(endpoint.name)
-                        Text(endpoint.baseURLString)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    Spacer()
-                    Button {
-                        draft.customEndpoints.removeAll { $0.id == endpoint.id }
-                    } label: {
-                        Image(systemName: "trash")
-                    }
-                    .buttonStyle(.borderless)
-                }
-            }
-
-            if isAddingEndpoint {
-                TextField(text: $newEndpointName, prompt: Text(verbatim: "DGX Spark")) {
-                    Text("Name", comment: "Custom endpoint name field")
-                }
-                TextField(text: $newEndpointURL, prompt: Text(verbatim: "http://spark.local:11434/v1")) {
-                    Text("Base URL", comment: "Custom endpoint URL field")
-                }
-                .autocorrectionDisabled()
-                HStack {
-                    Button {
-                        let trimmedURL = newEndpointURL.trimmingCharacters(in: .whitespaces)
-                        let trimmedName = newEndpointName.trimmingCharacters(in: .whitespaces)
-                        guard !trimmedName.isEmpty, URL(string: trimmedURL) != nil else { return }
-                        draft.customEndpoints.append(
-                            CustomLLMEndpoint(name: trimmedName, baseURLString: trimmedURL)
-                        )
-                        newEndpointName = ""
-                        newEndpointURL = ""
-                        isAddingEndpoint = false
-                    } label: {
-                        Text("Add", comment: "Confirm adding custom endpoint")
-                    }
-                    Button {
-                        isAddingEndpoint = false
-                        newEndpointName = ""
-                        newEndpointURL = ""
-                    } label: {
-                        Text("Cancel", comment: "Cancel adding custom endpoint")
-                    }
-                }
-            } else {
-                Button {
-                    isAddingEndpoint = true
-                } label: {
-                    Label {
-                        Text("Add OpenAI-compatible endpoint", comment: "Add custom endpoint button")
-                    } icon: {
-                        Image(systemName: "plus")
-                    }
-                }
-            }
-        } header: {
-            Text("Custom endpoints", comment: "Settings section header")
-        } footer: {
-            Text("Any OpenAI-compatible server: Ollama on another machine, LM Studio, vLLM …", comment: "Custom endpoints footer")
         }
     }
 
@@ -1027,10 +578,6 @@ struct LstnrSettingsView: View {
         if accessibilityGranted {
             NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
         }
-    }
-
-    private func refreshLocalHviskeStatus() {
-        localHviskeStatus = LocalHviskeBackend.runtimeStatus()
     }
 }
 
