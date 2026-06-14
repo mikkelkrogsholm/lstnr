@@ -630,12 +630,6 @@ private struct HistoryRow: View {
     }
 }
 
-private extension DictationHistoryItem {
-    var displayTranscript: String {
-        cleanedTranscript ?? rawTranscript
-    }
-}
-
 #Preview("Dashboard") {
     LstnrDashboardView(state: AppState())
 }
