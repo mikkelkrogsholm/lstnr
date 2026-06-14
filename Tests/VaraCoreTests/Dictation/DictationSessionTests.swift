@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import LstnrCore
+@testable import VaraCore
 
 final class DictationSessionTests: XCTestCase {
     func testPushToTalkRecordsTranscribesAndInsertsText() async {

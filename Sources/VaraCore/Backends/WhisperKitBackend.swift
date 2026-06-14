@@ -100,7 +100,7 @@ public struct WhisperKitBackend: SpeechToTextBackend {
     public static var downloadBaseURL: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        return base.appendingPathComponent("lstnr/models/whisperkit", isDirectory: true)
+        return base.appendingPathComponent("vara/models/whisperkit", isDirectory: true)
     }
 
     /// Whisper expects 2-letter ISO codes ("da", "en"); a nil/empty hint lets the
@@ -258,7 +258,7 @@ private extension WhisperKitBackend {
                 throw SpeechToTextBackendError.unsupportedAudio(backendID: id, reason: "recorded audio is empty")
             }
             let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("lstnr-whisperkit-\(UUID().uuidString).wav")
+                .appendingPathComponent("vara-whisperkit-\(UUID().uuidString).wav")
             try Self.writePCM16WAV(data: pcm, sampleRate: sampleRate, to: url)
             return MaterializedAudio(
                 url: url,

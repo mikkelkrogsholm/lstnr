@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-enum LstnrCredentialProvider: String, CaseIterable, Identifiable {
+enum VaraCredentialProvider: String, CaseIterable, Identifiable {
     case elevenLabs
     case groq
     case openAI
@@ -19,30 +19,30 @@ enum LstnrCredentialProvider: String, CaseIterable, Identifiable {
     }
 }
 
-protocol LstnrCredentialStoring {
-    func credential(for provider: LstnrCredentialProvider) throws -> String?
-    func saveCredential(_ credential: String, for provider: LstnrCredentialProvider) throws
-    func deleteCredential(for provider: LstnrCredentialProvider) throws
+protocol VaraCredentialStoring {
+    func credential(for provider: VaraCredentialProvider) throws -> String?
+    func saveCredential(_ credential: String, for provider: VaraCredentialProvider) throws
+    func deleteCredential(for provider: VaraCredentialProvider) throws
     func credential(forCustomEndpoint id: UUID) throws -> String?
     func saveCredential(_ credential: String, forCustomEndpoint id: UUID) throws
 }
 
-struct LstnrKeychainCredentialStore: LstnrCredentialStoring {
+struct VaraKeychainCredentialStore: VaraCredentialStoring {
     var service: String
 
-    init(service: String = Bundle.main.bundleIdentifier.map { "\($0).credentials" } ?? "dk.56n.lstnr.credentials") {
+    init(service: String = Bundle.main.bundleIdentifier.map { "\($0).credentials" } ?? "dk.56n.vara.credentials") {
         self.service = service
     }
 
-    func credential(for provider: LstnrCredentialProvider) throws -> String? {
+    func credential(for provider: VaraCredentialProvider) throws -> String? {
         try credential(account: provider.keychainAccount)
     }
 
-    func saveCredential(_ credential: String, for provider: LstnrCredentialProvider) throws {
+    func saveCredential(_ credential: String, for provider: VaraCredentialProvider) throws {
         try saveCredential(credential, account: provider.keychainAccount)
     }
 
-    func deleteCredential(for provider: LstnrCredentialProvider) throws {
+    func deleteCredential(for provider: VaraCredentialProvider) throws {
         try deleteCredential(account: provider.keychainAccount)
     }
 
@@ -71,11 +71,11 @@ struct LstnrKeychainCredentialStore: LstnrCredentialStoring {
         }
 
         guard status == errSecSuccess else {
-            throw LstnrKeychainError.unhandledStatus(status)
+            throw VaraKeychainError.unhandledStatus(status)
         }
 
         guard let data = item as? Data else {
-            throw LstnrKeychainError.invalidData
+            throw VaraKeychainError.invalidData
         }
 
         return String(data: data, encoding: .utf8)
@@ -99,7 +99,7 @@ struct LstnrKeychainCredentialStore: LstnrCredentialStoring {
         }
 
         guard updateStatus == errSecItemNotFound else {
-            throw LstnrKeychainError.unhandledStatus(updateStatus)
+            throw VaraKeychainError.unhandledStatus(updateStatus)
         }
 
         var addQuery = query
@@ -108,7 +108,7 @@ struct LstnrKeychainCredentialStore: LstnrCredentialStoring {
 
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
-            throw LstnrKeychainError.unhandledStatus(addStatus)
+            throw VaraKeychainError.unhandledStatus(addStatus)
         }
     }
 
@@ -116,7 +116,7 @@ struct LstnrKeychainCredentialStore: LstnrCredentialStoring {
         let status = SecItemDelete(baseQuery(account: account) as CFDictionary)
 
         guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw LstnrKeychainError.unhandledStatus(status)
+            throw VaraKeychainError.unhandledStatus(status)
         }
     }
 
@@ -129,7 +129,7 @@ struct LstnrKeychainCredentialStore: LstnrCredentialStoring {
     }
 }
 
-enum LstnrKeychainError: Error, Equatable {
+enum VaraKeychainError: Error, Equatable {
     case invalidData
     case unhandledStatus(OSStatus)
 }

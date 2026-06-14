@@ -1,4 +1,4 @@
-name: Lstnr
+name: Vara
 options:
   bundleIdPrefix: dk.56n
   deploymentTarget:
@@ -14,7 +14,7 @@ configs:
   Release: release
 
 packages:
-  LstnrCore:
+  VaraCore:
     path: .
 
 settings:
@@ -38,7 +38,7 @@ settings:
       COPY_PHASE_STRIP: "NO"
 
 targets:
-  Lstnr:
+  Vara:
     type: application
     platform: macOS
     sources:
@@ -75,7 +75,7 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
     entitlements:
-      path: App/Lstnr.entitlements
+      path: App/Vara.entitlements
       properties:
         com.apple.security.device.audio-input: true
         # Hardened-runtime relaxations required ONLY because Vara spawns a
@@ -88,11 +88,11 @@ targets:
         com.apple.security.cs.disable-library-validation: true
         com.apple.security.cs.allow-dyld-environment-variables: true
     dependencies:
-      - package: LstnrCore
-        product: LstnrCore
+      - package: VaraCore
+        product: VaraCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dk.56n.lstnr
+        PRODUCT_BUNDLE_IDENTIFIER: dk.56n.vara
         PRODUCT_NAME: Vara
         GENERATE_INFOPLIST_FILE: "NO"
         INFOPLIST_FILE: App/Info.plist
@@ -100,10 +100,10 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
 
 schemes:
-  Lstnr:
+  Vara:
     build:
       targets:
-        Lstnr: all
+        Vara: all
     run:
       config: Debug
     archive:

@@ -1,12 +1,12 @@
 // Manage user-defined OpenAI-compatible LLM endpoints.
 
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Lists existing custom endpoints (with delete) and an inline add form. All
 /// mutations go through the shared `draft.customEndpoints`.
 struct CustomEndpointsSection: View {
-    @Binding var draft: LstnrSettingsDraft
+    @Binding var draft: VaraSettingsDraft
 
     @State private var isAddingEndpoint = false
     @State private var newEndpointName = ""

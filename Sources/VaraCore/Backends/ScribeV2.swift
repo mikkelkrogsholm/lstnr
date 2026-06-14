@@ -57,7 +57,7 @@ public struct ScribeV2Backend: ASRBackend, SpeechToTextBackend {
 
     public func transcribe(audio: URL, language: String?) async throws -> TranscriptionResult {
         let endpoint = baseURL.appendingPathComponent("v1/speech-to-text")
-        let boundary = "----lstnr-\(UUID().uuidString)"
+        let boundary = "----vara-\(UUID().uuidString)"
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "xi-api-key")

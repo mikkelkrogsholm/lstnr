@@ -1,5 +1,5 @@
 import AVFoundation
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Vara's first-run welcome flow: meet Vara, grant the two permissions, connect
@@ -24,7 +24,7 @@ struct OnboardingView: View {
         case groq
         case openAI
 
-        var credentialProvider: LstnrCredentialProvider {
+        var credentialProvider: VaraCredentialProvider {
             switch self {
             case .groq: .groq
             case .openAI: .openAI
@@ -682,7 +682,7 @@ struct OnboardingView: View {
         hasCredential(provider.credentialProvider)
     }
 
-    private func hasCredential(_ provider: LstnrCredentialProvider) -> Bool {
+    private func hasCredential(_ provider: VaraCredentialProvider) -> Bool {
         if !state.savedCredential(for: provider).isEmpty { return true }
         return ((try? EnvLoader.resolveForApp(provider.environmentVariableName)) ?? "").isEmpty == false
     }
@@ -713,7 +713,7 @@ struct OnboardingView: View {
     /// Where to get a key for a provider, so a user isn't stuck with a key field
     /// and no way to fill it. Groq's is free — the zero-cost default for both
     /// layers.
-    private func keySignupURL(for provider: LstnrCredentialProvider) -> URL? {
+    private func keySignupURL(for provider: VaraCredentialProvider) -> URL? {
         switch provider {
         case .groq: URL(string: "https://console.groq.com/keys")
         case .openAI: URL(string: "https://platform.openai.com/api-keys")
@@ -725,7 +725,7 @@ struct OnboardingView: View {
     /// "Get a free key" link beside a provider's key field. Groq is highlighted
     /// as free; OpenAI just links to where the key is created.
     @ViewBuilder
-    private func getKeyLink(for provider: LstnrCredentialProvider) -> some View {
+    private func getKeyLink(for provider: VaraCredentialProvider) -> some View {
         if let url = keySignupURL(for: provider) {
             if provider == .groq {
                 Link(destination: url) {

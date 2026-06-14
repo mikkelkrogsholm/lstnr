@@ -1,4 +1,4 @@
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Developer diagnostics — the debug log lives here, out of the main window.

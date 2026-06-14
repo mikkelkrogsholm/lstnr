@@ -1,12 +1,12 @@
 @preconcurrency import AppKit
 import ArgumentParser
 import Foundation
-import LstnrCore
+import VaraCore
 
 @main
-struct Lstnr: AsyncParsableCommand {
+struct Vara: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "lstnr",
+        commandName: "vara",
         abstract: "Local dictation tool with pluggable ASR backends.",
         subcommands: [Transcribe.self, Dictate.self],
         defaultSubcommand: Transcribe.self

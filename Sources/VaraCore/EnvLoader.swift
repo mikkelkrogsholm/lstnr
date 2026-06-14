@@ -53,8 +53,8 @@ public enum EnvLoader {
         }
         let home = FileManager.default.homeDirectoryForCurrentUser
         let candidates = [
-            home.appendingPathComponent(".lstnr/.env"),
-            home.appendingPathComponent(".config/lstnr/.env"),
+            home.appendingPathComponent(".vara/.env"),
+            home.appendingPathComponent(".config/vara/.env"),
             URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
                 .appendingPathComponent(".env"),
         ]

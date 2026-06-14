@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "lstnr",
+    name: "vara",
     platforms: [.macOS(.v13)],
     products: [
-        .library(name: "LstnrCore", targets: ["LstnrCore"]),
-        .executable(name: "lstnr", targets: ["LstnrCLI"]),
+        .library(name: "VaraCore", targets: ["VaraCore"]),
+        .executable(name: "vara", targets: ["VaraCLI"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.4.0"),
@@ -16,24 +16,24 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "LstnrCore",
+            name: "VaraCore",
             dependencies: [
                 .product(name: "WhisperKit", package: "WhisperKit"),
             ],
-            path: "Sources/LstnrCore"
+            path: "Sources/VaraCore"
         ),
         .executableTarget(
-            name: "LstnrCLI",
+            name: "VaraCLI",
             dependencies: [
-                "LstnrCore",
+                "VaraCore",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            path: "Sources/LstnrCLI"
+            path: "Sources/VaraCLI"
         ),
         .testTarget(
-            name: "LstnrCoreTests",
-            dependencies: ["LstnrCore"],
-            path: "Tests/LstnrCoreTests"
+            name: "VaraCoreTests",
+            dependencies: ["VaraCore"],
+            path: "Tests/VaraCoreTests"
         ),
     ]
 )

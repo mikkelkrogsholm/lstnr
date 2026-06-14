@@ -1,17 +1,17 @@
 import AppKit
-import LstnrCore
+import VaraCore
 import Security
 import ServiceManagement
 import SwiftUI
 
 extension Notification.Name {
-    static let lstnrCredentialsDidChange = Notification.Name("dk.56n.lstnr.credentialsDidChange")
-    static let lstnrSettingsDidChange = Notification.Name("dk.56n.lstnr.settingsDidChange")
+    static let varaCredentialsDidChange = Notification.Name("dk.56n.vara.credentialsDidChange")
+    static let varaSettingsDidChange = Notification.Name("dk.56n.vara.settingsDidChange")
 }
 
-struct LstnrSettingsView: View {
-    @State private var draft: LstnrSettingsDraft
-    @State private var selectedSection: LstnrSettingsSection = .dictation
+struct VaraSettingsView: View {
+    @State private var draft: VaraSettingsDraft
+    @State private var selectedSection: VaraSettingsSection = .dictation
     @State private var elevenLabsAPIKey: String = ""
     @State private var elevenLabsCredentialStatus: String?
     @State private var groqAPIKey: String = ""
@@ -22,13 +22,13 @@ struct LstnrSettingsView: View {
     @State private var anthropicCredentialStatus: String?
     @State private var accessibilityGranted = false
     @State private var editingModeIndex: Int?
-    private let store: LstnrSettingsStore?
-    private let credentialStore: LstnrCredentialStoring?
+    private let store: VaraSettingsStore?
+    private let credentialStore: VaraCredentialStoring?
 
     init(
-        draft: LstnrSettingsDraft? = nil,
-        store: LstnrSettingsStore? = LstnrSettingsStore(),
-        credentialStore: LstnrCredentialStoring? = LstnrKeychainCredentialStore()
+        draft: VaraSettingsDraft? = nil,
+        store: VaraSettingsStore? = VaraSettingsStore(),
+        credentialStore: VaraCredentialStoring? = VaraKeychainCredentialStore()
     ) {
         self.store = store
         self.credentialStore = credentialStore
@@ -38,7 +38,7 @@ struct LstnrSettingsView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(LstnrSettingsSection.allCases, selection: $selectedSection) { section in
+            List(VaraSettingsSection.allCases, selection: $selectedSection) { section in
                 Label(section.title, systemImage: section.systemImage)
                     .tag(section)
             }
@@ -82,8 +82,8 @@ struct LstnrSettingsView: View {
         }
         .onChange(of: draft) { _, newDraft in
             guard let store else { return }
-            try? store.save(LstnrAppSettings(draft: newDraft))
-            NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+            try? store.save(VaraAppSettings(draft: newDraft))
+            NotificationCenter.default.post(name: .varaSettingsDidChange, object: nil)
         }
         .onAppear {
             loadCredentials()
@@ -92,7 +92,7 @@ struct LstnrSettingsView: View {
                 selectedSection = pendingSection
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .lstnrShowSettingsSection)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .varaShowSettingsSection)) { _ in
             if let pendingSection = SettingsDeepLink.consumePending() {
                 selectedSection = pendingSection
             }
@@ -102,7 +102,7 @@ struct LstnrSettingsView: View {
     private var dictationSection: some View {
         Section {
             Picker(selection: $draft.shortcut) {
-                ForEach(LstnrShortcutChoice.allCases) { shortcut in
+                ForEach(VaraShortcutChoice.allCases) { shortcut in
                     Text(shortcut.title).tag(shortcut)
                 }
             } label: {
@@ -116,7 +116,7 @@ struct LstnrSettingsView: View {
             shortcutAccessRow
 
             Picker(selection: $draft.language) {
-                ForEach(LstnrLanguageChoice.allCases) { language in
+                ForEach(VaraLanguageChoice.allCases) { language in
                     Text(language.title).tag(language)
                 }
             } label: {
@@ -193,8 +193,8 @@ struct LstnrSettingsView: View {
 
     /// The engine cards for one tier. Groq leads the Recommended grid since it is
     /// the zero-cost default; the rest keep their declaration order.
-    private func engineGrid(for tier: LstnrEngineTier) -> some View {
-        let backends = LstnrSpeechBackendChoice.allCases
+    private func engineGrid(for tier: VaraEngineTier) -> some View {
+        let backends = VaraSpeechBackendChoice.allCases
             .filter { $0.tier == tier }
             .sorted { lhs, _ in lhs == .groqWhisper }
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -210,12 +210,12 @@ struct LstnrSettingsView: View {
         }
     }
 
-    private func engineKeyStatus(for backend: LstnrSpeechBackendChoice) -> EngineCard.KeyStatus {
+    private func engineKeyStatus(for backend: VaraSpeechBackendChoice) -> EngineCard.KeyStatus {
         guard let provider = backend.credentialProvider else { return .notNeeded }
         return hasKey(for: provider) ? .present : .missing
     }
 
-    private func hasKey(for provider: LstnrCredentialProvider) -> Bool {
+    private func hasKey(for provider: VaraCredentialProvider) -> Bool {
         let savedKey: String? = switch provider {
         case .elevenLabs: elevenLabsAPIKey
         case .groq: groqAPIKey
@@ -227,7 +227,7 @@ struct LstnrSettingsView: View {
     }
 
     @ViewBuilder
-    private func apiKeySection(for provider: LstnrCredentialProvider) -> some View {
+    private func apiKeySection(for provider: VaraCredentialProvider) -> some View {
         Section {
             SecureField(text: keyBinding(for: provider)) {
                 Text("API key", comment: "API key field label")
@@ -395,7 +395,7 @@ struct LstnrSettingsView: View {
         }
     }
 
-    private func credentialProvider(for provider: LLMProvider) -> LstnrCredentialProvider? {
+    private func credentialProvider(for provider: LLMProvider) -> VaraCredentialProvider? {
         switch provider {
         case .openAI: .openAI
         case .groq: .groq
@@ -484,7 +484,7 @@ struct LstnrSettingsView: View {
 
             Button {
                 UserDefaults.standard.set(false, forKey: VaraOnboarding.completedDefaultsKey)
-                NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+                NotificationCenter.default.post(name: .varaSettingsDidChange, object: nil)
             } label: {
                 Text("Show welcome guide again", comment: "Reopen onboarding button")
             }
@@ -496,7 +496,7 @@ struct LstnrSettingsView: View {
     }
 
     private func loadCredentials() {
-        for provider in LstnrCredentialProvider.allCases {
+        for provider in VaraCredentialProvider.allCases {
             do {
                 let key = try credentialStore?.credential(for: provider) ?? ""
                 keyBinding(for: provider).wrappedValue = key
@@ -509,7 +509,7 @@ struct LstnrSettingsView: View {
         }
     }
 
-    private func keyBinding(for provider: LstnrCredentialProvider) -> Binding<String> {
+    private func keyBinding(for provider: VaraCredentialProvider) -> Binding<String> {
         switch provider {
         case .elevenLabs: $elevenLabsAPIKey
         case .groq: $groqAPIKey
@@ -518,7 +518,7 @@ struct LstnrSettingsView: View {
         }
     }
 
-    private func keyStatusBinding(for provider: LstnrCredentialProvider) -> Binding<String?> {
+    private func keyStatusBinding(for provider: VaraCredentialProvider) -> Binding<String?> {
         switch provider {
         case .elevenLabs: $elevenLabsCredentialStatus
         case .groq: $groqCredentialStatus
@@ -527,11 +527,11 @@ struct LstnrSettingsView: View {
         }
     }
 
-    private func keyStatus(for provider: LstnrCredentialProvider) -> String? {
+    private func keyStatus(for provider: VaraCredentialProvider) -> String? {
         keyStatusBinding(for: provider).wrappedValue
     }
 
-    private func saveKey(for provider: LstnrCredentialProvider) {
+    private func saveKey(for provider: VaraCredentialProvider) {
         let binding = keyBinding(for: provider)
         let trimmedKey = binding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -541,18 +541,18 @@ struct LstnrSettingsView: View {
             keyStatusBinding(for: provider).wrappedValue = trimmedKey.isEmpty
                 ? String(localized: "Removed", comment: "Key status")
                 : String(localized: "Saved", comment: "Key status")
-            NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
+            NotificationCenter.default.post(name: .varaCredentialsDidChange, object: nil)
         } catch {
             keyStatusBinding(for: provider).wrappedValue = String(localized: "Save failed", comment: "Key status")
         }
     }
 
-    private func deleteKey(for provider: LstnrCredentialProvider) {
+    private func deleteKey(for provider: VaraCredentialProvider) {
         do {
             try credentialStore?.deleteCredential(for: provider)
             keyBinding(for: provider).wrappedValue = ""
             keyStatusBinding(for: provider).wrappedValue = String(localized: "Removed", comment: "Key status")
-            NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
+            NotificationCenter.default.post(name: .varaCredentialsDidChange, object: nil)
         } catch {
             keyStatusBinding(for: provider).wrappedValue = String(localized: "Remove failed", comment: "Key status")
         }
@@ -576,13 +576,13 @@ struct LstnrSettingsView: View {
     private func refreshAccessibility(prompt: Bool) {
         accessibilityGranted = GlobalHotkey.hasAccessibility(prompt: prompt)
         if accessibilityGranted {
-            NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+            NotificationCenter.default.post(name: .varaSettingsDidChange, object: nil)
         }
     }
 }
 
 private struct ShortcutRecorderButton: View {
-    @Binding var shortcut: LstnrShortcutChoice
+    @Binding var shortcut: VaraShortcutChoice
     var onRecorded: () -> Void
     @State private var activeKeys: Set<GlobalHotkey.Key> = []
     @State private var capturedKeys: Set<GlobalHotkey.Key> = []
@@ -643,7 +643,7 @@ private struct ShortcutRecorderButton: View {
     private func record(event: NSEvent) {
         guard isRecording else { return }
         guard let key = GlobalHotkey.Key(rawValue: UInt16(event.keyCode)) else { return }
-        guard LstnrShortcutChoice.recordableKeys.contains(key) else { return }
+        guard VaraShortcutChoice.recordableKeys.contains(key) else { return }
 
         if activeKeys.contains(key) {
             activeKeys.remove(key)
@@ -654,7 +654,7 @@ private struct ShortcutRecorderButton: View {
         capturedKeys.formUnion(activeKeys)
 
         guard activeKeys.isEmpty else { return }
-        guard let recordedShortcut = LstnrShortcutChoice(keys: capturedKeys) else {
+        guard let recordedShortcut = VaraShortcutChoice(keys: capturedKeys) else {
             stopRecording(status: String(localized: "Unsupported shortcut: \(Self.title(for: capturedKeys)).", comment: "Shortcut recorder status"))
             return
         }
@@ -711,5 +711,5 @@ private extension GlobalHotkey.Key {
 }
 
 #Preview("Settings") {
-    LstnrSettingsView(draft: .preview, store: nil)
+    VaraSettingsView(draft: .preview, store: nil)
 }

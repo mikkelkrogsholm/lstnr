@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct LstnrApp: App {
+struct VaraApp: App {
     @State private var state = AppState()
 
     var body: some Scene {
@@ -26,7 +26,7 @@ struct LstnrApp: App {
         .defaultSize(width: 640, height: 420)
 
         Settings {
-            LstnrSettingsView()
+            VaraSettingsView()
         }
     }
 }
@@ -39,7 +39,7 @@ private struct MainWindowRoot: View {
 
     var body: some View {
         if onboardingCompleted {
-            LstnrDashboardView(state: state)
+            VaraDashboardView(state: state)
         } else {
             OnboardingView(state: state)
         }

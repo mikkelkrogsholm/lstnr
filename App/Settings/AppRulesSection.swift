@@ -1,13 +1,13 @@
 // Per-app automatic mode rules.
 
 import AppKit
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Lists per-app mode rules (with delete) and pickers to add a rule mapping a
 /// running app to a mode. All mutations go through the shared `draft.appModeRules`.
 struct AppRulesSection: View {
-    @Binding var draft: LstnrSettingsDraft
+    @Binding var draft: VaraSettingsDraft
 
     @State private var newRuleBundleID: String?
     @State private var newRuleModeID: UUID?

@@ -1,13 +1,13 @@
 // Model picker + download flow for the on-device WhisperKit engine.
 
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Model picker shown only when the on-device WhisperKit engine is selected.
 /// Selecting a model that isn't cached yet prompts to download it (with a
 /// progress bar) up front, rather than stalling the first dictation.
 struct WhisperKitModelSection: View {
-    @Binding var draft: LstnrSettingsDraft
+    @Binding var draft: VaraSettingsDraft
 
     // WhisperKit model download flow (confirm dialog + progress).
     @State private var whisperKitPendingModel: String?

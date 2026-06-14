@@ -1,6 +1,6 @@
 import Foundation
 
-final class LstnrSettingsStore {
+final class VaraSettingsStore {
     private let defaults: UserDefaults
     private let key: String
     private let decoder = JSONDecoder()
@@ -8,21 +8,21 @@ final class LstnrSettingsStore {
 
     init(
         defaults: UserDefaults = .standard,
-        key: String = "dk.56n.lstnr.settings.v1"
+        key: String = "dk.56n.vara.settings.v1"
     ) {
         self.defaults = defaults
         self.key = key
     }
 
-    func load() -> LstnrAppSettings {
+    func load() -> VaraAppSettings {
         guard let data = defaults.data(forKey: key) else {
             return .defaults
         }
 
-        return (try? decoder.decode(LstnrAppSettings.self, from: data)) ?? .defaults
+        return (try? decoder.decode(VaraAppSettings.self, from: data)) ?? .defaults
     }
 
-    func save(_ settings: LstnrAppSettings) throws {
+    func save(_ settings: VaraAppSettings) throws {
         let data = try encoder.encode(settings)
         defaults.set(data, forKey: key)
     }

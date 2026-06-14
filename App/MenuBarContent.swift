@@ -1,4 +1,4 @@
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Vara's menu bar popover: status, mode quick-switch, dictation toggle,

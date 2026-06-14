@@ -1,7 +1,7 @@
 import AppKit
 import AVFoundation
 import Foundation
-import LstnrCore
+import VaraCore
 
 // The push-to-talk dictation flow: begin/end/toggle/cancel, the DictationSession
 // builder and LLM processor, HUD presentation, and the audio instrumentation,
@@ -29,7 +29,7 @@ extension AppState {
 
     /// Changes the default mode. Only `activeMode` (and the HUD, if a dictation
     /// is in flight) depend on the selection — the backend and hotkey do not — so
-    /// this deliberately does NOT post `.lstnrSettingsDidChange`, which would
+    /// this deliberately does NOT post `.varaSettingsDidChange`, which would
     /// rebuild the backend/hotkey and could strand an in-progress recording.
     func selectMode(_ mode: DictationMode) {
         guard settings.selectedModeID != mode.id else { return }
@@ -210,7 +210,7 @@ extension AppState {
     }
 
     nonisolated private static func chatClientFactory(
-        credentialStore: LstnrKeychainCredentialStore,
+        credentialStore: VaraKeychainCredentialStore,
         customEndpoints: [CustomLLMEndpoint]
     ) -> DictationModeProcessor.ChatClientFactory {
         { selection in
@@ -260,8 +260,8 @@ extension AppState {
     }
 
     nonisolated private static func resolveLLMKey(
-        _ store: LstnrKeychainCredentialStore,
-        _ provider: LstnrCredentialProvider,
+        _ store: VaraKeychainCredentialStore,
+        _ provider: VaraCredentialProvider,
         env: String
     ) throws -> String {
         if let key = try? store.credential(for: provider), !key.isEmpty {

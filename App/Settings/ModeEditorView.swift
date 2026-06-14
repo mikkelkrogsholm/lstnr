@@ -1,4 +1,4 @@
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Sheet for creating/editing a dictation mode: name, symbol, behavior,

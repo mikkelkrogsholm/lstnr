@@ -1,5 +1,5 @@
 import Foundation
-import LstnrCore
+import VaraCore
 
 // Dictation history (reload/delete/clear), transcript copy/reinsert, debug-log
 // management, and the onboarding settings/credential mutations.
@@ -87,24 +87,24 @@ extension AppState {
     }
 
     /// Mutates, persists and broadcasts settings — used by onboarding.
-    func updateSettings(_ mutate: (inout LstnrAppSettings) -> Void) {
+    func updateSettings(_ mutate: (inout VaraAppSettings) -> Void) {
         var updated = settings
         mutate(&updated)
         settings = updated
         try? settingsStore.save(updated)
-        NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+        NotificationCenter.default.post(name: .varaSettingsDidChange, object: nil)
     }
 
     /// Saves an API key from onboarding and reloads configuration.
-    func saveCredential(_ key: String, for provider: LstnrCredentialProvider) {
+    func saveCredential(_ key: String, for provider: VaraCredentialProvider) {
         try? credentialStore.saveCredential(
             key.trimmingCharacters(in: .whitespacesAndNewlines),
             for: provider
         )
-        NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
+        NotificationCenter.default.post(name: .varaCredentialsDidChange, object: nil)
     }
 
-    func savedCredential(for provider: LstnrCredentialProvider) -> String {
+    func savedCredential(for provider: VaraCredentialProvider) -> String {
         (try? credentialStore.credential(for: provider)) ?? ""
     }
 }

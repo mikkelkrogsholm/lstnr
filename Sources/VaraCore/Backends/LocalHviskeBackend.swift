@@ -197,7 +197,7 @@ private extension LocalHviskeBackend {
     static var applicationSupportURL: URL {
         let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        return baseURL.appendingPathComponent("lstnr", isDirectory: true)
+        return baseURL.appendingPathComponent("vara", isDirectory: true)
     }
 
     static var managedVenvURL: URL {
@@ -210,12 +210,12 @@ private extension LocalHviskeBackend {
 
     static var spikeVenvURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".cache/lstnr-hviske-spike/venv", isDirectory: true)
+            .appendingPathComponent(".cache/vara-hviske-spike/venv", isDirectory: true)
     }
 
     static var spikeHFHomeURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".cache/lstnr-hviske-spike/hf", isDirectory: true)
+            .appendingPathComponent(".cache/vara-hviske-spike/hf", isDirectory: true)
     }
 
     func materializeAudioFile(from audio: SpeechToTextAudio) async throws -> MaterializedAudio {
@@ -236,7 +236,7 @@ private extension LocalHviskeBackend {
             }
 
             let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("lstnr-hviske-\(UUID().uuidString).wav")
+                .appendingPathComponent("vara-hviske-\(UUID().uuidString).wav")
             try Self.writePCM16WAV(data: pcmData, sampleRate: sampleRate, to: tempURL)
             return MaterializedAudio(
                 url: tempURL,
@@ -250,7 +250,7 @@ private extension LocalHviskeBackend {
             return preferredURL
         }
 
-        if let envPython = ProcessInfo.processInfo.environment["LSTNR_HVISKE_PYTHON"] {
+        if let envPython = ProcessInfo.processInfo.environment["VARA_HVISKE_PYTHON"] {
             let url = URL(fileURLWithPath: NSString(string: envPython).expandingTildeInPath)
             if FileManager.default.isExecutableFile(atPath: url.path) {
                 return url
@@ -268,7 +268,7 @@ private extension LocalHviskeBackend {
         if let preferredURL {
             return preferredURL
         }
-        if let envHFHome = ProcessInfo.processInfo.environment["LSTNR_HVISKE_HF_HOME"] {
+        if let envHFHome = ProcessInfo.processInfo.environment["VARA_HVISKE_HF_HOME"] {
             return URL(fileURLWithPath: NSString(string: envHFHome).expandingTildeInPath)
         }
         if pythonURL.path.hasPrefix(spikeVenvURL.path), FileManager.default.fileExists(atPath: spikeHFHomeURL.path) {

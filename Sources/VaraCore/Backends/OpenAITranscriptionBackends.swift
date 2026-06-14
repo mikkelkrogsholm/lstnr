@@ -65,7 +65,7 @@ public struct OpenAIAudioTranscriptionBackend: ASRBackend, SpeechToTextBackend {
 
     public func transcribe(audio: URL, language: String?) async throws -> TranscriptionResult {
         let endpoint = baseURL.appendingPathComponent("v1/audio/transcriptions")
-        let boundary = "----lstnr-\(UUID().uuidString)"
+        let boundary = "----vara-\(UUID().uuidString)"
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -396,7 +396,7 @@ private extension OpenAIAudioTranscriptionBackend {
         }
 
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("lstnr-openai-\(UUID().uuidString)")
+            .appendingPathComponent("vara-openai-\(UUID().uuidString)")
             .appendingPathExtension("wav")
         try Self.writePCM16WAV(data: pcm, sampleRate: sampleRate, to: url)
         let duration = Double(pcm.count / 2) / Double(sampleRate)

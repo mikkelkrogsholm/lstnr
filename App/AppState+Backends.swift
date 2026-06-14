@@ -1,5 +1,5 @@
 import Foundation
-import LstnrCore
+import VaraCore
 
 // Speech-to-text backend wiring: picks and builds the active backend and
 // resolves the API keys each provider needs.

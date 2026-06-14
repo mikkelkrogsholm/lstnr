@@ -12,10 +12,10 @@
 # WHAT IT DOES (idempotent — safe to re-run):
 #   1. Finds a bootstrap python3 (same search order the app used to use).
 #   2. Creates a venv at:
-#        ~/Library/Application Support/lstnr/hviske-venv
+#        ~/Library/Application Support/vara/hviske-venv
 #   3. Installs torch / transformers==5.4.0 / soundfile / huggingface_hub.
 #   4. Downloads the model syvai/hviske-v5.3 @ a pinned revision into:
-#        ~/Library/Application Support/lstnr/models/huggingface
+#        ~/Library/Application Support/vara/models/huggingface
 #   5. Verifies both paths exist, then prints the next step.
 #
 # These are the EXACT paths LocalHviskeBackend.runtimeStatus() checks, so after
@@ -24,20 +24,20 @@
 # ALTERNATIVE (advanced): if you already have a working python + model elsewhere,
 # you can skip this script and instead point Vara at them with environment
 # variables before launching it:
-#     export LSTNR_HVISKE_PYTHON=/path/to/python
-#     export LSTNR_HVISKE_HF_HOME=/path/to/huggingface
+#     export VARA_HVISKE_PYTHON=/path/to/python
+#     export VARA_HVISKE_HF_HOME=/path/to/huggingface
 #   NOTE: with the env-var route, Vara transcribes correctly but Settings may
 #   still show "not installed" — runtimeStatus() does not consult those vars.
 #   That is a known cosmetic gap; transcription still works.
 
 set -euo pipefail
 
-# ---- Constants (mirror Sources/LstnrCore/Backends/LocalHviskeBackend.swift) ----
+# ---- Constants (mirror Sources/VaraCore/Backends/LocalHviskeBackend.swift) ----
 MODEL_ID="syvai/hviske-v5.3"
 MODEL_REVISION="574bc158f3e8ce91af7995be2928f529a05c24b6"
 TRANSFORMERS_PIN="transformers==5.4.0"
 
-APP_SUPPORT="$HOME/Library/Application Support/lstnr"
+APP_SUPPORT="$HOME/Library/Application Support/vara"
 VENV_DIR="$APP_SUPPORT/hviske-venv"
 HF_HOME="$APP_SUPPORT/models/huggingface"
 VENV_PYTHON="$VENV_DIR/bin/python"
@@ -58,11 +58,11 @@ echo
 
 # ---- 1. Find a bootstrap python3 ----------------------------------------------
 # Search order matches the (now removed) in-app resolveBootstrapPythonURL:
-#   $LSTNR_HVISKE_BOOTSTRAP_PYTHON, /opt/miniconda3, /usr/local, /opt/homebrew,
+#   $VARA_HVISKE_BOOTSTRAP_PYTHON, /opt/miniconda3, /usr/local, /opt/homebrew,
 #   /usr/bin, then whatever python3 is on PATH.
 find_bootstrap_python() {
     local candidates=(
-        "${LSTNR_HVISKE_BOOTSTRAP_PYTHON:-}"
+        "${VARA_HVISKE_BOOTSTRAP_PYTHON:-}"
         "/opt/miniconda3/bin/python3"
         "/usr/local/bin/python3"
         "/opt/homebrew/bin/python3"
@@ -84,7 +84,7 @@ find_bootstrap_python() {
 
 if ! BOOTSTRAP_PYTHON="$(find_bootstrap_python)"; then
     err "No python3 found. Install Python 3 (e.g. 'brew install python') and re-run."
-    err "Or set LSTNR_HVISKE_BOOTSTRAP_PYTHON to a python3 you trust, then re-run."
+    err "Or set VARA_HVISKE_BOOTSTRAP_PYTHON to a python3 you trust, then re-run."
     exit 1
 fi
 ok "Bootstrap python: $BOOTSTRAP_PYTHON"

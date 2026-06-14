@@ -1,12 +1,12 @@
 import Foundation
-import LstnrCore
+import VaraCore
 
 /// How an engine or LLM provider is presented in Settings: the mainstream,
 /// zero-setup picks (Groq/OpenAI — bring one key) vs. the advanced integrations
 /// that need the user to do the last bit of setup themselves (ElevenLabs,
 /// on-device Hviske, Ollama, custom endpoints). Tiering is about last-mile setup
 /// and the zero-cost Groq default — not local-vs-cloud.
-enum LstnrEngineTier {
+enum VaraEngineTier {
     case recommended
     case advanced
 
@@ -20,10 +20,10 @@ enum LstnrEngineTier {
 }
 
 /// Presentation metadata for the STT engine cards in Settings and onboarding.
-extension LstnrSpeechBackendChoice {
+extension VaraSpeechBackendChoice {
     /// Mainstream cloud engines (Groq, all OpenAI variants) are Recommended;
     /// ElevenLabs and on-device Hviske are Advanced integrations.
-    var tier: LstnrEngineTier {
+    var tier: VaraEngineTier {
         switch self {
         case .groqWhisper,
              .openAIRealtimeWhisper,
@@ -51,7 +51,7 @@ extension LstnrSpeechBackendChoice {
     }
 
     /// Which API key the engine needs; nil for local engines.
-    var credentialProvider: LstnrCredentialProvider? {
+    var credentialProvider: VaraCredentialProvider? {
         switch self {
         case .elevenLabsScribe: .elevenLabs
         case .groqWhisper: .groq
@@ -104,7 +104,7 @@ func whisperKitModelLabel(_ modelID: String) -> String {
     }
 }
 
-extension LstnrCredentialProvider {
+extension VaraCredentialProvider {
     var displayTitle: String {
         switch self {
         case .elevenLabs: "ElevenLabs"
@@ -129,7 +129,7 @@ extension LLMProvider {
     /// both transcription and cleanup; Groq is the zero-cost default). Anthropic
     /// is cloud but a bring-your-own-paid-key, and Ollama/custom need local
     /// setup, so all three are Advanced.
-    var tier: LstnrEngineTier {
+    var tier: VaraEngineTier {
         switch self {
         case .groq, .openAI:
             .recommended

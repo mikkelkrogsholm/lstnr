@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import LstnrCore
+@testable import VaraCore
 
 final class OpenAITranscriptionBackendTests: XCTestCase {
     func testGPT4OTranscribeCapabilitiesDescribeNetworkFileTranscription() {

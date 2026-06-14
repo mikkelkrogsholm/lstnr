@@ -1,7 +1,7 @@
 import Foundation
 
 extension Notification.Name {
-    static let lstnrShowSettingsSection = Notification.Name("dk.56n.lstnr.showSettingsSection")
+    static let varaShowSettingsSection = Notification.Name("dk.56n.vara.showSettingsSection")
 }
 
 /// Lets any view open the Settings window at a specific section: call
@@ -9,18 +9,18 @@ extension Notification.Name {
 /// settings view consumes the pending section both on appear (fresh window)
 /// and via notification (window already open).
 enum SettingsDeepLink {
-    private static let pendingSectionKey = "dk.56n.lstnr.settings.pendingSection"
+    private static let pendingSectionKey = "dk.56n.vara.settings.pendingSection"
 
-    static func request(_ section: LstnrSettingsSection) {
+    static func request(_ section: VaraSettingsSection) {
         UserDefaults.standard.set(section.rawValue, forKey: pendingSectionKey)
-        NotificationCenter.default.post(name: .lstnrShowSettingsSection, object: nil)
+        NotificationCenter.default.post(name: .varaShowSettingsSection, object: nil)
     }
 
-    static func consumePending() -> LstnrSettingsSection? {
+    static func consumePending() -> VaraSettingsSection? {
         guard let rawValue = UserDefaults.standard.string(forKey: pendingSectionKey) else {
             return nil
         }
         UserDefaults.standard.removeObject(forKey: pendingSectionKey)
-        return LstnrSettingsSection(rawValue: rawValue)
+        return VaraSettingsSection(rawValue: rawValue)
     }
 }

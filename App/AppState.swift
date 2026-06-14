@@ -2,7 +2,7 @@ import AppKit
 import AVFoundation
 import CoreGraphics
 import Foundation
-import LstnrCore
+import VaraCore
 import Observation
 
 @MainActor
@@ -14,7 +14,7 @@ final class AppState {
     var lastError: String?
     var statusMessage: String = String(localized: "Starting …", comment: "Status message at launch")
     var historyItems: [DictationHistoryItem] = []
-    var settings: LstnrAppSettings
+    var settings: VaraAppSettings
     var microphoneName: String
     var microphonePermissionStatus: String
     var debugLogEntries: [AppDebugLogEntry] = []
@@ -42,8 +42,8 @@ final class AppState {
     /// blocks the dictation hotkey system-wide). Tracked in AppState+Hotkey to
     /// avoid re-reporting the same holder and to clear the warning when released.
     var lastReportedSecureInputPID: pid_t?
-    let credentialStore = LstnrKeychainCredentialStore()
-    let settingsStore = LstnrSettingsStore()
+    let credentialStore = VaraKeychainCredentialStore()
+    let settingsStore = VaraSettingsStore()
     var historyStore: DictationHistoryStore
     let pendingHistory = PendingDictationHistoryStore()
     let hudController: RecordingHUDWindowController
@@ -87,7 +87,7 @@ final class AppState {
         }
     }
 
-    private func hasLLMKey(_ provider: LstnrCredentialProvider) -> Bool {
+    private func hasLLMKey(_ provider: VaraCredentialProvider) -> Bool {
         if let key = try? credentialStore.credential(for: provider), !key.isEmpty {
             return true
         }
@@ -107,6 +107,11 @@ final class AppState {
     private var ollamaProbeTimer: Timer?
 
     init() {
+        // One-time data migration from the old "lstnr" identity. MUST run before
+        // settings load and before any App Support access (history/debug.log), so
+        // it is the very first statement here. Idempotent and never throws.
+        VaraMigration.runIfNeeded()
+
         hudController = RecordingHUDWindowController(state: hudState, placement: .insertionPoint)
         appNapActivity = ProcessInfo.processInfo.beginActivity(
             options: [.userInitiated, .latencyCritical],
@@ -121,14 +126,14 @@ final class AppState {
             maxRecentCount: loadedSettings.historyLimit
         )
         credentialsObserver = NotificationCenter.default.addObserver(
-            forName: .lstnrCredentialsDidChange,
+            forName: .varaCredentialsDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.reloadConfiguration() }
         }
         settingsObserver = NotificationCenter.default.addObserver(
-            forName: .lstnrSettingsDidChange,
+            forName: .varaSettingsDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -261,7 +266,7 @@ final class AppState {
         let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return baseURL
-            .appendingPathComponent("lstnr", isDirectory: true)
+            .appendingPathComponent("vara", isDirectory: true)
             .appendingPathComponent("dictation-history.json")
     }
 
@@ -269,7 +274,7 @@ final class AppState {
         let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return baseURL
-            .appendingPathComponent("lstnr", isDirectory: true)
+            .appendingPathComponent("vara", isDirectory: true)
             .appendingPathComponent("debug.log")
     }
 
@@ -377,7 +382,7 @@ actor RecoverableAudioCapture {
         let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         let directory = baseURL
-            .appendingPathComponent("lstnr", isDirectory: true)
+            .appendingPathComponent("vara", isDirectory: true)
             .appendingPathComponent("recovered-audio", isDirectory: true)
         let stamp = ISO8601DateFormatter().string(from: Date())
             .replacingOccurrences(of: ":", with: "-")
@@ -632,7 +637,7 @@ enum LLMConfigurationError: Error, CustomStringConvertible {
     }
 }
 
-extension LstnrLanguageChoice {
+extension VaraLanguageChoice {
     var languageCode: String? {
         switch self {
         case .automatic: nil

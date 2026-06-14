@@ -1,7 +1,7 @@
 import Foundation
-import LstnrCore
+import VaraCore
 
-enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
+enum VaraSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
     case elevenLabsScribe
     case groqWhisper
     case openAIRealtimeWhisper
@@ -40,7 +40,7 @@ enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-enum LstnrSettingsSection: String, CaseIterable, Identifiable {
+enum VaraSettingsSection: String, CaseIterable, Identifiable {
     case dictation
     case engine
     case intelligence
@@ -73,7 +73,7 @@ enum LstnrSettingsSection: String, CaseIterable, Identifiable {
     }
 }
 
-enum LstnrShortcutChoice: String, CaseIterable, Codable, Identifiable {
+enum VaraShortcutChoice: String, CaseIterable, Codable, Identifiable {
     case rightCommand
     case leftCommand
     case rightOption
@@ -174,7 +174,7 @@ enum LstnrShortcutChoice: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-enum LstnrLanguageChoice: String, CaseIterable, Codable, Identifiable {
+enum VaraLanguageChoice: String, CaseIterable, Codable, Identifiable {
     case automatic
     case danish
     case english

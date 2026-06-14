@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "122514C60142226C4F37A7F3"
-               BuildableName = "Lstnr.app"
-               BlueprintName = "Lstnr"
-               ReferencedContainer = "container:Lstnr.xcodeproj">
+               BlueprintIdentifier = "775D42F0198A9B87172815B7"
+               BuildableName = "Vara.app"
+               BlueprintName = "Vara"
+               ReferencedContainer = "container:Vara.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "122514C60142226C4F37A7F3"
-            BuildableName = "Lstnr.app"
-            BlueprintName = "Lstnr"
-            ReferencedContainer = "container:Lstnr.xcodeproj">
+            BlueprintIdentifier = "775D42F0198A9B87172815B7"
+            BuildableName = "Vara.app"
+            BlueprintName = "Vara"
+            ReferencedContainer = "container:Vara.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -55,10 +55,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "122514C60142226C4F37A7F3"
-            BuildableName = "Lstnr.app"
-            BlueprintName = "Lstnr"
-            ReferencedContainer = "container:Lstnr.xcodeproj">
+            BlueprintIdentifier = "775D42F0198A9B87172815B7"
+            BuildableName = "Vara.app"
+            BlueprintName = "Vara"
+            ReferencedContainer = "container:Vara.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -74,10 +74,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "122514C60142226C4F37A7F3"
-            BuildableName = "Lstnr.app"
-            BlueprintName = "Lstnr"
-            ReferencedContainer = "container:Lstnr.xcodeproj">
+            BlueprintIdentifier = "775D42F0198A9B87172815B7"
+            BuildableName = "Vara.app"
+            BlueprintName = "Vara"
+            ReferencedContainer = "container:Vara.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

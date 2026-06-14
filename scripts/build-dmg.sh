@@ -30,15 +30,15 @@ set -euo pipefail
 # ---- Configuration -----------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PROJECT="$REPO_ROOT/Lstnr.xcodeproj"
-SCHEME="Lstnr"
+PROJECT="$REPO_ROOT/Vara.xcodeproj"
+SCHEME="Vara"
 CONFIGURATION="Release"
 APP_NAME="Vara"
 PRODUCT_NAME="Vara"
-BUNDLE_ID="dk.56n.lstnr"
+BUNDLE_ID="dk.56n.vara"
 TEAM_ID="3B7KHK6C9K"
-ENTITLEMENTS="$REPO_ROOT/App/Lstnr.entitlements"
-NOTARY_PROFILE="${LSTNR_NOTARY_PROFILE:-lstnr-notary}"
+ENTITLEMENTS="$REPO_ROOT/App/Vara.entitlements"
+NOTARY_PROFILE="${VARA_NOTARY_PROFILE:-vara-notary}"
 
 # Version comes from the Info.plist short version string so the DMG name tracks
 # the marketing version without a second source of truth.
@@ -256,7 +256,7 @@ else
         info "  Store credentials once (Apple ID + app-specific password):"
         info "    xcrun notarytool store-credentials \"$NOTARY_PROFILE\" \\"
         info "        --apple-id \"you@example.com\" --team-id $TEAM_ID --password <app-specific-pw>"
-        info "  (Set LSTNR_NOTARY_PROFILE to use a different profile name.)"
+        info "  (Set VARA_NOTARY_PROFILE to use a different profile name.)"
     fi
     echo
     info "Un-notarized DMG (fine for local install / testing): $DMG_PATH"

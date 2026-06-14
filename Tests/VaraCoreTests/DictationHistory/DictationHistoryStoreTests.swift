@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import LstnrCore
+@testable import VaraCore
 
 final class DictationHistoryStoreTests: XCTestCase {
     func testAddPersistsEveryNonEmptyDictationField() async throws {
@@ -163,7 +163,7 @@ private func makeHistoryFileURL(
     line: UInt = #line
 ) throws -> URL {
     let directoryURL = FileManager.default.temporaryDirectory
-        .appendingPathComponent("LstnrCoreTests", isDirectory: true)
+        .appendingPathComponent("VaraCoreTests", isDirectory: true)
         .appendingPathComponent(UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
     return directoryURL.appendingPathComponent("dictation-history.json")

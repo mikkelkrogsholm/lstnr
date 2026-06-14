@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import LstnrCore
+@testable import VaraCore
 
 final class DictationHistoryItemDecodingTests: XCTestCase {
     /// History written by older builds has no modeName/targetAppName keys and

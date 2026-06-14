@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import LstnrCore
+@testable import VaraCore
 
 final class LocalHviskeBackendTests: XCTestCase {
     func testCapabilitiesDescribeLocalFileOnlyTranscription() {
@@ -21,7 +21,7 @@ final class LocalHviskeBackendTests: XCTestCase {
     func testRuntimeStatusUsesPinnedHviskeSnapshotPath() {
         let status = LocalHviskeBackend.runtimeStatus()
 
-        XCTAssertTrue(status.hfHomeURL.path.contains("lstnr"))
+        XCTAssertTrue(status.hfHomeURL.path.contains("vara"))
         XCTAssertTrue(status.modelSnapshotURL.path.contains("models--syvai--hviske-v5.3"))
         XCTAssertTrue(status.modelSnapshotURL.path.hasSuffix(LocalHviskeBackend.modelRevision))
         XCTAssertEqual(status.isReady, status.hasPythonRuntime && status.hasModelSnapshot)
@@ -36,11 +36,11 @@ final class LocalHviskeBackendTests: XCTestCase {
 
         // Normally the managed HF home; a developer "spike" runtime is the only
         // other documented location runtimeStatus() may resolve to.
-        XCTAssertTrue(status.hfHomeURL.path.contains("lstnr/models/huggingface")
-            || status.hfHomeURL.path.contains("lstnr-hviske-spike"))
+        XCTAssertTrue(status.hfHomeURL.path.contains("vara/models/huggingface")
+            || status.hfHomeURL.path.contains("vara-hviske-spike"))
         if let pythonURL = status.pythonURL {
-            XCTAssertTrue(pythonURL.path.contains("lstnr/hviske-venv")
-                || pythonURL.path.contains("lstnr-hviske-spike"))
+            XCTAssertTrue(pythonURL.path.contains("vara/hviske-venv")
+                || pythonURL.path.contains("vara-hviske-spike"))
         }
     }
 }

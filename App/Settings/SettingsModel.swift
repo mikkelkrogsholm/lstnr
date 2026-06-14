@@ -1,10 +1,10 @@
 import Foundation
-import LstnrCore
+import VaraCore
 
-struct LstnrAppSettings: Codable, Hashable {
-    var shortcut: LstnrShortcutChoice
-    var language: LstnrLanguageChoice
-    var speechBackend: LstnrSpeechBackendChoice
+struct VaraAppSettings: Codable, Hashable {
+    var shortcut: VaraShortcutChoice
+    var language: VaraLanguageChoice
+    var speechBackend: VaraSpeechBackendChoice
     var whisperKitModel: String
     var pasteAutomatically: Bool
     var showHUD: Bool
@@ -17,7 +17,7 @@ struct LstnrAppSettings: Codable, Hashable {
     var appModeRules: [AppModeRule]
     var playSounds: Bool
 
-    static let defaults = LstnrAppSettings(
+    static let defaults = VaraAppSettings(
         shortcut: .rightCommand,
         language: .automatic,
         speechBackend: .groqWhisper,
@@ -39,9 +39,9 @@ struct LstnrAppSettings: Codable, Hashable {
     )
 
     init(
-        shortcut: LstnrShortcutChoice,
-        language: LstnrLanguageChoice,
-        speechBackend: LstnrSpeechBackendChoice,
+        shortcut: VaraShortcutChoice,
+        language: VaraLanguageChoice,
+        speechBackend: VaraSpeechBackendChoice,
         whisperKitModel: String,
         pasteAutomatically: Bool,
         showHUD: Bool,
@@ -75,7 +75,7 @@ struct LstnrAppSettings: Codable, Hashable {
         self.playSounds = playSounds
     }
 
-    init(draft: LstnrSettingsDraft) {
+    init(draft: VaraSettingsDraft) {
         self.init(
             shortcut: draft.shortcut,
             language: draft.language,
@@ -94,8 +94,8 @@ struct LstnrAppSettings: Codable, Hashable {
         )
     }
 
-    var draft: LstnrSettingsDraft {
-        LstnrSettingsDraft(
+    var draft: VaraSettingsDraft {
+        VaraSettingsDraft(
             shortcut: shortcut,
             language: language,
             speechBackend: speechBackend,
@@ -148,9 +148,9 @@ struct LstnrAppSettings: Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
-            shortcut: try container.decodeIfPresent(LstnrShortcutChoice.self, forKey: .shortcut) ?? Self.defaults.shortcut,
-            language: try container.decodeIfPresent(LstnrLanguageChoice.self, forKey: .language) ?? Self.defaults.language,
-            speechBackend: try container.decodeIfPresent(LstnrSpeechBackendChoice.self, forKey: .speechBackend) ?? Self.defaults.speechBackend,
+            shortcut: try container.decodeIfPresent(VaraShortcutChoice.self, forKey: .shortcut) ?? Self.defaults.shortcut,
+            language: try container.decodeIfPresent(VaraLanguageChoice.self, forKey: .language) ?? Self.defaults.language,
+            speechBackend: try container.decodeIfPresent(VaraSpeechBackendChoice.self, forKey: .speechBackend) ?? Self.defaults.speechBackend,
             whisperKitModel: try container.decodeIfPresent(String.self, forKey: .whisperKitModel) ?? Self.defaults.whisperKitModel,
             pasteAutomatically: try container.decodeIfPresent(Bool.self, forKey: .pasteAutomatically) ?? Self.defaults.pasteAutomatically,
             showHUD: try container.decodeIfPresent(Bool.self, forKey: .showHUD) ?? Self.defaults.showHUD,
@@ -166,10 +166,10 @@ struct LstnrAppSettings: Codable, Hashable {
     }
 }
 
-struct LstnrSettingsDraft: Hashable {
-    var shortcut: LstnrShortcutChoice
-    var language: LstnrLanguageChoice
-    var speechBackend: LstnrSpeechBackendChoice
+struct VaraSettingsDraft: Hashable {
+    var shortcut: VaraShortcutChoice
+    var language: VaraLanguageChoice
+    var speechBackend: VaraSpeechBackendChoice
     var whisperKitModel: String
     var pasteAutomatically: Bool
     var showHUD: Bool
@@ -182,5 +182,5 @@ struct LstnrSettingsDraft: Hashable {
     var appModeRules: [AppModeRule]
     var playSounds: Bool
 
-    static let preview = LstnrAppSettings.defaults.draft
+    static let preview = VaraAppSettings.defaults.draft
 }

@@ -1,9 +1,9 @@
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Vara's home window: status hero, mode picker, stats, try-it scratchpad and
 /// searchable history. Replaces the old developer-tool layout.
-struct LstnrDashboardView: View {
+struct VaraDashboardView: View {
     let state: AppState
     @State private var scratchpadText = ""
     @State private var searchText = ""
@@ -573,7 +573,7 @@ private struct HistoryRow: View {
             }
 
             HStack(spacing: 8) {
-                Text(LstnrDashboardView.rowTimestamp(for: item.createdAt))
+                Text(VaraDashboardView.rowTimestamp(for: item.createdAt))
                 if let modeName = item.modeName {
                     metaChip(modeName)
                 }
@@ -631,5 +631,5 @@ private struct HistoryRow: View {
 }
 
 #Preview("Dashboard") {
-    LstnrDashboardView(state: AppState())
+    VaraDashboardView(state: AppState())
 }

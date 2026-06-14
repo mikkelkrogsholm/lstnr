@@ -1,5 +1,5 @@
 import Foundation
-import LstnrCore
+import VaraCore
 
 extension DictationMode {
     /// User-facing name: localized for the built-in modes, literal for

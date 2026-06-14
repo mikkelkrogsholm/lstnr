@@ -8,7 +8,7 @@ struct EngineCard: View {
         case missing
     }
 
-    let backend: LstnrSpeechBackendChoice
+    let backend: VaraSpeechBackendChoice
     let isSelected: Bool
     let keyStatus: KeyStatus
     let select: () -> Void

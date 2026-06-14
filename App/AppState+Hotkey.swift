@@ -1,6 +1,6 @@
 import AppKit
 import Foundation
-import LstnrCore
+import VaraCore
 
 // Global hotkey lifecycle and the Accessibility permission it depends on,
 // plus secure-input / tap-blocked reporting and in-dictation key handling.

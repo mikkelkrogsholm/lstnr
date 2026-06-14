@@ -1,5 +1,5 @@
 import XCTest
-@testable import LstnrCore
+@testable import VaraCore
 
 final class TranscriptCleanupProviderTests: XCTestCase {
     func testRawProviderReturnsOriginalTextForRawMode() async throws {

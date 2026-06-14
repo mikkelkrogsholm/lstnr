@@ -1,7 +1,7 @@
 // Detect-and-guide section for the on-device Hviske runtime.
 
 import AppKit
-import LstnrCore
+import VaraCore
 import SwiftUI
 
 /// Detect-and-guide for on-device Hviske. The shipped, notarized app never
