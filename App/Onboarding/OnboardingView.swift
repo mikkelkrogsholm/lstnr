@@ -25,6 +25,15 @@ struct OnboardingView: View {
     @State private var isInstallingHviske = false
     @State private var hviskeInstallMessage: String?
     @State private var tryItText = ""
+    /// The transcript count at the moment the try-it step appeared. A real
+    /// dictation increments `state.lastTranscript`; typing into the editor does
+    /// not — so success is only declared when an ACTUAL dictation landed, never
+    /// on arbitrary typed text.
+    @State private var tryItBaselineTranscript = ""
+    @State private var didDictateSuccessfully = false
+    /// Bumped whenever a key is saved so the readiness gating (which reads the
+    /// keychain, not an observable property) re-evaluates immediately.
+    @State private var keyStateRevision = 0
     @FocusState private var tryItFocused: Bool
     @Environment(\.openURL) private var openURL
 
@@ -194,23 +203,28 @@ struct OnboardingView: View {
             }
 
             if let provider = state.settings.speechBackend.credentialProvider {
-                HStack(spacing: 8) {
-                    SecureField(text: $engineAPIKey) {
-                        Text(verbatim: "\(provider.displayTitle) API key")
-                    }
-                    .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        SecureField(text: $engineAPIKey) {
+                            Text(verbatim: "\(provider.displayTitle) API key")
+                        }
+                        .textFieldStyle(.roundedBorder)
 
-                    Button {
-                        state.saveCredential(engineAPIKey, for: provider)
-                    } label: {
-                        Text("Save", comment: "Onboarding save key button")
-                    }
-                    .disabled(engineAPIKey.isEmpty)
+                        Button {
+                            state.saveCredential(engineAPIKey, for: provider)
+                            keyStateRevision += 1
+                        } label: {
+                            Text("Save", comment: "Onboarding save key button")
+                        }
+                        .disabled(engineAPIKey.isEmpty)
 
-                    if hasEngineKey(state.settings.speechBackend) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                        if hasEngineKey(state.settings.speechBackend) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
                     }
+
+                    getKeyLink(for: provider)
                 }
             }
 
@@ -243,6 +257,13 @@ struct OnboardingView: View {
                         }
                     }
                 }
+            }
+
+            // Explain why Next is held back so the gating isn't a dead end.
+            if !selectedEngineUsable {
+                Text("Add this engine's key (or install Hviske) to continue.", comment: "Onboarding engine-not-ready hint")
+                    .font(.system(size: 12))
+                    .foregroundStyle(BSTheme.stateError)
             }
 
             Spacer()
@@ -286,31 +307,49 @@ struct OnboardingView: View {
             if let provider = state.settings.defaultLLM?.provider {
                 switch provider {
                 case .ollama:
-                    Label {
-                        Text("Combined with Hviske, everything runs on this Mac. Completely private.", comment: "Onboarding local LLM highlight")
-                    } icon: {
-                        Image(systemName: "lock.shield.fill")
+                    // Only claim the local-private chain when Ollama actually
+                    // answered its reachability probe; otherwise point the user at
+                    // starting it. Wording stays truthful (the app is not
+                    // sandboxed) — "sends nothing to the cloud", not OS isolation.
+                    if state.ollamaReachable == true {
+                        Label {
+                            Text("Combined with Hviske, this runs locally on your Mac — this chain sends nothing to the cloud.", comment: "Onboarding local LLM highlight")
+                        } icon: {
+                            Image(systemName: "lock.shield.fill")
+                        }
+                        .foregroundStyle(.green)
+                    } else {
+                        Label {
+                            Text("Ollama isn't reachable yet. Start it (ollama serve) — then this chain runs locally on your Mac.", comment: "Onboarding Ollama not running hint")
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        }
+                        .foregroundStyle(BSTheme.stateError)
                     }
-                    .foregroundStyle(.green)
                 case .openAI, .groq, .anthropic:
                     if let credentialProvider = onboardingCredentialProvider(provider) {
-                        HStack(spacing: 8) {
-                            SecureField(text: $llmAPIKey) {
-                                Text(verbatim: "\(credentialProvider.displayTitle) API key")
-                            }
-                            .textFieldStyle(.roundedBorder)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 8) {
+                                SecureField(text: $llmAPIKey) {
+                                    Text(verbatim: "\(credentialProvider.displayTitle) API key")
+                                }
+                                .textFieldStyle(.roundedBorder)
 
-                            Button {
-                                state.saveCredential(llmAPIKey, for: credentialProvider)
-                            } label: {
-                                Text("Save", comment: "Onboarding save key button")
-                            }
-                            .disabled(llmAPIKey.isEmpty)
+                                Button {
+                                    state.saveCredential(llmAPIKey, for: credentialProvider)
+                                    keyStateRevision += 1
+                                } label: {
+                                    Text("Save", comment: "Onboarding save key button")
+                                }
+                                .disabled(llmAPIKey.isEmpty)
 
-                            if !state.savedCredential(for: credentialProvider).isEmpty {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
+                                if !state.savedCredential(for: credentialProvider).isEmpty {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                }
                             }
+
+                            getKeyLink(for: credentialProvider)
                         }
                     }
                 case .custom:
@@ -347,9 +386,17 @@ struct OnboardingView: View {
                     RoundedRectangle(cornerRadius: BSTheme.cornerRadius, style: .continuous)
                         .strokeBorder(tryItFocused ? BSTheme.teal.opacity(0.6) : BSTheme.border)
                 }
-                .onAppear { tryItFocused = true }
+                .onAppear {
+                    tryItFocused = true
+                    // Snapshot the current transcript so only a NEW dictation (not
+                    // pre-existing history or typed text) counts as success.
+                    tryItBaselineTranscript = state.lastTranscript
+                    didDictateSuccessfully = false
+                }
 
-            if !tryItText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // Success only lights once a real dictation produced a transcript —
+            // observed via state.lastTranscript, never on arbitrary typed text.
+            if didDictateSuccessfully {
                 HStack(spacing: 10) {
                     EmberBurst()
                     Text("Vara is ready.", comment: "Onboarding success message")
@@ -357,11 +404,22 @@ struct OnboardingView: View {
                         .foregroundStyle(BSTheme.textPrimary)
                 }
                 .transition(.scale.combined(with: .opacity))
+            } else {
+                Text("Hold \(state.settings.shortcut.symbol) and speak — Vara inserts the text right here.", comment: "Onboarding try-it hint before first dictation")
+                    .font(.system(size: 12))
+                    .foregroundStyle(BSTheme.textMuted)
             }
 
             Spacer()
         }
-        .animation(.spring(duration: 0.4), value: tryItText.isEmpty)
+        .animation(.spring(duration: 0.4), value: didDictateSuccessfully)
+        .onChange(of: state.lastTranscript) { _, newValue in
+            // A real dictation landed: the transcript changed from the baseline
+            // and is non-empty. Typing in the editor never touches this value.
+            if !newValue.isEmpty, newValue != tryItBaselineTranscript {
+                didDictateSuccessfully = true
+            }
+        }
     }
 
     // MARK: Chrome
@@ -408,6 +466,9 @@ struct OnboardingView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(BSTheme.teal)
                     .keyboardShortcut(.defaultAction)
+                    // Don't let a user finish with a dead app: the chosen engine
+                    // must actually be usable. "Skip" stays as the escape hatch.
+                    .disabled(!selectedEngineUsable)
                 } else {
                     Button {
                         withAnimation(.spring(duration: 0.3)) {
@@ -416,6 +477,9 @@ struct OnboardingView: View {
                     } label: {
                         Text("Next", comment: "Onboarding next button")
                     }
+                    // Can't leave the engine step until the chosen engine can
+                    // transcribe — keeps the default Groq path the smooth one.
+                    .disabled(step == .engine && !selectedEngineUsable)
                     .buttonStyle(.borderedProminent)
                     .tint(BSTheme.teal)
                     .keyboardShortcut(.defaultAction)
@@ -478,12 +542,60 @@ struct OnboardingView: View {
         return ((try? EnvLoader.resolveForApp(provider.environmentVariableName)) ?? "").isEmpty == false
     }
 
+    /// Whether the chosen engine can actually transcribe right now: a cloud
+    /// engine needs its key saved (or in the environment); local Hviske needs
+    /// its runtime + model installed. Gates leaving the engine step and finishing
+    /// so a default-engine user can't end onboarding with a dead app.
+    private var selectedEngineUsable: Bool {
+        // Touch keyStateRevision so saving a key re-evaluates this gate (it reads
+        // the keychain, not an observable property).
+        _ = keyStateRevision
+        let backend = state.settings.speechBackend
+        if backend == .localHviske {
+            return localHviskeStatus.isReady
+        }
+        return hasEngineKey(backend)
+    }
+
     private func onboardingCredentialProvider(_ provider: LLMProvider) -> LstnrCredentialProvider? {
         switch provider {
         case .openAI: .openAI
         case .groq: .groq
         case .anthropic: .anthropic
         case .ollama, .custom: nil
+        }
+    }
+
+    /// Where to get a key for a provider, so a default-engine user isn't stuck
+    /// with a key field and no way to fill it. Groq's is free — the zero-cost
+    /// default for both layers.
+    private func keySignupURL(for provider: LstnrCredentialProvider) -> URL? {
+        switch provider {
+        case .groq: URL(string: "https://console.groq.com/keys")
+        case .openAI: URL(string: "https://platform.openai.com/api-keys")
+        case .anthropic: URL(string: "https://console.anthropic.com/settings/keys")
+        case .elevenLabs: URL(string: "https://elevenlabs.io/app/settings/api-keys")
+        }
+    }
+
+    /// "Get a free key" link beside a provider's key field. Groq is highlighted
+    /// as free; the others just link to where the key is created.
+    @ViewBuilder
+    private func getKeyLink(for provider: LstnrCredentialProvider) -> some View {
+        if let url = keySignupURL(for: provider) {
+            if provider == .groq {
+                Link(destination: url) {
+                    Text("Get a free key — Groq is free", comment: "Onboarding free Groq key link")
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(BSTheme.tealLight)
+            } else {
+                Link(destination: url) {
+                    Text("Get a key for \(provider.displayTitle)", comment: "Onboarding get key link")
+                }
+                .font(.system(size: 12))
+                .foregroundStyle(BSTheme.tealLight)
+            }
         }
     }
 

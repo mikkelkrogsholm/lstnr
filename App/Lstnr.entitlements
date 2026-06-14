@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!--
+	Vara is intentionally NOT sandboxed (no com.apple.security.app-sandbox).
+
+	App Sandbox is fundamentally incompatible with Vara's core mechanics:
+	  - global keyboard monitoring via a CGEventTap (system-wide hotkey),
+	  - synthetic Cmd+V paste into the frontmost app of the user's choice,
+	  - spawning the local Python Hviske speech runtime as a child process,
+	  - connecting to arbitrary user-chosen LLM endpoints (Groq, OpenAI,
+	    Ollama/DGX on the LAN, etc.).
+
+	Enabling the sandbox would break these features and the product itself,
+	so it is deliberately omitted. Note: because the app is not sandboxed,
+	any "Helt privat / Completely private" UI copy must be softened to
+	truthful wording (handled by the UI layer, not this entitlements file).
+
+	Only the microphone entitlement below is required.
+-->
 <dict>
 	<key>com.apple.security.device.audio-input</key>
 	<true/>

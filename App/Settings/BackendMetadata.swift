@@ -36,7 +36,7 @@ extension LstnrSpeechBackendChoice {
         case .openAIGPT4OTranscribe, .openAIGPT4OMiniTranscribe20251215:
             String(localized: "Batch", comment: "Engine latency hint")
         case .localHviske:
-            String(localized: "On this Mac — private, Danish", comment: "Engine latency hint")
+            String(localized: "Runs on this Mac — Danish", comment: "Engine latency hint")
         }
     }
 
@@ -47,7 +47,8 @@ extension LstnrSpeechBackendChoice {
         case .openAIRealtimeWhisper: "OpenAI Realtime"
         case .openAIGPT4OTranscribe: "GPT-4o Transcribe"
         case .openAIGPT4OMiniTranscribe20251215: "GPT-4o Mini Transcribe"
-        case .localHviske: "Hviske (lokal)"
+        // Localized "Local" tag instead of the hardcoded Danish "(lokal)" leak.
+        case .localHviske: "Hviske (\(String(localized: "Local", comment: "Engine name suffix marking an on-device engine")))"
         }
     }
 }

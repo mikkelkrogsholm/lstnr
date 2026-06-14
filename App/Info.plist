@@ -28,6 +28,11 @@
 	<string>14.0</string>
 	<key>LSUIElement</key>
 	<false/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Brokk og Sindre ApS · brokk-sindre.dk</string>
 	<key>NSMicrophoneUsageDescription</key>

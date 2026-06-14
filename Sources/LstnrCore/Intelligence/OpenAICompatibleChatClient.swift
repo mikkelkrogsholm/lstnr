@@ -10,6 +10,7 @@ public struct OpenAICompatibleChatClient: ChatClient {
     public let baseURL: URL
     public let apiKey: String?
     public let model: String
+    public let maxTokens: Int
     public let temperature: Double
     let transport: HTTPTransport
 
@@ -18,13 +19,15 @@ public struct OpenAICompatibleChatClient: ChatClient {
         baseURL: URL,
         apiKey: String?,
         model: String,
+        maxTokens: Int = 4096,
         temperature: Double = 0.3,
-        transport: @escaping HTTPTransport = liveHTTPTransport
+        transport: @escaping HTTPTransport = timeoutHTTPTransport()
     ) {
         self.id = id
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.model = model
+        self.maxTokens = maxTokens
         self.temperature = temperature
         self.transport = transport
     }
@@ -39,6 +42,7 @@ public struct OpenAICompatibleChatClient: ChatClient {
         request.httpBody = try JSONEncoder().encode(
             RequestBody(
                 model: model,
+                maxTokens: maxTokens,
                 temperature: temperature,
                 messages: [
                     Message(role: "system", content: system),
@@ -57,7 +61,17 @@ public struct OpenAICompatibleChatClient: ChatClient {
         }
 
         let decoded = try JSONDecoder().decode(ResponseBody.self, from: data)
-        guard let text = decoded.choices.first?.message.content, !text.isEmpty else {
+        guard let choice = decoded.choices.first else {
+            throw ChatClientError.emptyCompletion
+        }
+        // A "length" finish means the model hit `max_tokens` mid-reply: the text
+        // is a partial completion, so treat it as a failure and let the caller
+        // fall back to the raw transcript rather than paste half a sentence.
+        if choice.finishReason == "length" {
+            throw ChatClientError.truncated
+        }
+        let text = choice.message.content
+        guard !text.isEmpty else {
             throw ChatClientError.emptyCompletion
         }
         return text
@@ -65,8 +79,16 @@ public struct OpenAICompatibleChatClient: ChatClient {
 
     private struct RequestBody: Encodable {
         let model: String
+        let maxTokens: Int
         let temperature: Double
         let messages: [Message]
+
+        enum CodingKeys: String, CodingKey {
+            case model
+            case maxTokens = "max_tokens"
+            case temperature
+            case messages
+        }
     }
 
     private struct Message: Codable {
@@ -77,6 +99,12 @@ public struct OpenAICompatibleChatClient: ChatClient {
     private struct ResponseBody: Decodable {
         struct Choice: Decodable {
             let message: Message
+            let finishReason: String?
+
+            enum CodingKeys: String, CodingKey {
+                case message
+                case finishReason = "finish_reason"
+            }
         }
 
         let choices: [Choice]

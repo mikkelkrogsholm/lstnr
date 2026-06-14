@@ -17,9 +17,14 @@ public final class MicrophoneDictationAudioRecorder: DictationAudioRecorder, @un
     private var recorder: AudioRecorder?
     private var stream: AsyncStream<Data>?
     private let onLevel: (@Sendable (Double) -> Void)?
+    private let onDiagnostic: (@Sendable (String) -> Void)?
 
-    public init(onLevel: (@Sendable (Double) -> Void)? = nil) {
+    public init(
+        onLevel: (@Sendable (Double) -> Void)? = nil,
+        onDiagnostic: (@Sendable (String) -> Void)? = nil
+    ) {
         self.onLevel = onLevel
+        self.onDiagnostic = onDiagnostic
     }
 
     public func startRecording() async throws {
@@ -28,6 +33,10 @@ public final class MicrophoneDictationAudioRecorder: DictationAudioRecorder, @un
         }
 
         let recorder = try AudioRecorder()
+        // Forward non-fatal audio events (dropped buffers, input-format changes
+        // on AirPods/aggregate devices) to the app log so they surface in
+        // Diagnostics instead of vanishing silently.
+        recorder.diagnosticLog = onDiagnostic
         let stream = try recorder.start(onLevel: onLevel)
         self.recorder = recorder
         self.stream = stream

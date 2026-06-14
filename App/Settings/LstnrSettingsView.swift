@@ -341,7 +341,7 @@ struct LstnrSettingsView: View {
                         .foregroundStyle(.orange)
                     case .ollama:
                         Label {
-                            Text("Runs against http://localhost:11434 — everything stays on this Mac.", comment: "Ollama info")
+                            Text("Runs against http://localhost:11434 — this chain sends nothing to the cloud. Start Ollama if it isn't running.", comment: "Ollama info")
                         } icon: {
                             Image(systemName: "lock.fill")
                         }
@@ -528,6 +528,16 @@ struct LstnrSettingsView: View {
         }
     }
 
+    /// Whether the LLM half of the chain stays on the local network: built-in
+    /// Ollama or a custom OpenAI-compatible endpoint (DGX/LM Studio on the LAN).
+    /// Cloud providers (OpenAI/Groq/Anthropic) and an unset model do not qualify.
+    private func isLocalLLMChain(_ provider: LLMProvider?) -> Bool {
+        switch provider {
+        case .ollama, .custom: true
+        case .openAI, .groq, .anthropic, .none: false
+        }
+    }
+
     private var customEndpointsSection: some View {
         Section {
             ForEach(draft.customEndpoints) { endpoint in
@@ -630,9 +640,14 @@ struct LstnrSettingsView: View {
                 Text("Text processing", comment: "Privacy row: where text is processed")
             }
 
-            if draft.speechBackend.isLocal, draft.defaultLLM?.provider.runsLocally ?? false {
+            // The local-chain badge lights when the engine is Hviske AND the LLM
+            // stays on the LAN — either built-in Ollama or a custom endpoint
+            // (DGX/LM Studio). A custom endpoint could in theory be a cloud URL,
+            // so the wording stays truthful about the chain rather than implying
+            // OS-enforced isolation (the app is intentionally not sandboxed).
+            if draft.speechBackend.isLocal, isLocalLLMChain(draft.defaultLLM?.provider) {
                 Label {
-                    Text("Everything runs on this Mac — nothing leaves the machine.", comment: "Fully local privacy badge")
+                    Text("Runs locally on this Mac — this chain sends nothing to the cloud.", comment: "Fully local privacy badge")
                 } icon: {
                     Image(systemName: "lock.shield.fill")
                 }
@@ -765,7 +780,7 @@ struct LstnrSettingsView: View {
 
     private func installLocalHviske() {
         isInstallingLocalHviske = true
-        localHviskeInstallStatus = "Starting install"
+        localHviskeInstallStatus = String(localized: "Starting install …", comment: "Hviske install progress")
 
         Task {
             do {
@@ -776,7 +791,7 @@ struct LstnrSettingsView: View {
                 }
                 await MainActor.run {
                     isInstallingLocalHviske = false
-                    localHviskeInstallStatus = "Ready"
+                    localHviskeInstallStatus = String(localized: "Ready", comment: "Hviske install status when finished")
                     refreshLocalHviskeStatus()
                     NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
                 }
@@ -795,12 +810,8 @@ struct LstnrAppSettings: Codable, Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
     var speechBackend: LstnrSpeechBackendChoice
-    var cleanupMode: LstnrCleanupModeChoice
     var pasteAutomatically: Bool
     var showHUD: Bool
-    var inputDevice: LstnrInputDeviceChoice
-    var inputGain: Double
-    var reduceNoise: Bool
     var keepRecentTranscript: Bool
     var historyLimit: Int
     var modes: [DictationMode]
@@ -814,12 +825,8 @@ struct LstnrAppSettings: Codable, Hashable {
         shortcut: .rightCommand,
         language: .automatic,
         speechBackend: .groqWhisper,
-        cleanupMode: .raw,
         pasteAutomatically: true,
         showHUD: true,
-        inputDevice: .previewDevices[0],
-        inputGain: 0.72,
-        reduceNoise: true,
         keepRecentTranscript: true,
         historyLimit: 100,
         modes: DictationMode.builtInModes(),
@@ -838,12 +845,8 @@ struct LstnrAppSettings: Codable, Hashable {
         shortcut: LstnrShortcutChoice,
         language: LstnrLanguageChoice,
         speechBackend: LstnrSpeechBackendChoice,
-        cleanupMode: LstnrCleanupModeChoice,
         pasteAutomatically: Bool,
         showHUD: Bool,
-        inputDevice: LstnrInputDeviceChoice,
-        inputGain: Double,
-        reduceNoise: Bool,
         keepRecentTranscript: Bool,
         historyLimit: Int,
         modes: [DictationMode],
@@ -856,12 +859,8 @@ struct LstnrAppSettings: Codable, Hashable {
         self.shortcut = shortcut
         self.language = language
         self.speechBackend = speechBackend
-        self.cleanupMode = cleanupMode
         self.pasteAutomatically = pasteAutomatically
         self.showHUD = showHUD
-        self.inputDevice = inputDevice
-        self.inputGain = inputGain
-        self.reduceNoise = reduceNoise
         self.keepRecentTranscript = keepRecentTranscript
         self.historyLimit = historyLimit
         self.modes = Self.withBuiltInModes(modes)
@@ -877,12 +876,8 @@ struct LstnrAppSettings: Codable, Hashable {
             shortcut: draft.shortcut,
             language: draft.language,
             speechBackend: draft.speechBackend,
-            cleanupMode: draft.cleanupMode,
             pasteAutomatically: draft.pasteAutomatically,
             showHUD: draft.showHUD,
-            inputDevice: draft.inputDevice,
-            inputGain: draft.inputGain,
-            reduceNoise: draft.reduceNoise,
             keepRecentTranscript: draft.keepRecentTranscript,
             historyLimit: draft.historyLimit,
             modes: draft.modes,
@@ -899,12 +894,8 @@ struct LstnrAppSettings: Codable, Hashable {
             shortcut: shortcut,
             language: language,
             speechBackend: speechBackend,
-            cleanupMode: cleanupMode,
             pasteAutomatically: pasteAutomatically,
             showHUD: showHUD,
-            inputDevice: inputDevice,
-            inputGain: min(max(inputGain, 0), 1),
-            reduceNoise: reduceNoise,
             keepRecentTranscript: keepRecentTranscript,
             historyLimit: min(max(historyLimit, 10), 200),
             modes: modes,
@@ -935,12 +926,8 @@ struct LstnrAppSettings: Codable, Hashable {
         case shortcut
         case language
         case speechBackend
-        case cleanupMode
         case pasteAutomatically
         case showHUD
-        case inputDevice
-        case inputGain
-        case reduceNoise
         case keepRecentTranscript
         case historyLimit
         case modes
@@ -957,12 +944,8 @@ struct LstnrAppSettings: Codable, Hashable {
             shortcut: try container.decodeIfPresent(LstnrShortcutChoice.self, forKey: .shortcut) ?? Self.defaults.shortcut,
             language: try container.decodeIfPresent(LstnrLanguageChoice.self, forKey: .language) ?? Self.defaults.language,
             speechBackend: try container.decodeIfPresent(LstnrSpeechBackendChoice.self, forKey: .speechBackend) ?? Self.defaults.speechBackend,
-            cleanupMode: try container.decodeIfPresent(LstnrCleanupModeChoice.self, forKey: .cleanupMode) ?? Self.defaults.cleanupMode,
             pasteAutomatically: try container.decodeIfPresent(Bool.self, forKey: .pasteAutomatically) ?? Self.defaults.pasteAutomatically,
             showHUD: try container.decodeIfPresent(Bool.self, forKey: .showHUD) ?? Self.defaults.showHUD,
-            inputDevice: try container.decodeIfPresent(LstnrInputDeviceChoice.self, forKey: .inputDevice) ?? Self.defaults.inputDevice,
-            inputGain: try container.decodeIfPresent(Double.self, forKey: .inputGain) ?? Self.defaults.inputGain,
-            reduceNoise: try container.decodeIfPresent(Bool.self, forKey: .reduceNoise) ?? Self.defaults.reduceNoise,
             keepRecentTranscript: try container.decodeIfPresent(Bool.self, forKey: .keepRecentTranscript) ?? Self.defaults.keepRecentTranscript,
             historyLimit: try container.decodeIfPresent(Int.self, forKey: .historyLimit) ?? Self.defaults.historyLimit,
             modes: try container.decodeIfPresent([DictationMode].self, forKey: .modes) ?? Self.defaults.modes,
@@ -1144,12 +1127,8 @@ struct LstnrSettingsDraft: Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
     var speechBackend: LstnrSpeechBackendChoice
-    var cleanupMode: LstnrCleanupModeChoice
     var pasteAutomatically: Bool
     var showHUD: Bool
-    var inputDevice: LstnrInputDeviceChoice
-    var inputGain: Double
-    var reduceNoise: Bool
     var keepRecentTranscript: Bool
     var historyLimit: Int
     var modes: [DictationMode]
@@ -1185,12 +1164,16 @@ enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
 
     var processingTitle: String {
         switch self {
-        case .elevenLabsScribe: "Realtime network transcription"
-        case .groqWhisper: "Network file transcription via Groq"
-        case .openAIRealtimeWhisper: "Realtime network transcription via OpenAI"
-        case .openAIGPT4OTranscribe: "Network file transcription via OpenAI"
-        case .openAIGPT4OMiniTranscribe20251215: "Network file transcription via OpenAI"
-        case .localHviske: "Local transcription on this Mac"
+        case .elevenLabsScribe:
+            String(localized: "Realtime network transcription", comment: "Privacy panel: where audio is processed")
+        case .groqWhisper:
+            String(localized: "Network file transcription via Groq", comment: "Privacy panel: where audio is processed")
+        case .openAIRealtimeWhisper:
+            String(localized: "Realtime network transcription via OpenAI", comment: "Privacy panel: where audio is processed")
+        case .openAIGPT4OTranscribe, .openAIGPT4OMiniTranscribe20251215:
+            String(localized: "Network file transcription via OpenAI", comment: "Privacy panel: where audio is processed")
+        case .localHviske:
+            String(localized: "Local transcription on this Mac", comment: "Privacy panel: where audio is processed")
         }
     }
 }
@@ -1551,31 +1534,6 @@ enum LstnrLanguageChoice: String, CaseIterable, Codable, Identifiable {
         case .english: String(localized: "English", comment: "Language choice")
         }
     }
-}
-
-enum LstnrCleanupModeChoice: String, CaseIterable, Codable, Identifiable {
-    case raw
-    case clean
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .raw: "Raw"
-        case .clean: "Clean"
-        }
-    }
-}
-
-struct LstnrInputDeviceChoice: Codable, Hashable, Identifiable {
-    let id: String
-    let name: String
-
-    static let previewDevices = [
-        LstnrInputDeviceChoice(id: "default", name: "System Default"),
-        LstnrInputDeviceChoice(id: "studio-display", name: "Studio Display Microphone"),
-        LstnrInputDeviceChoice(id: "airpods", name: "AirPods Pro")
-    ]
 }
 
 #Preview("Settings") {

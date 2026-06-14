@@ -15,9 +15,9 @@ public struct AnthropicChatClient: ChatClient {
         baseURL: URL = URL(string: "https://api.anthropic.com")!,
         apiKey: String,
         model: String,
-        maxTokens: Int = 2048,
+        maxTokens: Int = 4096,
         temperature: Double = 0.3,
-        transport: @escaping HTTPTransport = liveHTTPTransport
+        transport: @escaping HTTPTransport = timeoutHTTPTransport()
     ) {
         self.id = id
         self.baseURL = baseURL
@@ -54,6 +54,13 @@ public struct AnthropicChatClient: ChatClient {
         }
 
         let decoded = try JSONDecoder().decode(ResponseBody.self, from: data)
+        // A "max_tokens" stop means the model ran out of room mid-reply: the
+        // text is a partial completion, so treat it as a failure and let the
+        // caller fall back to the raw transcript rather than paste half a
+        // sentence.
+        if decoded.stopReason == "max_tokens" {
+            throw ChatClientError.truncated
+        }
         let text = decoded.content
             .compactMap { $0.type == "text" ? $0.text : nil }
             .joined()
@@ -91,5 +98,11 @@ public struct AnthropicChatClient: ChatClient {
         }
 
         let content: [ContentBlock]
+        let stopReason: String?
+
+        enum CodingKeys: String, CodingKey {
+            case content
+            case stopReason = "stop_reason"
+        }
     }
 }

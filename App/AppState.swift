@@ -19,6 +19,13 @@ final class AppState {
     var microphonePermissionStatus: String
     var debugLogEntries: [AppDebugLogEntry] = []
 
+    /// Whether the local Ollama endpoint answered its last reachability probe.
+    /// `nil` means not probed yet. Drives `isModeReady(.ollama)` and is exposed
+    /// so the UI can show the "ready / Completely private" badge honestly rather
+    /// than unconditionally. Refreshed on launch, on settings change, and on a
+    /// periodic timer.
+    var ollamaReachable: Bool?
+
     var debugLogFilePath: String {
         Self.debugLogFileURL().path
     }
@@ -63,7 +70,11 @@ final class AppState {
         case .anthropic:
             return hasLLMKey(.anthropic)
         case .ollama:
-            return true
+            // Only "ready" if a probe has actually reached the local endpoint.
+            // Before the first probe (nil) we optimistically allow it so the
+            // badge isn't briefly wrong on a working setup; once probed, the
+            // cached truth wins.
+            return ollamaReachable ?? true
         case .custom(let endpointID):
             return settings.customEndpoints.contains { $0.id == endpointID }
         }
@@ -83,6 +94,10 @@ final class AppState {
     /// CGEventTap too slowly and macOS disables the tap, killing the hotkey
     /// whenever Vara is in the background.
     private var appNapActivity: NSObjectProtocol?
+
+    /// Periodically re-probes the local Ollama endpoint so `ollamaReachable`
+    /// reflects a server that was started or stopped after launch.
+    private var ollamaProbeTimer: Timer?
 
     init() {
         hudController = RecordingHUDWindowController(state: hudState, placement: .insertionPoint)
@@ -121,14 +136,76 @@ final class AppState {
         log("Bootstrap started")
         reloadSettings()
         await reloadHistory()
+        startOllamaReachabilityMonitoring()
         guard configureBackend() else { return }
         guard ensureAccessibility(prompt: true) else { return }
         installHotkey()
     }
 
+    /// Probes Ollama once now and then on a periodic timer so the badge stays
+    /// honest as the local server starts or stops.
+    private func startOllamaReachabilityMonitoring() {
+        refreshOllamaReachability()
+        ollamaProbeTimer?.invalidate()
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refreshOllamaReachability() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        ollamaProbeTimer = timer
+    }
+
+    /// Kicks off an async reachability probe of the local Ollama endpoint and
+    /// caches the result in `ollamaReachable`. Cheap and side-effect-free, so it
+    /// is safe to call on launch, on settings change, and periodically.
+    private func refreshOllamaReachability() {
+        let url = LLMProvider.ollama.defaultBaseURL?.appendingPathComponent("models")
+        guard let url else { return }
+        Task { @MainActor [weak self] in
+            let reachable = await Self.probeOllama(modelsURL: url)
+            guard let self else { return }
+            if self.ollamaReachable != reachable {
+                self.log("Ollama reachability changed: \(reachable)")
+            }
+            self.ollamaReachable = reachable
+        }
+    }
+
+    /// GETs the Ollama OpenAI-compatible `/v1/models` with a short timeout. Any
+    /// HTTP response (even an error status) means the server is up; a transport
+    /// error or timeout means it is unreachable.
+    nonisolated private static func probeOllama(modelsURL: URL) async -> Bool {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 2
+        configuration.timeoutIntervalForResource = 3
+        let session = URLSession(configuration: configuration)
+        var request = URLRequest(url: modelsURL)
+        request.httpMethod = "GET"
+        do {
+            let (_, response) = try await session.data(for: request)
+            return response is HTTPURLResponse
+        } catch {
+            return false
+        }
+    }
+
+    /// A settings/credentials change arrived while a dictation was in flight, so
+    /// the backend/hotkey rebuild was deferred to avoid stranding the recording.
+    private var reloadPending = false
+
     private func reloadConfiguration() {
+        // Rebuilding the backend uninstalls the tap and replaces the
+        // dictationSession. Doing that mid-recording (e.g. the user clicks a mode
+        // chip while still holding the key) strands the in-progress recording and
+        // loses the words. Defer the teardown until the interaction finishes.
+        guard !isRecording, !isTranscribing else {
+            reloadPending = true
+            log("Configuration reload deferred — dictation in progress")
+            return
+        }
+        reloadPending = false
         log("Reloading configuration")
         reloadSettings()
+        refreshOllamaReachability()
         guard configureBackend() else { return }
         if ensureAccessibility(prompt: false) {
             installHotkey()
@@ -137,13 +214,22 @@ final class AppState {
         }
     }
 
+    /// Runs a configuration reload that was deferred because a dictation was in
+    /// flight. Called once the interaction settles (completed/cancelled/failed).
+    private func runDeferredReloadIfNeeded() {
+        guard reloadPending else { return }
+        guard !isRecording, !isTranscribing else { return }
+        log("Running deferred configuration reload")
+        reloadConfiguration()
+    }
+
     private func reloadSettings() {
         let loadedSettings = settingsStore.load()
         settings = loadedSettings
         microphoneName = Self.defaultMicrophoneName()
         microphonePermissionStatus = Self.microphoneAuthorizationStatusTitle()
         log(
-            "Settings loaded: shortcut=\(loadedSettings.shortcut.rawValue), language=\(loadedSettings.language.rawValue), backend=\(loadedSettings.speechBackend.rawValue), cleanup=\(loadedSettings.cleanupMode.rawValue), paste=\(loadedSettings.pasteAutomatically), hud=\(loadedSettings.showHUD), microphonePermission=\(microphonePermissionStatus)"
+            "Settings loaded: shortcut=\(loadedSettings.shortcut.rawValue), language=\(loadedSettings.language.rawValue), backend=\(loadedSettings.speechBackend.rawValue), paste=\(loadedSettings.pasteAutomatically), hud=\(loadedSettings.showHUD), microphonePermission=\(microphonePermissionStatus)"
         )
         historyStore = DictationHistoryStore(
             fileURL: Self.defaultHistoryFileURL(),
@@ -375,6 +461,13 @@ final class AppState {
         hotkey.onKeyDownWhileActive = { [weak self] keyCode in
             Task { @MainActor in self?.handleKeyWhileDictating(keyCode: keyCode) }
         }
+        // Forward Esc/1–9 based on whether we're recording, not the hotkey's own
+        // `isDown` flag — a watchdog rearm can reset `isDown` while the shortcut
+        // is still physically held, which would otherwise drop Esc-to-cancel and
+        // digit mode selection mid-dictation.
+        hotkey.shouldForwardKeyDown = { [weak self] in
+            MainActor.assumeIsolated { self?.isRecording ?? false }
+        }
         hotkey.onTapBlocked = { [weak self] holderPID in
             Task { @MainActor in self?.reportTapBlocked(holderPID: holderPID) }
         }
@@ -486,6 +579,11 @@ final class AppState {
         let timeoutSeconds = backend.capabilities.runsLocally
             ? 180.0
             : (backend.capabilities.supportsStreamingTranscription ? 30.0 : 120.0)
+        // Local backends (Hviske) can be slow on first model load but stream no
+        // intermediate signal, so give the LLM cleanup the same generous budget;
+        // network backends usually answer fast, so 20s is plenty before we fall
+        // back to the raw transcript. Either way the words are kept.
+        let llmTimeoutSeconds = backend.capabilities.runsLocally ? 30.0 : 20.0
         let instrumentAudio: @Sendable (SpeechToTextAudio) -> SpeechToTextAudio = { [weak self] audio in
             Self.instrument(audio: audio) { message in
                 await MainActor.run { self?.log(message) }
@@ -503,6 +601,8 @@ final class AppState {
             Task { @MainActor in
                 self?.hudState.pushLevel(level)
             }
+        }, onDiagnostic: { [weak self] message in
+            Task { @MainActor in self?.log(message) }
         })
 
         return DictationSession(
@@ -510,23 +610,71 @@ final class AppState {
             recorder: recorder,
             languageCode: languageCode,
             transcribe: { [weak self] request in
+                // One sendable logger for the whole closure so we don't repeatedly
+                // capture `self` across the sending boundaries of `withTimeout`.
+                let logMessage: @Sendable (String) async -> Void = { message in
+                    await MainActor.run { self?.log(message) }
+                }
+                // Tee the captured audio to a recoverable temp file as it flows
+                // to the backend. The one-shot stream is consumed during
+                // transcription, so if transcription FAILS this file is the only
+                // copy left — without it the user's words would vanish silently.
+                let recoverable = RecoverableAudioCapture(audio: request.audio, log: logMessage)
                 let instrumentedRequest = SpeechToTextRequest(
-                    audio: instrumentAudio(request.audio),
+                    audio: instrumentAudio(recoverable.audio),
                     languageCode: request.languageCode
                 )
-                let rawResult = try await Self.withTimeout(seconds: timeoutSeconds) {
-                    try await backend.transcribe(instrumentedRequest)
+
+                let rawResult: TranscriptionResult
+                do {
+                    rawResult = try await Self.withTimeout(seconds: timeoutSeconds) {
+                        try await backend.transcribe(instrumentedRequest)
+                    }
+                } catch {
+                    // Transcription failed/timed out. Keep the captured audio so
+                    // the dictation is recoverable, log its path, and surface a
+                    // clear message — never a silent loss.
+                    let savedPath = await recoverable.finalizeForRecovery()
+                    if let savedPath {
+                        await logMessage("Transcription failed: \(error). Captured audio kept at \(savedPath)")
+                    } else {
+                        await logMessage("Transcription failed: \(error). No audio could be recovered.")
+                    }
+                    throw DictationTranscriptionFailure(
+                        underlying: error,
+                        recoveredAudioPath: savedPath
+                    )
                 }
+
+                // Transcription succeeded — the captured audio is no longer
+                // needed, so discard the recovery file.
+                await recoverable.discard()
 
                 guard let (mode, processor, targetAppName) = await resolveProcessing() else {
                     return rawResult
                 }
-                let outcome = await processor.process(transcript: rawResult.text, mode: mode)
+                // Wrap the LLM cleanup in a timeout: a hung Ollama/DGX must never
+                // freeze the HUD in 'forging' with the words trapped. On timeout
+                // (or any failure) we fall through to the RAW transcript.
+                let outcome: DictationModeOutcome
+                do {
+                    outcome = try await Self.withTimeout(seconds: llmTimeoutSeconds) {
+                        await processor.process(transcript: rawResult.text, mode: mode)
+                    }
+                } catch {
+                    await logMessage("LLM step timed out; inserting raw transcript")
+                    outcome = DictationModeOutcome(
+                        text: rawResult.text,
+                        usedLLM: false,
+                        llmErrorDescription: "LLM timed out"
+                    )
+                }
                 if let llmError = outcome.llmErrorDescription {
                     // The raw transcript is inserted instead — never lose words.
-                    await MainActor.run {
-                        self?.log("LLM step fell back to raw transcript: \(llmError)")
-                    }
+                    // `llmError` may carry an HTTP body that echoes the
+                    // transcript, so redact it before it reaches debug.log.
+                    let safeError = Self.redactedLogDescription(llmError)
+                    await logMessage("LLM step fell back to raw transcript: \(safeError)")
                 }
 
                 await pendingHistory.replace(
@@ -634,13 +782,21 @@ final class AppState {
         throw LLMConfigurationError.missingAPIKey(provider: provider.rawValue)
     }
 
-    /// Persists a new default mode and notifies so configuration reloads.
+    /// Changes the default mode. Only `activeMode` (and the HUD, if a dictation
+    /// is in flight) depend on the selection — the backend and hotkey do not — so
+    /// this deliberately does NOT post `.lstnrSettingsDidChange`, which would
+    /// rebuild the backend/hotkey and could strand an in-progress recording.
     func selectMode(_ mode: DictationMode) {
         guard settings.selectedModeID != mode.id else { return }
         settings.selectedModeID = mode.id
         try? settingsStore.save(settings)
         log("Selected mode: \(mode.name)")
-        NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+        // Reflect the new default in the HUD if it would now be the active mode
+        // (no digit override or per-app rule taking precedence).
+        if isRecording, activeModeOverride == nil, activeAppRuleMode == nil {
+            hudState.modeTitle = mode.displayTitle
+            hudState.modeSymbol = mode.symbolName
+        }
     }
 
     /// Mutates, persists and broadcasts settings — used by onboarding.
@@ -777,6 +933,7 @@ final class AppState {
             log("Dictation cancelled")
             hudState.phase = .cancelled
             hideHUDAfterDelay()
+            runDeferredReloadIfNeeded()
         case .completed(let insertedText):
             if let insertedText {
                 lastTranscript = insertedText
@@ -802,18 +959,25 @@ final class AppState {
                 hudState.phase = .heardNothing
                 hideHUDAfterDelay(seconds: 2.0)
             }
+            runDeferredReloadIfNeeded()
         case .failed(let message):
             isRecording = false
             isTranscribing = false
             activeModeOverride = nil
             activeAppRuleMode = nil
-            lastError = message
+            // A transcription failure carries a friendly, body-free message and
+            // notes that the captured audio was kept; other failures get a
+            // generic message. Either way debug.log only sees a redacted line so
+            // an HTTP body can never echo the transcript to disk.
+            let userMessage = message
+            lastError = userMessage
             statusMessage = String(localized: "Something went wrong", comment: "Status on dictation error")
-            log("Dictation failed: \(message)")
+            log("Dictation failed: \(Self.redactedLogDescription(message))")
             hudState.transcriptPreview = ""
-            hudState.phase = .error(message: message)
+            hudState.phase = .error(message: userMessage)
             hideHUDAfterDelay(seconds: 4.0)
             playFeedbackSound("Basso", volume: 0.25)
+            runDeferredReloadIfNeeded()
         }
     }
 
@@ -843,7 +1007,7 @@ final class AppState {
             return false
         case .denied:
             statusMessage = String(localized: "Grant microphone access in System Settings", comment: "Status message")
-            lastError = "Microphone permission is denied for this Lstnr.app build."
+            lastError = "Microphone permission is denied for this Vara build."
             log("Microphone permission denied")
             return false
         case .restricted:
@@ -1071,6 +1235,23 @@ final class AppState {
         return (peak: peak, nonZeroBytes: nonZeroBytes)
     }
 
+    /// Strips any HTTP response body from an already-stringified chat error
+    /// before it is written to debug.log. `ChatClientError.httpError` formats as
+    /// `"Chat completion HTTP <status>: <body>"`, and that body can echo the
+    /// user's transcript — so we replace it with a byte count, mirroring
+    /// `ChatClientError.redactedDescription`. Anything else passes through.
+    nonisolated private static func redactedLogDescription(_ message: String) -> String {
+        let marker = "Chat completion HTTP "
+        guard let markerRange = message.range(of: marker),
+              let colonRange = message.range(of: ": ", range: markerRange.upperBound..<message.endIndex) else {
+            return message
+        }
+        let status = message[markerRange.upperBound..<colonRange.lowerBound]
+        let body = message[colonRange.upperBound...]
+        let byteCount = Data(body.utf8).count
+        return "Chat completion HTTP \(status): <\(byteCount) bytes redacted>"
+    }
+
     nonisolated private static func withTimeout<T: Sendable>(
         seconds: Double,
         operation: @escaping @Sendable () async throws -> T
@@ -1101,6 +1282,176 @@ private struct AppStateTimeoutError: Error, CustomStringConvertible, Sendable {
     }
 }
 
+/// Transcription failed or timed out, but the captured audio was preserved so
+/// the dictation is recoverable. The `description` is the user-facing message
+/// (DictationSession turns it into `.failed(message:)`) and deliberately omits
+/// any HTTP body — it must never echo the transcript. The underlying error is
+/// kept only for the in-memory ring; it is never persisted verbatim.
+private struct DictationTranscriptionFailure: Error, CustomStringConvertible, Sendable {
+    let underlying: any Error
+    let recoveredAudioPath: String?
+
+    var description: String {
+        if recoveredAudioPath != nil {
+            return String(
+                localized: "Transcription failed, but your audio was kept and can be recovered. Please try again.",
+                comment: "Error shown when transcription fails but the recording was saved"
+            )
+        }
+        return String(
+            localized: "Transcription failed. Please try again.",
+            comment: "Error shown when transcription fails and no audio could be recovered"
+        )
+    }
+}
+
+/// Tees the dictation audio to a temp WAV file as it streams to the backend, so
+/// that if transcription fails the user's words are not gone with the consumed
+/// one-shot stream. On success the capture is discarded; on failure
+/// `finalizeForRecovery()` returns the saved path. PCM streams are written to a
+/// fresh WAV; a `.file` request is left untouched and recovered by copying it
+/// to a stable location (the backend may delete its own temp input).
+private actor RecoverableAudioCapture {
+    /// The audio to hand to the backend — for PCM, a teed stream that forwards
+    /// every chunk downstream while buffering a copy to disk.
+    nonisolated let audio: SpeechToTextAudio
+
+    private let sourceFileURL: URL?
+    private let recoveryURL: URL
+    private let sampleRate: Int
+    private let log: @Sendable (String) async -> Void
+
+    /// Accumulates the PCM bytes as the teed stream drains, returning the full
+    /// buffer once the stream finishes. Awaited by `finalizeForRecovery()` so
+    /// the WAV is written only after every chunk has been seen.
+    private let captureTask: Task<Data, Never>?
+    private var finalized = false
+    private var savedPath: String?
+
+    init(audio: SpeechToTextAudio, log: @escaping @Sendable (String) async -> Void) {
+        self.log = log
+        let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let directory = baseURL
+            .appendingPathComponent("lstnr", isDirectory: true)
+            .appendingPathComponent("recovered-audio", isDirectory: true)
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+
+        switch audio {
+        case .file(let url):
+            self.sourceFileURL = url
+            self.sampleRate = 0
+            let suffix = url.pathExtension.isEmpty ? "audio" : url.pathExtension
+            self.recoveryURL = directory.appendingPathComponent("dictation-\(stamp).\(suffix)")
+            self.audio = audio
+            self.captureTask = nil
+        case .pcm16Stream(let stream, let sampleRate):
+            self.sourceFileURL = nil
+            self.sampleRate = sampleRate
+            self.recoveryURL = directory.appendingPathComponent("dictation-\(stamp).wav")
+            // Tee: forward every chunk to the backend while buffering a copy so a
+            // failed transcription still has the audio.
+            let (teedStream, continuation) = AsyncStream<Data>.makeStream(bufferingPolicy: .unbounded)
+            self.audio = .pcm16Stream(teedStream, sampleRate: sampleRate)
+            self.captureTask = Task {
+                var pcm = Data()
+                for await chunk in stream {
+                    pcm.append(chunk)
+                    continuation.yield(chunk)
+                }
+                continuation.finish()
+                return pcm
+            }
+        }
+    }
+
+    /// Persists whatever audio was captured and returns the file path, or nil if
+    /// nothing could be saved. Safe to call repeatedly — later calls return the
+    /// already-saved path.
+    func finalizeForRecovery() async -> String? {
+        guard !finalized else { return savedPath }
+        finalized = true
+
+        do {
+            try FileManager.default.createDirectory(
+                at: recoveryURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+        } catch {
+            await log("Could not create recovery directory: \(error)")
+            return nil
+        }
+
+        if let sourceFileURL {
+            do {
+                if FileManager.default.fileExists(atPath: recoveryURL.path) {
+                    try FileManager.default.removeItem(at: recoveryURL)
+                }
+                try FileManager.default.copyItem(at: sourceFileURL, to: recoveryURL)
+                savedPath = recoveryURL.path
+                return savedPath
+            } catch {
+                await log("Could not preserve recovery audio file: \(error)")
+                return nil
+            }
+        }
+
+        let pcm = await captureTask?.value ?? Data()
+        guard !pcm.isEmpty else { return nil }
+        let wav = Self.wavData(pcm16: pcm, sampleRate: sampleRate)
+        do {
+            try wav.write(to: recoveryURL, options: .atomic)
+            savedPath = recoveryURL.path
+            return savedPath
+        } catch {
+            await log("Could not write recovered WAV: \(error)")
+            return nil
+        }
+    }
+
+    /// Drops the captured audio; called after a successful transcription so we
+    /// don't accumulate orphaned recordings. The teed PCM buffer is freed when
+    /// the capture task finishes; source files are the backend's own input and
+    /// are left alone.
+    func discard() {
+        finalized = true
+    }
+
+    /// Wraps raw little-endian PCM16 mono samples in a minimal WAV container.
+    private static func wavData(pcm16: Data, sampleRate: Int) -> Data {
+        let channels: UInt16 = 1
+        let bitsPerSample: UInt16 = 16
+        let byteRate = UInt32(sampleRate) * UInt32(channels) * UInt32(bitsPerSample / 8)
+        let blockAlign = channels * (bitsPerSample / 8)
+        let dataSize = UInt32(pcm16.count)
+        let riffSize = 36 + dataSize
+
+        var header = Data()
+        func appendASCII(_ string: String) { header.append(contentsOf: string.utf8) }
+        func appendUInt32(_ value: UInt32) { var v = value.littleEndian; withUnsafeBytes(of: &v) { header.append(contentsOf: $0) } }
+        func appendUInt16(_ value: UInt16) { var v = value.littleEndian; withUnsafeBytes(of: &v) { header.append(contentsOf: $0) } }
+
+        appendASCII("RIFF")
+        appendUInt32(riffSize)
+        appendASCII("WAVE")
+        appendASCII("fmt ")
+        appendUInt32(16)            // PCM fmt chunk size
+        appendUInt16(1)             // PCM format
+        appendUInt16(channels)
+        appendUInt32(UInt32(sampleRate))
+        appendUInt32(byteRate)
+        appendUInt16(blockAlign)
+        appendUInt16(bitsPerSample)
+        appendASCII("data")
+        appendUInt32(dataSize)
+
+        var out = header
+        out.append(pcm16)
+        return out
+    }
+}
+
 struct AppDebugLogEntry: Identifiable, Hashable {
     let id = UUID()
     let createdAt: Date
@@ -1115,7 +1466,13 @@ struct AppDebugLogEntry: Identifiable, Hashable {
 
 /// Copies text to the clipboard and simulates ⌘V into the frontmost app.
 /// Restores the previous clipboard after a short delay.
+@MainActor
 enum ClipboardPaster {
+    /// The pending clipboard-restore for the previous paste, cancelled when a
+    /// new paste starts so back-to-back dictations never restore stale contents
+    /// over each other.
+    private static var pendingRestore: DispatchWorkItem?
+
     static func copyToClipboard(text: String) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -1123,6 +1480,10 @@ enum ClipboardPaster {
     }
 
     static func pasteAtCursor(text: String) {
+        // A new paste supersedes any pending restore from the previous one.
+        pendingRestore?.cancel()
+        pendingRestore = nil
+
         let pasteboard = NSPasteboard.general
         let savedTypes = pasteboard.types ?? []
         let savedItems: [(NSPasteboard.PasteboardType, Data)] = savedTypes.compactMap { type in
@@ -1132,15 +1493,31 @@ enum ClipboardPaster {
 
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        // Snapshot the changeCount right after we own the pasteboard. We only
+        // restore the previous contents if nothing else (the user, the synthetic
+        // ⌘V's consumer, or another app) has touched the pasteboard since — that
+        // way the restore can't clobber a value the user just copied, and it
+        // can't race the paste itself.
+        let ownedChangeCount = pasteboard.changeCount
 
         simulateCmdV()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            pasteboard.clearContents()
-            for (type, data) in savedItems {
-                pasteboard.setData(data, forType: type)
+        let restore = DispatchWorkItem {
+            guard NSPasteboard.general.changeCount == ownedChangeCount else {
+                // Pasteboard changed since we set the transcript — leave it be.
+                pendingRestore = nil
+                return
             }
+            NSPasteboard.general.clearContents()
+            for (type, data) in savedItems {
+                NSPasteboard.general.setData(data, forType: type)
+            }
+            pendingRestore = nil
         }
+        pendingRestore = restore
+        // Slightly longer than before so the synthetic ⌘V is reliably consumed
+        // by the target app before we put the user's clipboard back.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: restore)
     }
 
     private static func simulateCmdV() {
@@ -1172,17 +1549,22 @@ private struct PendingDictationHistoryEntry: Sendable {
     }
 }
 
+/// Holds transcription outcomes between the transcribe step and the history
+/// save, which run on separate async tasks. A FIFO queue (not a single slot) so
+/// back-to-back dictations can't clobber each other: a second dictation's
+/// enqueue no longer overwrites the first's still-unsaved entry. Each dictation
+/// enqueues exactly one entry and dequeues exactly one, so the queue stays
+/// balanced.
 private actor PendingDictationHistoryStore {
-    private var entry: PendingDictationHistoryEntry?
+    private var entries: [PendingDictationHistoryEntry] = []
 
     func replace(_ entry: PendingDictationHistoryEntry) {
-        self.entry = entry
+        entries.append(entry)
     }
 
     func take() -> PendingDictationHistoryEntry? {
-        let currentEntry = entry
-        entry = nil
-        return currentEntry
+        guard !entries.isEmpty else { return nil }
+        return entries.removeFirst()
     }
 }
 

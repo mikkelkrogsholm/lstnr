@@ -12,12 +12,12 @@ public enum HotkeyError: Error, CustomStringConvertible {
         case .accessibilityNotGranted:
             return """
             Accessibility permission is required for global hotkeys.
-            Open System Settings → Privacy & Security → Accessibility and enable lstnr.
+            Open System Settings → Privacy & Security → Accessibility and enable Vara.
             """
         case .cannotCreateTap:
             return """
             Failed to create CGEventTap. Accessibility permission is probably missing.
-            Open System Settings → Privacy & Security → Accessibility and enable lstnr.
+            Open System Settings → Privacy & Security → Accessibility and enable Vara.
             """
         }
     }
@@ -62,6 +62,14 @@ public final class GlobalHotkey: @unchecked Sendable {
     /// listen-only, so the event still reaches the frontmost app). Used for
     /// Esc-to-cancel and 1–9 mode selection during dictation.
     public var onKeyDownWhileActive: (@Sendable (UInt16) -> Void)?
+
+    /// Decides whether regular key presses should be forwarded via
+    /// `onKeyDownWhileActive`. AppState wires this to `isRecording` so
+    /// Esc-to-cancel and 1–9 mode selection keep working even when the
+    /// hotkey's own `isDown` was reset by a watchdog rearm while the
+    /// shortcut is still physically held. When `nil`, falls back to the
+    /// `isDown` gate.
+    public var shouldForwardKeyDown: (@Sendable () -> Bool)?
 
     /// Fired by the watchdog when the tap was found disabled. Carries the PID
     /// of the process holding secure keyboard input, if any — while secure
@@ -220,7 +228,13 @@ public final class GlobalHotkey: @unchecked Sendable {
             return
         }
         if type == .keyDown {
-            guard isDown else { return }
+            // Decouple in-dictation key handling from `isDown`: a watchdog
+            // rearm forces `isDown` to false even while the shortcut is still
+            // held, which would otherwise drop Esc-to-cancel and 1–9 mode
+            // selection. Prefer the AppState-supplied predicate (isRecording);
+            // fall back to the `isDown` gate when no predicate is set.
+            let shouldForward = shouldForwardKeyDown?() ?? isDown
+            guard shouldForward else { return }
             let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
             onKeyDownWhileActive?(keyCode)
             return
@@ -230,10 +244,24 @@ public final class GlobalHotkey: @unchecked Sendable {
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         guard let changedKey = Key(rawValue: keyCode) else { return }
 
-        if pressedKeys.contains(changedKey) {
-            pressedKeys.remove(changedKey)
-        } else {
+        // Self-correcting: read pressed/released from the event's actual
+        // modifier flags rather than toggling. A missed transition (watchdog
+        // rearm, app launched with the key held, tap gap) can no longer invert
+        // onDown/onUp. The keyCode identifies WHICH physical key changed; the
+        // generic flag mask (.maskCommand/.maskAlternate/.maskControl, or the
+        // function-key flag) tells us whether that modifier class is pressed.
+        // Left/right keys of the same modifier share one mask, so we keep
+        // keyCode-based identity for chord support: when the mask is set the
+        // changed key is down; when it clears, no key of that class is held,
+        // so we also drop its sibling to stay in sync.
+        let flags = event.flags
+        if changedKey.isActive(in: flags) {
             pressedKeys.insert(changedKey)
+        } else {
+            pressedKeys.remove(changedKey)
+            if let sibling = changedKey.sibling {
+                pressedKeys.remove(sibling)
+            }
         }
 
         let isCurrentlyDown = !shortcut.keys.isEmpty && shortcut.keys.isSubset(of: pressedKeys)
@@ -260,6 +288,38 @@ public final class GlobalHotkey: @unchecked Sendable {
 }
 
 private extension GlobalHotkey.Key {
+    /// The generic CoreGraphics modifier mask for this key's modifier class.
+    /// Left/right keys of the same modifier share one mask (e.g. both Command
+    /// keys report `.maskCommand`), so the mask alone cannot tell left from
+    /// right — that is what the keyCode is for.
+    var modifierMask: CGEventFlags {
+        switch self {
+        case .leftCommand, .rightCommand: .maskCommand
+        case .leftOption, .rightOption: .maskAlternate
+        case .rightControl: .maskControl
+        case .function: .maskSecondaryFn
+        }
+    }
+
+    /// Whether this key's modifier class is currently pressed according to the
+    /// event's actual modifier flags.
+    func isActive(in flags: CGEventFlags) -> Bool {
+        flags.contains(modifierMask)
+    }
+
+    /// The left/right counterpart that shares this key's modifier mask, if any.
+    /// When a modifier mask clears, neither side is held, so the sibling must
+    /// be dropped from `pressedKeys` to stay in sync.
+    var sibling: GlobalHotkey.Key? {
+        switch self {
+        case .leftCommand: .rightCommand
+        case .rightCommand: .leftCommand
+        case .leftOption: .rightOption
+        case .rightOption: .leftOption
+        case .rightControl, .function: nil
+        }
+    }
+
     var displayTitle: String {
         switch self {
         case .leftCommand: "leftCommand"

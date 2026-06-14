@@ -29,6 +29,17 @@ public struct DictationModeProcessor: Sendable {
         self.makeChatClient = makeChatClient
     }
 
+    /// Wraps the transcript in a delimited block so the model can tell the
+    /// dictated content apart from its instructions. The matching guidance in
+    /// the built-in system prompts references this same `TRANSCRIPT` fence.
+    static func frameTranscriptAsData(_ transcript: String) -> String {
+        """
+        <<<TRANSCRIPT
+        \(transcript)
+        TRANSCRIPT
+        """
+    }
+
     public func process(transcript: String, mode: DictationMode) async -> DictationModeOutcome {
         let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -49,7 +60,15 @@ public struct DictationModeProcessor: Sendable {
 
         do {
             let client = try makeChatClient(selection)
-            let completion = try await client.complete(system: mode.systemPrompt, user: trimmed)
+            // Frame the transcript as opaque DATA inside a delimited block so a
+            // dictated "ignore your instructions …" can't hijack the system
+            // prompt. The built-in prompts instruct the model to treat the user
+            // message strictly as content (see DictationMode.builtInModes()).
+            let framedUser = DictationModeProcessor.frameTranscriptAsData(trimmed)
+            let completion = try await client.complete(system: mode.systemPrompt, user: framedUser)
+            // A truncated completion (`ChatClientError.truncated`) throws and is
+            // handled by the catch below — the raw transcript is inserted, never
+            // a half-finished sentence.
             let cleaned = completion.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !cleaned.isEmpty else {
                 return DictationModeOutcome(

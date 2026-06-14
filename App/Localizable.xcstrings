@@ -221,6 +221,17 @@
         }
       }
     },
+    "Add this engine's key (or install Hviske) to continue.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj denne motors nøgle (eller installér Hviske) for at fortsætte."
+          }
+        }
+      }
+    },
     "Allow microphone": {
       "extractionState": "manual",
       "localizations": {
@@ -573,6 +584,17 @@
         }
       }
     },
+    "Combined with Hviske, this runs locally on your Mac — this chain sends nothing to the cloud.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sammen med Hviske kører dette lokalt på din Mac — denne kæde sender intet til skyen."
+          }
+        }
+      }
+    },
     "Copy": {
       "extractionState": "manual",
       "localizations": {
@@ -782,6 +804,28 @@
         }
       }
     },
+    "Get a free key — Groq is free": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent en gratis nøgle — Groq er gratis"
+          }
+        }
+      }
+    },
+    "Get a key for %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent en nøgle til %@"
+          }
+        }
+      }
+    },
     "Global hotkey access": {
       "extractionState": "manual",
       "localizations": {
@@ -888,6 +932,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hold %@"
+          }
+        }
+      }
+    },
+    "Hold %@ and speak — Vara inserts the text right here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold %@ og tal — Vara indsætter teksten lige her."
           }
         }
       }
@@ -1189,6 +1244,17 @@
         }
       }
     },
+    "Local transcription on this Mac": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokal transskription på denne Mac"
+          }
+        }
+      }
+    },
     "Microphone access granted": {
       "extractionState": "manual",
       "localizations": {
@@ -1332,6 +1398,28 @@
         }
       }
     },
+    "Network file transcription via Groq": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Netværksbaseret filtransskription via Groq"
+          }
+        }
+      }
+    },
+    "Network file transcription via OpenAI": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Netværksbaseret filtransskription via OpenAI"
+          }
+        }
+      }
+    },
     "New mode": {
       "extractionState": "manual",
       "localizations": {
@@ -1460,6 +1548,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ollama (lokal)"
+          }
+        }
+      }
+    },
+    "Ollama isn't reachable yet. Start it (ollama serve) — then this chain runs locally on your Mac.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ollama kan ikke nås endnu. Start den (ollama serve) — så kører denne kæde lokalt på din Mac."
           }
         }
       }
@@ -1647,6 +1746,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Klar"
+          }
+        }
+      }
+    },
+    "Realtime network transcription": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Realtids netværkstransskription"
+          }
+        }
+      }
+    },
+    "Realtime network transcription via OpenAI": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Realtids netværkstransskription via OpenAI"
           }
         }
       }
@@ -1911,6 +2032,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kører mod http://localhost:11434 — alt bliver på denne Mac."
+          }
+        }
+      }
+    },
+    "Runs against http://localhost:11434 — this chain sends nothing to the cloud. Start Ollama if it isn't running.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kører mod http://localhost:11434 — denne kæde sender intet til skyen. Start Ollama, hvis den ikke kører."
+          }
+        }
+      }
+    },
+    "Runs locally on this Mac — this chain sends nothing to the cloud.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kører lokalt på denne Mac — denne kæde sender intet til skyen."
+          }
+        }
+      }
+    },
+    "Runs on this Mac — Danish": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kører på denne Mac — dansk"
           }
         }
       }
@@ -2285,6 +2439,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "I dag"
+          }
+        }
+      }
+    },
+    "Transcription failed, but your audio was kept and can be recovered. Please try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transskriptionen mislykkedes, men din lyd blev gemt og kan gendannes. Prøv igen."
+          }
+        }
+      }
+    },
+    "Transcription failed. Please try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transskriptionen mislykkedes. Prøv igen."
           }
         }
       }
