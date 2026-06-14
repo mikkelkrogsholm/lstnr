@@ -50,12 +50,33 @@ public final class GlobalHotkey: @unchecked Sendable {
     private var runLoopSource: CFRunLoopSource?
     private var wakeObserver: NSObjectProtocol?
     private var unlockObserver: NSObjectProtocol?
+    private var watchdogTimer: Timer?
     private var pressedKeys: Set<Key> = []
     private var isDown = false
     let shortcut: Shortcut
     let diagnosticLog: (@Sendable (String) -> Void)?
     let onDown: @Sendable () -> Void
     let onUp: @Sendable () -> Void
+
+    /// Fired for regular key presses while the shortcut is held (the tap is
+    /// listen-only, so the event still reaches the frontmost app). Used for
+    /// Esc-to-cancel and 1–9 mode selection during dictation.
+    public var onKeyDownWhileActive: (@Sendable (UInt16) -> Void)?
+
+    /// Fired by the watchdog when the tap was found disabled. Carries the PID
+    /// of the process holding secure keyboard input, if any — while secure
+    /// input is held, macOS keeps every keyboard tap disabled and the hotkey
+    /// cannot work.
+    public var onTapBlocked: (@Sendable (pid_t?) -> Void)?
+
+    /// PID of the process currently holding secure keyboard input, if any.
+    public static func secureInputHolderPID() -> pid_t? {
+        guard let sessionInfo = CGSessionCopyCurrentDictionary() as? [String: Any],
+              let pid = sessionInfo["kCGSSessionSecureInputPID"] as? Int else {
+            return nil
+        }
+        return pid_t(pid)
+    }
 
     public init(
         key: Key = .rightOption,
@@ -90,13 +111,20 @@ public final class GlobalHotkey: @unchecked Sendable {
     }
 
     public func install() throws {
-        let eventMask = CGEventMask(1 << CGEventType.flagsChanged.rawValue)
+        let eventMask = CGEventMask(
+            (1 << CGEventType.flagsChanged.rawValue) | (1 << CGEventType.keyDown.rawValue)
+        )
         let refcon = Unmanaged.passUnretained(self).toOpaque()
 
+        // Active tap (not listen-only): macOS 26 keeps listen-only keyboard
+        // taps permanently disabled unless Input Monitoring is granted, while
+        // active taps are governed by Accessibility, which Vara already holds.
+        // The callback always returns the event unmodified, so this behaves
+        // exactly like a listener.
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
-            options: .listenOnly,
+            options: .defaultTap,
             eventsOfInterest: eventMask,
             callback: { _, type, event, refcon in
                 guard let refcon else { return Unmanaged.passUnretained(event) }
@@ -130,6 +158,15 @@ public final class GlobalHotkey: @unchecked Sendable {
             object: nil,
             queue: .main
         ) { [weak self] _ in self?.rearm() }
+
+        // Watchdog: macOS only tells us about a disabled tap via the next
+        // event through the callback — which never arrives if the tap is dead.
+        // Poll and revive it.
+        let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
+            self?.rearm()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        watchdogTimer = timer
     }
 
     public func uninstall() {
@@ -145,6 +182,8 @@ public final class GlobalHotkey: @unchecked Sendable {
         if let obs = unlockObserver {
             DistributedNotificationCenter.default().removeObserver(obs)
         }
+        watchdogTimer?.invalidate()
+        watchdogTimer = nil
         eventTap = nil
         runLoopSource = nil
         wakeObserver = nil
@@ -159,6 +198,13 @@ public final class GlobalHotkey: @unchecked Sendable {
             pressedKeys = []
             isDown = false
             CGEvent.tapEnable(tap: tap, enable: true)
+            let holderPID = Self.secureInputHolderPID()
+            if let holderPID {
+                diagnosticLog?("Global hotkey event tap disabled — secure input held by pid \(holderPID).")
+            } else {
+                diagnosticLog?("Global hotkey event tap was found disabled; re-enabled.")
+            }
+            onTapBlocked?(holderPID)
         }
     }
 
@@ -166,10 +212,20 @@ public final class GlobalHotkey: @unchecked Sendable {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             pressedKeys = []
             isDown = false
-            diagnosticLog?("Global hotkey event tap disabled by macOS. Rearming.")
+            let reason = type == .tapDisabledByTimeout
+                ? "timeout (process too slow — App Nap?)"
+                : "secure input (password field active)"
+            diagnosticLog?("Global hotkey event tap disabled by macOS: \(reason). Rearming.")
             rearm()
             return
         }
+        if type == .keyDown {
+            guard isDown else { return }
+            let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
+            onKeyDownWhileActive?(keyCode)
+            return
+        }
+
         guard type == .flagsChanged else { return }
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         guard let changedKey = Key(rawValue: keyCode) else { return }

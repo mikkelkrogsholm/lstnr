@@ -16,8 +16,11 @@ public enum MicrophoneDictationAudioRecorderError: Error, CustomStringConvertibl
 public final class MicrophoneDictationAudioRecorder: DictationAudioRecorder, @unchecked Sendable {
     private var recorder: AudioRecorder?
     private var stream: AsyncStream<Data>?
+    private let onLevel: (@Sendable (Double) -> Void)?
 
-    public init() {}
+    public init(onLevel: (@Sendable (Double) -> Void)? = nil) {
+        self.onLevel = onLevel
+    }
 
     public func startRecording() async throws {
         guard recorder == nil, stream == nil else {
@@ -25,7 +28,7 @@ public final class MicrophoneDictationAudioRecorder: DictationAudioRecorder, @un
         }
 
         let recorder = try AudioRecorder()
-        let stream = try recorder.start()
+        let stream = try recorder.start(onLevel: onLevel)
         self.recorder = recorder
         self.stream = stream
     }

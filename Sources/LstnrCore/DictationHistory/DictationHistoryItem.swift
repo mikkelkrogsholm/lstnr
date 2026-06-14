@@ -11,6 +11,10 @@ public struct DictationHistoryItem: Codable, Sendable, Equatable, Identifiable {
     public let rawTranscript: String
     public let cleanedTranscript: String?
     public let backend: String
+    /// Display name of the dictation mode used; nil for pre-mode history items.
+    public let modeName: String?
+    /// App the dictation was inserted into; nil when unknown ("General").
+    public let targetAppName: String?
     public let detectedLanguage: String?
     public let requestedLanguage: String?
     public let audioDurationSeconds: Double?
@@ -23,6 +27,8 @@ public struct DictationHistoryItem: Codable, Sendable, Equatable, Identifiable {
         rawTranscript: String,
         cleanedTranscript: String? = nil,
         backend: String,
+        modeName: String? = nil,
+        targetAppName: String? = nil,
         detectedLanguage: String? = nil,
         requestedLanguage: String? = nil,
         audioDurationSeconds: Double? = nil,
@@ -34,6 +40,8 @@ public struct DictationHistoryItem: Codable, Sendable, Equatable, Identifiable {
         self.rawTranscript = rawTranscript
         self.cleanedTranscript = cleanedTranscript
         self.backend = backend
+        self.modeName = modeName
+        self.targetAppName = targetAppName
         self.detectedLanguage = detectedLanguage
         self.requestedLanguage = requestedLanguage
         self.audioDurationSeconds = audioDurationSeconds

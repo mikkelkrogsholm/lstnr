@@ -14,8 +14,9 @@ settings:
   base:
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     SWIFT_VERSION: "6.0"
-    CODE_SIGN_STYLE: Manual
-    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "Apple Development"
+    DEVELOPMENT_TEAM: 3B7KHK6C9K
     CODE_SIGNING_REQUIRED: "YES"
     CODE_SIGNING_ALLOWED: "YES"
     ENABLE_HARDENED_RUNTIME: "NO"
@@ -27,18 +28,28 @@ targets:
     platform: macOS
     sources:
       - path: App
+        excludes:
+          - "Resources/**"
+      - path: App/Resources/Fonts
+        buildPhase: resources
+        type: folder
+      - path: App/Resources/AppIcon.icns
+        buildPhase: resources
     info:
       path: App/Info.plist
       properties:
-        CFBundleName: lstnr
-        CFBundleDisplayName: lstnr
+        CFBundleName: Vara
+        CFBundleDisplayName: Vara
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         LSUIElement: false
         LSMinimumSystemVersion: "14.0"
+        ATSApplicationFontsPath: Fonts
+        CFBundleIconFile: AppIcon
+        NSHumanReadableCopyright: "© 2026 Brokk og Sindre ApS · brokk-sindre.dk"
         NSMicrophoneUsageDescription: >-
-          lstnr listens to your voice and sends audio to ElevenLabs Scribe
-          for live transcription.
+          Vara listens to your voice to turn speech into text. Audio is
+          transcribed by the engine you choose in Settings.
     entitlements:
       path: App/Lstnr.entitlements
       properties:
@@ -49,6 +60,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dk.56n.lstnr
+        PRODUCT_NAME: Vara
         GENERATE_INFOPLIST_FILE: "NO"
         INFOPLIST_FILE: App/Info.plist
         MARKETING_VERSION: "0.1.0"

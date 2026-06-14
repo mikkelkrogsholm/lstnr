@@ -12,7 +12,7 @@ final class AppState {
     var isTranscribing: Bool = false
     var lastTranscript: String = ""
     var lastError: String?
-    var statusMessage: String = "Starting…"
+    var statusMessage: String = String(localized: "Starting …", comment: "Status message at launch")
     var historyItems: [DictationHistoryItem] = []
     var settings: LstnrAppSettings
     var microphoneName: String
@@ -23,6 +23,8 @@ final class AppState {
         Self.debugLogFileURL().path
     }
 
+    let hudState = RecordingHUDState()
+
     private var backend: (any SpeechToTextBackend)?
     private var dictationSession: DictationSession?
     private var hotkey: GlobalHotkey?
@@ -30,11 +32,64 @@ final class AppState {
     private let settingsStore = LstnrSettingsStore()
     private var historyStore: DictationHistoryStore
     private let pendingHistory = PendingDictationHistoryStore()
-    private let hudController = RecordingHUDWindowController(placement: .insertionPoint)
+    private let hudController: RecordingHUDWindowController
     private var credentialsObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
+    /// Mode picked with 1–9 during the current dictation; cleared afterwards.
+    private var activeModeOverride: DictationMode?
+
+    /// Mode chosen by a per-app rule for the current dictation.
+    private var activeAppRuleMode: DictationMode?
+    /// App that was frontmost when the current dictation started — where the
+    /// text will land. Used for history grouping and per-app mode rules.
+    private var dictationTargetAppName: String?
+
+    /// The mode the next/ongoing dictation runs through:
+    /// digit override > per-app rule > selected default.
+    var activeMode: DictationMode {
+        activeModeOverride ?? activeAppRuleMode ?? settings.selectedMode
+    }
+
+    /// Whether a mode can actually run: raw always can; LLM modes need a
+    /// configured provider with its key in place.
+    func isModeReady(_ mode: DictationMode) -> Bool {
+        guard mode.behavior != .insertRaw else { return true }
+        guard let selection = mode.llm ?? settings.defaultLLM else { return false }
+        switch selection.provider {
+        case .openAI:
+            return hasLLMKey(.openAI)
+        case .groq:
+            return hasLLMKey(.groq)
+        case .anthropic:
+            return hasLLMKey(.anthropic)
+        case .ollama:
+            return true
+        case .custom(let endpointID):
+            return settings.customEndpoints.contains { $0.id == endpointID }
+        }
+    }
+
+    private func hasLLMKey(_ provider: LstnrCredentialProvider) -> Bool {
+        if let key = try? credentialStore.credential(for: provider), !key.isEmpty {
+            return true
+        }
+        if let key = try? EnvLoader.resolveForApp(provider.environmentVariableName), !key.isEmpty {
+            return true
+        }
+        return false
+    }
+
+    /// Keeps App Nap from throttling the process — a napped app services its
+    /// CGEventTap too slowly and macOS disables the tap, killing the hotkey
+    /// whenever Vara is in the background.
+    private var appNapActivity: NSObjectProtocol?
 
     init() {
+        hudController = RecordingHUDWindowController(state: hudState, placement: .insertionPoint)
+        appNapActivity = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiated, .latencyCritical],
+            reason: "Global dictation hotkey must stay responsive"
+        )
         let loadedSettings = settingsStore.load()
         settings = loadedSettings
         microphoneName = AppState.defaultMicrophoneName()
@@ -78,7 +133,7 @@ final class AppState {
         if ensureAccessibility(prompt: false) {
             installHotkey()
         } else {
-            statusMessage = "Grant Accessibility in System Settings, then relaunch."
+            statusMessage = String(localized: "Grant Accessibility in System Settings, then relaunch.", comment: "Status message")
         }
     }
 
@@ -144,7 +199,7 @@ final class AppState {
             dictationSession = nil
             hotkey?.uninstall()
             hotkey = nil
-            statusMessage = "Add ElevenLabs API key in Settings"
+            statusMessage = String(localized: "Add an ElevenLabs API key in Settings", comment: "Status message")
             lastError = "\(error)"
             log("API key/backend setup failed: \(error)")
             return false
@@ -159,7 +214,7 @@ final class AppState {
             self.backend = backend
             dictationSession = makeDictationSession(backend: backend)
             lastError = nil
-            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            statusMessage = readyStatusMessage
             log("Groq Whisper backend ready. API key source resolved without exposing key.")
             return true
         } catch {
@@ -167,7 +222,7 @@ final class AppState {
             dictationSession = nil
             hotkey?.uninstall()
             hotkey = nil
-            statusMessage = "Add Groq API key in Settings"
+            statusMessage = String(localized: "Add a Groq API key in Settings", comment: "Status message")
             lastError = "\(error)"
             log("Groq API key/backend setup failed: \(error)")
             return false
@@ -186,7 +241,7 @@ final class AppState {
             self.backend = backend
             dictationSession = makeDictationSession(backend: backend)
             lastError = nil
-            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            statusMessage = readyStatusMessage
             log("\(displayName) backend ready. API key source resolved without exposing key.")
             return true
         } catch {
@@ -194,7 +249,7 @@ final class AppState {
             dictationSession = nil
             hotkey?.uninstall()
             hotkey = nil
-            statusMessage = "Add OpenAI API key in Settings"
+            statusMessage = String(localized: "Add an OpenAI API key in Settings", comment: "Status message")
             lastError = "\(error)"
             log("OpenAI API key/backend setup failed: \(error)")
             return false
@@ -214,7 +269,7 @@ final class AppState {
             self.backend = backend
             dictationSession = makeDictationSession(backend: backend)
             lastError = nil
-            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            statusMessage = readyStatusMessage
             log("OpenAI GPT Realtime Whisper backend ready. API key source resolved without exposing key.")
             return true
         } catch {
@@ -222,7 +277,7 @@ final class AppState {
             dictationSession = nil
             hotkey?.uninstall()
             hotkey = nil
-            statusMessage = "Add OpenAI API key in Settings"
+            statusMessage = String(localized: "Add an OpenAI API key in Settings", comment: "Status message")
             lastError = "\(error)"
             log("OpenAI Realtime API key/backend setup failed: \(error)")
             return false
@@ -237,7 +292,7 @@ final class AppState {
             dictationSession = nil
             hotkey?.uninstall()
             hotkey = nil
-            statusMessage = "Install Local Hviske in Settings"
+            statusMessage = String(localized: "Install Hviske in Settings", comment: "Status message")
             lastError = "Local Hviske runtime or model is missing."
             log("Local Hviske backend not ready. runtime=\(runtimeStatus.hasPythonRuntime), model=\(runtimeStatus.hasModelSnapshot), hfHome=\(runtimeStatus.hfHomeURL.path)")
             return false
@@ -251,7 +306,7 @@ final class AppState {
         self.backend = backend
         dictationSession = makeDictationSession(backend: backend)
         lastError = nil
-        statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+        statusMessage = readyStatusMessage
         log("Local Hviske backend ready. hfHome=\(runtimeStatus.hfHomeURL.path)")
         return true
     }
@@ -298,7 +353,7 @@ final class AppState {
         let granted = GlobalHotkey.hasAccessibility(prompt: prompt)
         log("Accessibility check: granted=\(granted), prompt=\(prompt)")
         if granted { return true }
-        statusMessage = "Grant Accessibility in System Settings, then relaunch."
+        statusMessage = String(localized: "Grant Accessibility in System Settings, then relaunch.", comment: "Status message")
         return false
     }
 
@@ -317,21 +372,114 @@ final class AppState {
                 Task { @MainActor in self?.endDictationInteraction() }
             }
         )
+        hotkey.onKeyDownWhileActive = { [weak self] keyCode in
+            Task { @MainActor in self?.handleKeyWhileDictating(keyCode: keyCode) }
+        }
+        hotkey.onTapBlocked = { [weak self] holderPID in
+            Task { @MainActor in self?.reportTapBlocked(holderPID: holderPID) }
+        }
         do {
             try hotkey.install()
             self.hotkey = hotkey
-            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            statusMessage = readyStatusMessage
             log("Hotkey installed")
         } catch {
-            statusMessage = "Hotkey setup failed"
+            statusMessage = String(localized: "Hotkey setup failed", comment: "Status message")
             lastError = "\(error)"
             log("Hotkey install failed: \(error)")
         }
     }
 
+    private var readyStatusMessage: String {
+        String(localized: "Hold \(settings.shortcut.symbol) — Vara is listening", comment: "Status message when ready to dictate")
+    }
+
+    /// Last secure-input holder we warned about, to avoid repeating the
+    /// message on every 5-second watchdog tick.
+    private var lastReportedSecureInputPID: pid_t?
+
+    private func reportTapBlocked(holderPID: pid_t?) {
+        guard let holderPID else {
+            // Tap was re-enabled and no one holds secure input — clear stale warning.
+            if lastReportedSecureInputPID != nil {
+                lastReportedSecureInputPID = nil
+                lastError = nil
+                statusMessage = readyStatusMessage
+            }
+            return
+        }
+        guard holderPID != lastReportedSecureInputPID else { return }
+        lastReportedSecureInputPID = holderPID
+
+        let holderName = NSRunningApplication(processIdentifier: holderPID)?.localizedName
+            ?? "pid \(holderPID)"
+        statusMessage = String(localized: "Keyboard blocked by \(holderName)", comment: "Status when secure input blocks the hotkey")
+        lastError = String(
+            localized: "“\(holderName)” is holding secure keyboard input (e.g. a password field), so macOS blocks the dictation key everywhere. Close the password prompt or quit that app to release it.",
+            comment: "Explanation when secure input blocks the hotkey"
+        )
+        log("Secure input held by \(holderName) (pid \(holderPID)) — hotkey blocked system-wide")
+    }
+
+    /// Esc cancels; 1–9 picks a mode for the ongoing dictation only.
+    private func handleKeyWhileDictating(keyCode: UInt16) {
+        guard isRecording else { return }
+
+        let escKeyCode: UInt16 = 53
+        if keyCode == escKeyCode {
+            cancelDictation()
+            return
+        }
+
+        let digitKeyCodes: [UInt16: Int] = [
+            18: 1, 19: 2, 20: 3, 21: 4, 23: 5, 22: 6, 26: 7, 28: 8, 25: 9,
+        ]
+        guard let digit = digitKeyCodes[keyCode] else { return }
+        let modes = settings.modes
+        guard digit <= modes.count else { return }
+
+        let mode = modes[digit - 1]
+        guard isModeReady(mode) else {
+            log("Mode override via digit \(digit) ignored — '\(mode.name)' is not configured")
+            return
+        }
+        activeModeOverride = mode
+        hudState.modeTitle = mode.displayTitle
+        hudState.modeSymbol = mode.symbolName
+        log("Mode override via digit \(digit): \(mode.name)")
+    }
+
+    /// Records which app the dictation targets and applies a matching
+    /// per-app mode rule, if one exists and its LLM is configured.
+    private func captureDictationTarget() {
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        dictationTargetAppName = frontmost?.localizedName
+        activeAppRuleMode = nil
+
+        if let bundleID = frontmost?.bundleIdentifier,
+           let rule = settings.appModeRules.first(where: { $0.bundleID == bundleID }),
+           let ruleMode = settings.modes.first(where: { $0.id == rule.modeID }) {
+            if isModeReady(ruleMode) {
+                activeAppRuleMode = ruleMode
+                log("App rule applied: \(rule.appName) → \(ruleMode.name)")
+            } else {
+                log("App rule for \(rule.appName) skipped — mode '\(ruleMode.name)' is not configured")
+            }
+        }
+    }
+
+    func cancelDictation() {
+        guard let dictationSession else { return }
+        log("Cancelling dictation")
+        isRecording = false
+        isTranscribing = false
+        Task { @MainActor [weak self] in
+            let result = await dictationSession.cancelRecording()
+            self?.apply(commandResult: result)
+        }
+    }
+
     private func makeDictationSession(backend: any SpeechToTextBackend) -> DictationSession {
-        let cleanupMode = settings.cleanupMode.transcriptCleanupMode
-        let cleanupProvider = settings.cleanupMode.cleanupProvider
         let languageCode = settings.language.languageCode
         let pasteAutomatically = settings.pasteAutomatically
         let pendingHistory = pendingHistory
@@ -343,12 +491,25 @@ final class AppState {
                 await MainActor.run { self?.log(message) }
             }
         }
+        // Snapshot of mode + processor taken at transcription time so digit
+        // overrides during the recording take effect.
+        let resolveProcessing: @Sendable () async -> (DictationMode, DictationModeProcessor, String?)? = { [weak self] in
+            await MainActor.run {
+                guard let self else { return nil }
+                return (self.activeMode, self.makeModeProcessor(), self.dictationTargetAppName)
+            }
+        }
+        let recorder = MicrophoneDictationAudioRecorder(onLevel: { [weak self] level in
+            Task { @MainActor in
+                self?.hudState.pushLevel(level)
+            }
+        })
 
         return DictationSession(
             mode: .pushToTalk,
-            recorder: MicrophoneDictationAudioRecorder(),
+            recorder: recorder,
             languageCode: languageCode,
-            transcribe: { request in
+            transcribe: { [weak self] request in
                 let instrumentedRequest = SpeechToTextRequest(
                     audio: instrumentAudio(request.audio),
                     languageCode: request.languageCode
@@ -356,18 +517,29 @@ final class AppState {
                 let rawResult = try await Self.withTimeout(seconds: timeoutSeconds) {
                     try await backend.transcribe(instrumentedRequest)
                 }
-                let cleanupResult = try await cleanupProvider.cleanup(
-                    TranscriptCleanupRequest(rawText: rawResult.text, mode: cleanupMode)
-                )
+
+                guard let (mode, processor, targetAppName) = await resolveProcessing() else {
+                    return rawResult
+                }
+                let outcome = await processor.process(transcript: rawResult.text, mode: mode)
+                if let llmError = outcome.llmErrorDescription {
+                    // The raw transcript is inserted instead — never lose words.
+                    await MainActor.run {
+                        self?.log("LLM step fell back to raw transcript: \(llmError)")
+                    }
+                }
+
                 await pendingHistory.replace(
                     PendingDictationHistoryEntry(
                         rawResult: rawResult,
-                        cleanupResult: cleanupResult,
+                        outcome: outcome,
+                        modeName: mode.displayTitle,
+                        targetAppName: targetAppName,
                         requestedLanguage: request.languageCode
                     )
                 )
                 return TranscriptionResult(
-                    text: cleanupResult.cleanedText,
+                    text: outcome.text,
                     detectedLanguage: rawResult.detectedLanguage,
                     languageConfidence: rawResult.languageConfidence,
                     audioDurationSeconds: rawResult.audioDurationSeconds,
@@ -386,6 +558,118 @@ final class AppState {
         )
     }
 
+    /// Builds the LLM processor with credentials resolved lazily so keychain
+    /// access happens off the hot path only when a mode actually needs an LLM.
+    private func makeModeProcessor() -> DictationModeProcessor {
+        DictationModeProcessor(
+            defaultLLM: settings.defaultLLM,
+            makeChatClient: Self.chatClientFactory(
+                credentialStore: credentialStore,
+                customEndpoints: settings.customEndpoints
+            )
+        )
+    }
+
+    nonisolated private static func chatClientFactory(
+        credentialStore: LstnrKeychainCredentialStore,
+        customEndpoints: [CustomLLMEndpoint]
+    ) -> DictationModeProcessor.ChatClientFactory {
+        { selection in
+            switch selection.provider {
+            case .openAI:
+                let key = try Self.resolveLLMKey(credentialStore, .openAI, env: "OPENAI_API_KEY")
+                return OpenAICompatibleChatClient(
+                    id: "openai",
+                    baseURL: LLMProvider.openAI.defaultBaseURL!,
+                    apiKey: key,
+                    model: selection.model
+                )
+            case .groq:
+                let key = try Self.resolveLLMKey(credentialStore, .groq, env: "GROQ_API_KEY")
+                return OpenAICompatibleChatClient(
+                    id: "groq",
+                    baseURL: LLMProvider.groq.defaultBaseURL!,
+                    apiKey: key,
+                    model: selection.model
+                )
+            case .anthropic:
+                let key = try Self.resolveLLMKey(credentialStore, .anthropic, env: "ANTHROPIC_API_KEY")
+                return AnthropicChatClient(apiKey: key, model: selection.model)
+            case .ollama:
+                return OpenAICompatibleChatClient(
+                    id: "ollama",
+                    baseURL: LLMProvider.ollama.defaultBaseURL!,
+                    apiKey: nil,
+                    model: selection.model
+                )
+            case .custom(let endpointID):
+                guard let endpoint = customEndpoints.first(where: { $0.id == endpointID }),
+                      let baseURL = endpoint.baseURL else {
+                    throw LLMConfigurationError.unknownCustomEndpoint
+                }
+                let key = endpoint.requiresAPIKey
+                    ? try credentialStore.credential(forCustomEndpoint: endpointID)
+                    : nil
+                return OpenAICompatibleChatClient(
+                    id: endpoint.name,
+                    baseURL: baseURL,
+                    apiKey: key,
+                    model: selection.model
+                )
+            }
+        }
+    }
+
+    nonisolated private static func resolveLLMKey(
+        _ store: LstnrKeychainCredentialStore,
+        _ provider: LstnrCredentialProvider,
+        env: String
+    ) throws -> String {
+        if let key = try? store.credential(for: provider), !key.isEmpty {
+            return key
+        }
+        if let key = try? EnvLoader.resolveForApp(env), !key.isEmpty {
+            return key
+        }
+        throw LLMConfigurationError.missingAPIKey(provider: provider.rawValue)
+    }
+
+    /// Persists a new default mode and notifies so configuration reloads.
+    func selectMode(_ mode: DictationMode) {
+        guard settings.selectedModeID != mode.id else { return }
+        settings.selectedModeID = mode.id
+        try? settingsStore.save(settings)
+        log("Selected mode: \(mode.name)")
+        NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+    }
+
+    /// Mutates, persists and broadcasts settings — used by onboarding.
+    func updateSettings(_ mutate: (inout LstnrAppSettings) -> Void) {
+        var updated = settings
+        mutate(&updated)
+        settings = updated
+        try? settingsStore.save(updated)
+        NotificationCenter.default.post(name: .lstnrSettingsDidChange, object: nil)
+    }
+
+    /// Saves an API key from onboarding and reloads configuration.
+    func saveCredential(_ key: String, for provider: LstnrCredentialProvider) {
+        try? credentialStore.saveCredential(
+            key.trimmingCharacters(in: .whitespacesAndNewlines),
+            for: provider
+        )
+        NotificationCenter.default.post(name: .lstnrCredentialsDidChange, object: nil)
+    }
+
+    func savedCredential(for provider: LstnrCredentialProvider) -> String {
+        (try? credentialStore.credential(for: provider)) ?? ""
+    }
+
+    /// Whether the app currently holds the Accessibility permission.
+    func checkAccessibilityGranted() -> Bool {
+        GlobalHotkey.hasAccessibility(prompt: false)
+    }
+
     func toggleDictationFromMenu() {
         log("Dictation toggle requested. isRecording=\(isRecording), isTranscribing=\(isTranscribing)")
         if isRecording {
@@ -402,7 +686,7 @@ final class AppState {
     func reinsertTranscript(_ item: DictationHistoryItem) {
         ClipboardPaster.pasteAtCursor(text: item.displayTranscript)
         lastTranscript = item.displayTranscript
-        statusMessage = "Reinserted from history"
+        statusMessage = String(localized: "Reinserted from history", comment: "Status message")
     }
 
     func deleteHistoryItem(_ item: DictationHistoryItem) {
@@ -438,7 +722,8 @@ final class AppState {
         guard ensureMicrophonePermissionBeforeRecording() else {
             return
         }
-        statusMessage = "Starting microphone…"
+        captureDictationTarget()
+        statusMessage = String(localized: "Starting the microphone …", comment: "Status message")
         log("Begin dictation interaction")
         Task { @MainActor [weak self] in
             let result = await dictationSession.beginInteraction()
@@ -453,9 +738,10 @@ final class AppState {
             return
         }
         if isRecording {
-            statusMessage = "Transcribing…"
+            statusMessage = String(localized: "Vara is forging the text …", comment: "Status while transcribing/cleaning")
             isTranscribing = true
-            showHUD(phase: .transcribing)
+            hudState.phase = .forging
+            presentHUD()
         }
         isRecording = false
         log("End dictation interaction")
@@ -471,39 +757,63 @@ final class AppState {
             isRecording = true
             isTranscribing = false
             lastError = nil
-            statusMessage = "Recording…"
+            statusMessage = String(localized: "Vara is listening …", comment: "Status while recording")
             log("Recording started")
-            showHUD(phase: .recording)
+            let mode = activeMode
+            hudState.modeTitle = mode.displayTitle
+            hudState.modeSymbol = mode.symbolName
+            hudState.beginRecording(startedAt: Date())
+            presentHUD()
+            playFeedbackSound("Tink", volume: 0.25)
         case .ignored:
             log("Dictation command ignored")
             return
+        case .cancelled:
+            isRecording = false
+            isTranscribing = false
+            activeModeOverride = nil
+            activeAppRuleMode = nil
+            statusMessage = readyStatusMessage
+            log("Dictation cancelled")
+            hudState.phase = .cancelled
+            hideHUDAfterDelay()
         case .completed(let insertedText):
             if let insertedText {
                 lastTranscript = insertedText
             }
             isRecording = false
             isTranscribing = false
-            statusMessage = "Hold \(settings.shortcut.symbol) to dictate"
+            activeModeOverride = nil
+            activeAppRuleMode = nil
+            statusMessage = readyStatusMessage
             let insertionStatus: DictationInsertionStatus = settings.pasteAutomatically ? .inserted : .notInserted
             Task { @MainActor [weak self] in
                 await self?.savePendingHistory(insertionStatus: insertionStatus)
             }
             if let insertedText {
                 log("Dictation completed. Inserted text length=\(insertedText.count), insertionStatus=\(insertionStatus.rawValue)")
-                showHUD(phase: .inserted, transcriptPreview: insertedText)
+                hudState.transcriptPreview = insertedText
+                hudState.phase = .inserted(words: DictationStats.wordCount(of: insertedText))
                 hideHUDAfterDelay()
+                playFeedbackSound("Pop", volume: 0.3)
             } else {
                 log("Dictation completed with empty transcript")
-                statusMessage = "No speech detected"
-                hideHUD()
+                statusMessage = String(localized: "Vara heard nothing", comment: "Status for empty transcript")
+                hudState.phase = .heardNothing
+                hideHUDAfterDelay(seconds: 2.0)
             }
         case .failed(let message):
             isRecording = false
             isTranscribing = false
+            activeModeOverride = nil
+            activeAppRuleMode = nil
             lastError = message
-            statusMessage = "Error"
+            statusMessage = String(localized: "Something went wrong", comment: "Status on dictation error")
             log("Dictation failed: \(message)")
-            showHUD(phase: .error, transcriptPreview: message)
+            hudState.transcriptPreview = ""
+            hudState.phase = .error(message: message)
+            hideHUDAfterDelay(seconds: 4.0)
+            playFeedbackSound("Basso", volume: 0.25)
         }
     }
 
@@ -517,32 +827,32 @@ final class AppState {
         case .authorized:
             return true
         case .notDetermined:
-            statusMessage = "Grant Microphone permission"
+            statusMessage = String(localized: "Grant microphone access", comment: "Status message")
             log("Requesting Microphone permission")
             Task { @MainActor [weak self] in
                 let granted = await AVCaptureDevice.requestAccess(for: .audio)
                 self?.microphonePermissionStatus = Self.microphoneAuthorizationStatusTitle()
                 self?.log("Microphone permission response: granted=\(granted)")
                 if granted {
-                    self?.statusMessage = "Microphone ready"
+                    self?.statusMessage = String(localized: "Microphone ready", comment: "Status message")
                     self?.beginDictationInteraction()
                 } else {
-                    self?.statusMessage = "Grant Microphone in System Settings"
+                    self?.statusMessage = String(localized: "Grant microphone access in System Settings", comment: "Status message")
                 }
             }
             return false
         case .denied:
-            statusMessage = "Grant Microphone in System Settings"
+            statusMessage = String(localized: "Grant microphone access in System Settings", comment: "Status message")
             lastError = "Microphone permission is denied for this Lstnr.app build."
             log("Microphone permission denied")
             return false
         case .restricted:
-            statusMessage = "Microphone restricted"
+            statusMessage = String(localized: "Microphone is restricted", comment: "Status message")
             lastError = "Microphone permission is restricted by macOS."
             log("Microphone permission restricted")
             return false
         @unknown default:
-            statusMessage = "Microphone unavailable"
+            statusMessage = String(localized: "Microphone unavailable", comment: "Status message")
             lastError = "Unknown Microphone permission state."
             log("Microphone permission unknown status")
             return false
@@ -556,6 +866,8 @@ final class AppState {
                 rawTranscript: pendingEntry.rawResult.text,
                 cleanedTranscript: pendingEntry.cleanedTranscriptForHistory,
                 backend: pendingEntry.rawResult.backend,
+                modeName: pendingEntry.modeName,
+                targetAppName: pendingEntry.targetAppName,
                 detectedLanguage: pendingEntry.rawResult.detectedLanguage,
                 requestedLanguage: pendingEntry.requestedLanguage,
                 audioDurationSeconds: pendingEntry.rawResult.audioDurationSeconds,
@@ -604,25 +916,33 @@ final class AppState {
         Self.appendDebugLogLine(entry.line)
     }
 
-    private func showHUD(phase: RecordingHUDPhase, transcriptPreview: String = "") {
+    /// Subtle audio confirmation for push-to-talk states; system sounds at
+    /// low volume so they never dominate.
+    private func playFeedbackSound(_ name: String, volume: Float) {
+        guard settings.playSounds else { return }
+        guard let sound = NSSound(named: name) else { return }
+        sound.volume = volume
+        sound.play()
+    }
+
+    private func presentHUD() {
         guard settings.showHUD else { return }
-        hudController.show(
-            model: RecordingHUDModel(
-                phase: phase,
-                level: phase == .recording ? 0.62 : 0,
-                transcriptPreview: transcriptPreview
-            )
-        )
+        hudController.show()
     }
 
     private func hideHUD() {
         hudController.hide()
     }
 
-    private func hideHUDAfterDelay() {
+    private func hideHUDAfterDelay(seconds: Double = 1.4) {
+        let phaseAtSchedule = hudState.phase
         Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(1.2))
-            self?.hideHUD()
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self else { return }
+            // A new dictation may have started in the meantime — don't hide it.
+            if self.hudState.phase == phaseAtSchedule {
+                self.hideHUD()
+            }
         }
     }
 
@@ -841,13 +1161,14 @@ enum ClipboardPaster {
 
 private struct PendingDictationHistoryEntry: Sendable {
     let rawResult: TranscriptionResult
-    let cleanupResult: TranscriptCleanupResult
+    let outcome: DictationModeOutcome
+    let modeName: String
+    let targetAppName: String?
     let requestedLanguage: String?
 
     var cleanedTranscriptForHistory: String? {
-        guard cleanupResult.mode != .raw else { return nil }
-        guard cleanupResult.cleanedText != rawResult.text else { return nil }
-        return cleanupResult.cleanedText
+        guard outcome.usedLLM, outcome.text != rawResult.text else { return nil }
+        return outcome.text
     }
 }
 
@@ -871,18 +1192,16 @@ private extension DictationHistoryItem {
     }
 }
 
-private extension LstnrCleanupModeChoice {
-    var transcriptCleanupMode: TranscriptCleanupMode {
-        switch self {
-        case .raw: .raw
-        case .clean: .clean
-        }
-    }
+enum LLMConfigurationError: Error, CustomStringConvertible {
+    case missingAPIKey(provider: String)
+    case unknownCustomEndpoint
 
-    var cleanupProvider: any TranscriptCleanupProvider {
+    var description: String {
         switch self {
-        case .raw: RawTranscriptCleanupProvider()
-        case .clean: BasicTranscriptCleanupProvider()
+        case .missingAPIKey(let provider):
+            return "Missing API key for LLM provider '\(provider)'. Add it in Settings → Intelligence."
+        case .unknownCustomEndpoint:
+            return "The custom LLM endpoint for this mode no longer exists."
         }
     }
 }

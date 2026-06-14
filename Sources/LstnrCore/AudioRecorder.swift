@@ -33,7 +33,25 @@ public final class AudioRecorder: @unchecked Sendable {
         self.targetFormat = format
     }
 
-    public func start() throws -> AsyncStream<Data> {
+    /// Linear RMS of interleaved PCM s16le samples, normalized to 0...1.
+    public static func pcm16RMSLevel(_ data: Data) -> Double {
+        let sampleCount = data.count / 2
+        guard sampleCount > 0 else { return 0 }
+
+        var sumOfSquares = 0.0
+        data.withUnsafeBytes { (rawBuffer: UnsafeRawBufferPointer) in
+            var index = 0
+            while index + 1 < rawBuffer.count {
+                let unsignedSample = UInt16(rawBuffer[index]) | (UInt16(rawBuffer[index + 1]) << 8)
+                let sample = Double(Int16(bitPattern: unsignedSample)) / Double(Int16.max)
+                sumOfSquares += sample * sample
+                index += 2
+            }
+        }
+        return (sumOfSquares / Double(sampleCount)).squareRoot()
+    }
+
+    public func start(onLevel: (@Sendable (Double) -> Void)? = nil) throws -> AsyncStream<Data> {
         let input = engine.inputNode
         let sourceFormat = input.outputFormat(forBus: 0)
 
@@ -74,6 +92,7 @@ public final class AudioRecorder: @unchecked Sendable {
             let byteCount = Int(out.frameLength) * MemoryLayout<Int16>.size
             guard byteCount > 0 else { return }
             let data = Data(bytes: channelData.pointee, count: byteCount)
+            onLevel?(Self.pcm16RMSLevel(data))
             cont.yield(data)
         }
 

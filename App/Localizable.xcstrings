@@ -1,0 +1,2525 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ h": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ t"
+          }
+        }
+      }
+    },
+    "%lld min": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        }
+      }
+    },
+    "%lld words inserted": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ord indsat"
+          }
+        }
+      }
+    },
+    "<1 min": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<1 min"
+          }
+        }
+      }
+    },
+    "A language model cleans up your dictation: punctuation, filler words, polish. Skip it and Vara inserts the raw transcript.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En sprogmodel renser din diktering: tegnsætning, fyldord, finpudsning. Spring over, og Vara indsætter den rå transskription."
+          }
+        }
+      }
+    },
+    "API key": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-nøgle"
+          }
+        }
+      }
+    },
+    "About": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Om"
+          }
+        }
+      }
+    },
+    "Access denied — open System Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adgang nægtet — åbn Systemindstillinger"
+          }
+        }
+      }
+    },
+    "Accessibility access granted": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilgængelighedsadgang givet"
+          }
+        }
+      }
+    },
+    "Accessibility access missing — the hotkey and pasting need it": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilgængelighedsadgang mangler — genvejstasten og indsætning kræver den"
+          }
+        }
+      }
+    },
+    "Accessibility access not granted yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilgængelighedsadgang er ikke givet endnu"
+          }
+        }
+      }
+    },
+    "Accessibility lets Vara see the dictation key everywhere and paste the text where your cursor is. Without it, nothing works globally.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilgængelighed lader Vara se dikteringstasten overalt og indsætte teksten dér, hvor din markør står. Uden den virker intet globalt."
+          }
+        }
+      }
+    },
+    "Active": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv"
+          }
+        }
+      }
+    },
+    "Add": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj"
+          }
+        }
+      }
+    },
+    "Add OpenAI-compatible endpoint": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj OpenAI-kompatibelt endpoint"
+          }
+        }
+      }
+    },
+    "Add a Groq API key in Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj en Groq API-nøgle i Indstillinger"
+          }
+        }
+      }
+    },
+    "Add an ElevenLabs API key in Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj en ElevenLabs API-nøgle i Indstillinger"
+          }
+        }
+      }
+    },
+    "Add an OpenAI API key in Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj en OpenAI API-nøgle i Indstillinger"
+          }
+        }
+      }
+    },
+    "Add mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj tilstand"
+          }
+        }
+      }
+    },
+    "Add rule": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj regel"
+          }
+        }
+      }
+    },
+    "Allow microphone": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tillad mikrofon"
+          }
+        }
+      }
+    },
+    "Answer the transcript": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besvar transskriptionen"
+          }
+        }
+      }
+    },
+    "Answers using your prompt.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svarer ud fra din prompt."
+          }
+        }
+      }
+    },
+    "Answers your spoken question and inserts the answer.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besvarer dit talte spørgsmål og indsætter svaret."
+          }
+        }
+      }
+    },
+    "Anthropic (Claude)": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anthropic (Claude)"
+          }
+        }
+      }
+    },
+    "Any OpenAI-compatible server: Ollama on another machine, LM Studio, vLLM …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enhver OpenAI-kompatibel server: Ollama på en anden maskine, LM Studio, vLLM …"
+          }
+        }
+      }
+    },
+    "App": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
+          }
+        }
+      }
+    },
+    "App default": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appens standard"
+          }
+        }
+      }
+    },
+    "Ask AI": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spørg AI"
+          }
+        }
+      }
+    },
+    "Audio": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lyd"
+          }
+        }
+      }
+    },
+    "Automatic": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisk"
+          }
+        }
+      }
+    },
+    "Automatic modes per app": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatiske tilstande pr. app"
+          }
+        }
+      }
+    },
+    "Avg. per dictation": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snit pr. diktering"
+          }
+        }
+      }
+    },
+    "Back": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilbage"
+          }
+        }
+      }
+    },
+    "Base URL": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Base-URL"
+          }
+        }
+      }
+    },
+    "Batch": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batch"
+          }
+        }
+      }
+    },
+    "Batch — very fast": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batch — meget hurtig"
+          }
+        }
+      }
+    },
+    "Behavior": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adfærd"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annullér"
+          }
+        }
+      }
+    },
+    "Cancelled": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulleret"
+          }
+        }
+      }
+    },
+    "Check again": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tjek igen"
+          }
+        }
+      }
+    },
+    "Choose Vara's intelligence": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg Varas intelligens"
+          }
+        }
+      }
+    },
+    "Choose app": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg app"
+          }
+        }
+      }
+    },
+    "Choose mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg tilstand"
+          }
+        }
+      }
+    },
+    "Choose your speech engine": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg din talemotor"
+          }
+        }
+      }
+    },
+    "Clean text": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ren tekst"
+          }
+        }
+      }
+    },
+    "Clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ryd"
+          }
+        }
+      }
+    },
+    "Clear history": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ryd historik"
+          }
+        }
+      }
+    },
+    "Click here, hold %@ and say hello to Vara.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klik her, hold %@ og sig hej til Vara."
+          }
+        }
+      }
+    },
+    "Click the field, hold %@, say something — and let go.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klik i feltet, hold %@, sig noget — og slip."
+          }
+        }
+      }
+    },
+    "Cloud": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud"
+          }
+        }
+      }
+    },
+    "Combined with Hviske, everything runs on this Mac. Completely private.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sammen med Hviske kører alt på denne Mac. Helt privat."
+          }
+        }
+      }
+    },
+    "Copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiér"
+          }
+        }
+      }
+    },
+    "Custom endpoint": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brugerdefineret endpoint"
+          }
+        }
+      }
+    },
+    "Custom endpoints": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brugerdefinerede endpoints"
+          }
+        }
+      }
+    },
+    "Danish": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dansk"
+          }
+        }
+      }
+    },
+    "Default model": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standardmodel"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet"
+          }
+        }
+      }
+    },
+    "Delete mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet tilstand"
+          }
+        }
+      }
+    },
+    "Diagnostics": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostik"
+          }
+        }
+      }
+    },
+    "Dictation": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diktering"
+          }
+        }
+      }
+    },
+    "Done": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Færdig"
+          }
+        }
+      }
+    },
+    "Downloaded": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hentet"
+          }
+        }
+      }
+    },
+    "Engine": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor"
+          }
+        }
+      }
+    },
+    "English": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engelsk"
+          }
+        }
+      }
+    },
+    "Everything runs on this Mac — nothing leaves the machine.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alt kører på denne Mac — intet forlader maskinen."
+          }
+        }
+      }
+    },
+    "Fixes punctuation and removes filler words. Keeps your wording.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retter tegnsætning og fjerner fyldord. Bevarer dine formuleringer."
+          }
+        }
+      }
+    },
+    "Forged by": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smedet af"
+          }
+        }
+      }
+    },
+    "Forged by Brokk & Sindre": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smedet af Brokk & Sindre"
+          }
+        }
+      }
+    },
+    "Function key (best effort)": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fn-tasten (bedst muligt)"
+          }
+        }
+      }
+    },
+    "General": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generelt"
+          }
+        }
+      }
+    },
+    "Global hotkey access": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global genvejsadgang"
+          }
+        }
+      }
+    },
+    "Grant Accessibility in System Settings, then relaunch.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giv Tilgængelighed i Systemindstillinger, og genstart appen."
+          }
+        }
+      }
+    },
+    "Grant access": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giv adgang"
+          }
+        }
+      }
+    },
+    "Grant microphone access": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giv mikrofonadgang"
+          }
+        }
+      }
+    },
+    "Grant microphone access in System Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giv mikrofonadgang i Systemindstillinger"
+          }
+        }
+      }
+    },
+    "Groq": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groq"
+          }
+        }
+      }
+    },
+    "History": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historik"
+          }
+        }
+      }
+    },
+    "History is stored locally on this Mac. API keys live in Keychain. The clipboard is briefly used for pasting and then restored.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historik gemmes lokalt på denne Mac. API-nøgler ligger i nøgleringen. Udklipsholderen bruges kortvarigt til indsætning og gendannes bagefter."
+          }
+        }
+      }
+    },
+    "History limit": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historikgrænse"
+          }
+        }
+      }
+    },
+    "Hold %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold %@"
+          }
+        }
+      }
+    },
+    "Hold %@ — Vara is listening": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold %@ — Vara lytter"
+          }
+        }
+      }
+    },
+    "Hold the key while you speak, then let go.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold tasten nede, mens du taler — og slip så."
+          }
+        }
+      }
+    },
+    "Hold — speak — release": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold — tal — slip"
+          }
+        }
+      }
+    },
+    "Hotkey setup failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opsætning af genvejstast fejlede"
+          }
+        }
+      }
+    },
+    "Hviske is installed and ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hviske er installeret og klar"
+          }
+        }
+      }
+    },
+    "Hviske on this Mac": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hviske på denne Mac"
+          }
+        }
+      }
+    },
+    "Insert raw transcript": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indsæt rå transskription"
+          }
+        }
+      }
+    },
+    "Inserts exactly what the engine heard — no LLM.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indsætter præcis det, motoren hørte — ingen LLM."
+          }
+        }
+      }
+    },
+    "Inserts the transcript untouched.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indsætter transskriptionen urørt."
+          }
+        }
+      }
+    },
+    "Install Hviske": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installér Hviske"
+          }
+        }
+      }
+    },
+    "Install Hviske (downloads the model)": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installér Hviske (henter modellen)"
+          }
+        }
+      }
+    },
+    "Install Hviske in Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installér Hviske i Indstillinger"
+          }
+        }
+      }
+    },
+    "Installed": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installeret"
+          }
+        }
+      }
+    },
+    "Instructions to the LLM": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instruktioner til LLM'en"
+          }
+        }
+      }
+    },
+    "Intelligence": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intelligens"
+          }
+        }
+      }
+    },
+    "Keep latest transcript visible in the menu bar": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis seneste transskription i menulinjen"
+          }
+        }
+      }
+    },
+    "Key missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nøgle mangler"
+          }
+        }
+      }
+    },
+    "Key ✓": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nøgle ✓"
+          }
+        }
+      }
+    },
+    "Keyboard blocked by %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tastaturet blokeres af %@"
+          }
+        }
+      }
+    },
+    "Keychain read failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke læse nøglering"
+          }
+        }
+      }
+    },
+    "Language": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprog"
+          }
+        }
+      }
+    },
+    "Latest": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seneste"
+          }
+        }
+      }
+    },
+    "Left Command": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Venstre Command"
+          }
+        }
+      }
+    },
+    "Left Command + Left Option": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Venstre Command + Venstre Option"
+          }
+        }
+      }
+    },
+    "Left Command + Right Option": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Venstre Command + Højre Option"
+          }
+        }
+      }
+    },
+    "Left Option": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Venstre Option"
+          }
+        }
+      }
+    },
+    "Local": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokal"
+          }
+        }
+      }
+    },
+    "Microphone access granted": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonadgang givet"
+          }
+        }
+      }
+    },
+    "Microphone access missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonadgang mangler"
+          }
+        }
+      }
+    },
+    "Microphone access not granted yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonadgang er ikke givet endnu"
+          }
+        }
+      }
+    },
+    "Microphone is restricted": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonen er begrænset"
+          }
+        }
+      }
+    },
+    "Microphone ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonen er klar"
+          }
+        }
+      }
+    },
+    "Microphone unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonen er utilgængelig"
+          }
+        }
+      }
+    },
+    "Missing API key — add it below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-nøgle mangler — tilføj den nedenfor."
+          }
+        }
+      }
+    },
+    "Mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilstand"
+          }
+        }
+      }
+    },
+    "Model": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model"
+          }
+        }
+      }
+    },
+    "Modes": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilstande"
+          }
+        }
+      }
+    },
+    "Modes that rewrite or answer use this model unless they pin their own. Raw works without any model.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilstande, der omskriver eller svarer, bruger denne model, medmindre de har valgt deres egen. Rå virker uden model."
+          }
+        }
+      }
+    },
+    "Name": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navn"
+          }
+        }
+      }
+    },
+    "Needs Accessibility": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kræver Tilgængelighed"
+          }
+        }
+      }
+    },
+    "New mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ny tilstand"
+          }
+        }
+      }
+    },
+    "Next": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Næste"
+          }
+        }
+      }
+    },
+    "No LLM configured": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen LLM valgt"
+          }
+        }
+      }
+    },
+    "No events yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen hændelser endnu"
+          }
+        }
+      }
+    },
+    "No matches for “%@”": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen resultater for “%@”"
+          }
+        }
+      }
+    },
+    "No model chosen — Vara starts in Raw mode.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen model valgt — Vara starter i Rå-tilstand."
+          }
+        }
+      }
+    },
+    "No saved key": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen gemt nøgle"
+          }
+        }
+      }
+    },
+    "Not downloaded": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ikke hentet"
+          }
+        }
+      }
+    },
+    "Not installed": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ikke installeret"
+          }
+        }
+      }
+    },
+    "Nothing dictated yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intet dikteret endnu"
+          }
+        }
+      }
+    },
+    "Nothing was inserted.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intet blev indsat."
+          }
+        }
+      }
+    },
+    "Ollama (local)": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ollama (lokal)"
+          }
+        }
+      }
+    },
+    "On this Mac — private, Danish": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "På denne Mac — privat, dansk"
+          }
+        }
+      }
+    },
+    "One more permission": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Én tilladelse mere"
+          }
+        }
+      }
+    },
+    "Open Accessibility": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åbn Tilgængelighed"
+          }
+        }
+      }
+    },
+    "Open System Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åbn Systemindstillinger"
+          }
+        }
+      }
+    },
+    "Open Vara": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åbn Vara"
+          }
+        }
+      }
+    },
+    "OpenAI": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI"
+          }
+        }
+      }
+    },
+    "Paste transcript automatically": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indsæt teksten automatisk"
+          }
+        }
+      }
+    },
+    "Press 1–9 while dictating to use a mode for a single dictation.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryk 1–9 under diktering for at bruge en tilstand til en enkelt diktering."
+          }
+        }
+      }
+    },
+    "Press a modifier key, or Command + Option together.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryk på en modifikationstast, eller Command + Option samtidig."
+          }
+        }
+      }
+    },
+    "Press record, then press and release a shortcut.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryk på Optag genvej, og tryk og slip derefter en genvej."
+          }
+        }
+      }
+    },
+    "Privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privatliv"
+          }
+        }
+      }
+    },
+    "Professional": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Professionel"
+          }
+        }
+      }
+    },
+    "Provider": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udbyder"
+          }
+        }
+      }
+    },
+    "Quit": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afslut"
+          }
+        }
+      }
+    },
+    "Raw": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rå"
+          }
+        }
+      }
+    },
+    "Raw transcript": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rå transskription"
+          }
+        }
+      }
+    },
+    "Ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klar"
+          }
+        }
+      }
+    },
+    "Recent": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seneste"
+          }
+        }
+      }
+    },
+    "Record shortcut": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optag genvej"
+          }
+        }
+      }
+    },
+    "Recorded %@.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optog %@."
+          }
+        }
+      }
+    },
+    "Recorded shortcut": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optaget genvej"
+          }
+        }
+      }
+    },
+    "Recording %@. Release all keys to save.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optager %@. Slip alle taster for at gemme."
+          }
+        }
+      }
+    },
+    "Recording cancelled.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optagelse annulleret."
+          }
+        }
+      }
+    },
+    "Refresh": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdatér"
+          }
+        }
+      }
+    },
+    "Reinsert": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genindsæt"
+          }
+        }
+      }
+    },
+    "Reinserted from history": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genindsat fra historik"
+          }
+        }
+      }
+    },
+    "Reinstall Hviske": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geninstallér Hviske"
+          }
+        }
+      }
+    },
+    "Release · Esc · 1–9": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slip · Esc · 1–9"
+          }
+        }
+      }
+    },
+    "Remove failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fjernelse fejlede"
+          }
+        }
+      }
+    },
+    "Remove key": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fjern nøgle"
+          }
+        }
+      }
+    },
+    "Removed": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fjernet"
+          }
+        }
+      }
+    },
+    "Request access": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anmod om adgang"
+          }
+        }
+      }
+    },
+    "Requires setup — click to open Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kræver opsætning — klik for at åbne Indstillinger"
+          }
+        }
+      }
+    },
+    "Rewrite the transcript": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omskriv transskriptionen"
+          }
+        }
+      }
+    },
+    "Rewrites the transcript with your prompt.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omskriver transskriptionen med din prompt."
+          }
+        }
+      }
+    },
+    "Rewrites your words as polished, professional text.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omskriver dine ord til poleret, professionel tekst."
+          }
+        }
+      }
+    },
+    "Right Command": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Højre Command"
+          }
+        }
+      }
+    },
+    "Right Command + Left Option": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Højre Command + Venstre Option"
+          }
+        }
+      }
+    },
+    "Right Command + Right Option": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Højre Command + Højre Option"
+          }
+        }
+      }
+    },
+    "Right Option": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Højre Option"
+          }
+        }
+      }
+    },
+    "Runs against http://localhost:11434 — everything stays on this Mac.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kører mod http://localhost:11434 — alt bliver på denne Mac."
+          }
+        }
+      }
+    },
+    "Runtime": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runtime"
+          }
+        }
+      }
+    },
+    "Save": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gem"
+          }
+        }
+      }
+    },
+    "Save failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gem fejlede"
+          }
+        }
+      }
+    },
+    "Save key": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gem nøgle"
+          }
+        }
+      }
+    },
+    "Saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemt"
+          }
+        }
+      }
+    },
+    "Saved in Keychain": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemt i nøglering"
+          }
+        }
+      }
+    },
+    "Say hello to Vara": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sig hej til Vara"
+          }
+        }
+      }
+    },
+    "Search": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indstillinger"
+          }
+        }
+      }
+    },
+    "Shortcut": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genvej"
+          }
+        }
+      }
+    },
+    "Show floating HUD while dictating": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis svævende HUD under diktering"
+          }
+        }
+      }
+    },
+    "Show welcome guide again": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis velkomstguiden igen"
+          }
+        }
+      }
+    },
+    "Skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spring over"
+          }
+        }
+      }
+    },
+    "Something went wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noget gik galt"
+          }
+        }
+      }
+    },
+    "Sound feedback when dictating": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lydfeedback ved diktering"
+          }
+        }
+      }
+    },
+    "Speech engine": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Talemotor"
+          }
+        }
+      }
+    },
+    "Start Vara at login": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Vara ved login"
+          }
+        }
+      }
+    },
+    "Start dictation": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start diktering"
+          }
+        }
+      }
+    },
+    "Starting install …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starter installation …"
+          }
+        }
+      }
+    },
+    "Starting the microphone …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starter mikrofonen …"
+          }
+        }
+      }
+    },
+    "Starting …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starter …"
+          }
+        }
+      }
+    },
+    "Stop dictation": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop diktering"
+          }
+        }
+      }
+    },
+    "Stored in Keychain. Without a saved key, Vara falls back to %@ from the environment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemmes i nøgleringen. Uden en gemt nøgle falder Vara tilbage til %@ fra miljøet."
+          }
+        }
+      }
+    },
+    "Streaming — fastest": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streaming — hurtigst"
+          }
+        }
+      }
+    },
+    "Symbol": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol"
+          }
+        }
+      }
+    },
+    "Text processing": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekstbehandling"
+          }
+        }
+      }
+    },
+    "The engine turns voice into text. You can switch any time in Settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motoren omdanner tale til tekst. Du kan skifte når som helst i Indstillinger."
+          }
+        }
+      }
+    },
+    "The engine turns your voice into raw text. Hviske runs entirely on this Mac (CC BY-NC 4.0 — non-commercial use only).": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motoren omdanner din stemme til rå tekst. Hviske kører udelukkende på denne Mac (CC BY-NC 4.0 — kun ikke-kommerciel brug)."
+          }
+        }
+      }
+    },
+    "The microphone is only used while you hold the dictation key. Nothing is recorded in the background.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonen bruges kun, mens du holder dikteringstasten nede. Intet optages i baggrunden."
+          }
+        }
+      }
+    },
+    "The transcript is sent as the user message; these instructions steer what comes back.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transskriptionen sendes som brugerbesked; disse instruktioner styrer, hvad der kommer tilbage."
+          }
+        }
+      }
+    },
+    "This week": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne uge"
+          }
+        }
+      }
+    },
+    "Time saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tid sparet"
+          }
+        }
+      }
+    },
+    "Tip: press 1–9 while dictating to use another mode for that dictation only.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tip: tryk 1–9 under diktering for at bruge en anden tilstand til netop dén diktering."
+          }
+        }
+      }
+    },
+    "Today": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I dag"
+          }
+        }
+      }
+    },
+    "Try it": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prøv det"
+          }
+        }
+      }
+    },
+    "Turns spoken intent into a precise prompt for a coding agent.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omdanner talte intentioner til en præcis prompt til en kodeagent."
+          }
+        }
+      }
+    },
+    "Unsupported shortcut: %@.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ikke-understøttet genvej: %@."
+          }
+        }
+      }
+    },
+    "Vara heard nothing": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara hørte ikke noget"
+          }
+        }
+      }
+    },
+    "Vara hears your words — hold the key, speak, let go.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara hører dine ord — hold tasten, tal, slip."
+          }
+        }
+      }
+    },
+    "Vara hit a snag": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara stødte på et problem"
+          }
+        }
+      }
+    },
+    "Vara is forging the text …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara smeder teksten …"
+          }
+        }
+      }
+    },
+    "Vara is listening …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara lytter …"
+          }
+        }
+      }
+    },
+    "Vara is named after Vár — the goddess who hears oaths and promises.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara er opkaldt efter Vár — gudinden der hører eder og løfter."
+          }
+        }
+      }
+    },
+    "Vara is ready.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara er klar."
+          }
+        }
+      }
+    },
+    "Vara needs to hear you": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara skal kunne høre dig"
+          }
+        }
+      }
+    },
+    "Vara records from macOS' default input device — change the microphone in System Settings → Sound. What happens to the text is decided by the selected mode.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vara optager fra macOS' standard-inputenhed — skift mikrofon i Systemindstillinger → Lyd. Hvad der sker med teksten, afgøres af den valgte tilstand."
+          }
+        }
+      }
+    },
+    "Version": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        }
+      }
+    },
+    "VibeCode": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VibeCode"
+          }
+        }
+      }
+    },
+    "When you dictate into one of these apps, Vara switches to that mode automatically — e.g. VibeCode in your editor and Professional in Mail. A 1–9 press still wins. The app list shows currently running apps.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Når du dikterer i en af disse apps, skifter Vara automatisk til den tilstand — fx VibeCode i din editor og Professionel i Mail. Et tryk på 1–9 vinder stadig. App-listen viser apps, der kører lige nu."
+          }
+        }
+      }
+    },
+    "Words today": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ord i dag"
+          }
+        }
+      }
+    },
+    "Yesterday": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I går"
+          }
+        }
+      }
+    },
+    "Your dictations land here so you can copy or reinsert them later.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dine dikteringer lander her, så du kan kopiere eller genindsætte dem senere."
+          }
+        }
+      }
+    },
+    "words": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ord"
+          }
+        }
+      }
+    },
+    "“%@” is holding secure keyboard input (e.g. a password field), so macOS blocks the dictation key everywhere. Close the password prompt or quit that app to release it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” holder secure keyboard input (fx et adgangskodefelt), så macOS blokerer dikteringstasten overalt. Luk adgangskodeprompten, eller afslut appen, for at frigive det."
+          }
+        }
+      }
+    },
+    "“App default” uses the model chosen under Intelligence.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Appens standard” bruger modellen valgt under Intelligens."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

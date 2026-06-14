@@ -30,6 +30,7 @@ public enum DictationSessionCommandResult: Equatable, Sendable {
     case startedRecording
     case ignored
     case completed(insertedText: String?)
+    case cancelled
     case failed(message: String)
 }
 
@@ -98,6 +99,19 @@ public actor DictationSession {
         } catch {
             return fail(with: error)
         }
+    }
+
+    /// Stops an active recording and discards the captured audio without
+    /// transcribing. Used for Esc-to-cancel.
+    @discardableResult
+    public func cancelRecording() async -> DictationSessionCommandResult {
+        guard case .recording = state else {
+            return .ignored
+        }
+
+        state = .idle
+        _ = try? await recorder.stopRecording()
+        return .cancelled
     }
 
     @discardableResult

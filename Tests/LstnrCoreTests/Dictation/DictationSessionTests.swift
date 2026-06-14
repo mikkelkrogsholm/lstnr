@@ -107,6 +107,70 @@ final class DictationSessionTests: XCTestCase {
         XCTAssertEqual(insertedTexts, [])
     }
 
+    func testCancelRecordingDiscardsAudioWithoutTranscribing() async {
+        let recorder = RecordingProbe()
+        let sink = TextSinkProbe()
+        let transcriber = TranscriptionProbe(text: "should never appear")
+        let session = DictationSession(
+            mode: .pushToTalk,
+            recorder: recorder,
+            transcribe: transcriber.transcribe,
+            textSink: sink.insert
+        )
+
+        let startResult = await session.beginInteraction()
+        XCTAssertEqual(startResult, .startedRecording)
+
+        let cancelResult = await session.cancelRecording()
+        let finalState = await session.state
+        let stopCount = await recorder.stopCount
+        let requestCount = await transcriber.requestCount
+        let insertedTexts = await sink.insertedTexts
+
+        XCTAssertEqual(cancelResult, .cancelled)
+        XCTAssertEqual(finalState, .idle)
+        XCTAssertEqual(stopCount, 1)
+        XCTAssertEqual(requestCount, 0)
+        XCTAssertEqual(insertedTexts, [])
+    }
+
+    func testCancelWhileIdleIsIgnored() async {
+        let session = DictationSession(
+            mode: .pushToTalk,
+            recorder: RecordingProbe(),
+            transcribe: TranscriptionProbe(text: "x").transcribe,
+            textSink: TextSinkProbe().insert
+        )
+
+        let cancelResult = await session.cancelRecording()
+        let finalState = await session.state
+
+        XCTAssertEqual(cancelResult, .ignored)
+        XCTAssertEqual(finalState, .idle)
+    }
+
+    func testCanRecordAgainAfterCancel() async {
+        let recorder = RecordingProbe()
+        let sink = TextSinkProbe()
+        let transcriber = TranscriptionProbe(text: "second take")
+        let session = DictationSession(
+            mode: .pushToTalk,
+            recorder: recorder,
+            transcribe: transcriber.transcribe,
+            textSink: sink.insert
+        )
+
+        _ = await session.beginInteraction()
+        _ = await session.cancelRecording()
+        let restartResult = await session.beginInteraction()
+        let stopResult = await session.endInteraction()
+        let insertedTexts = await sink.insertedTexts
+
+        XCTAssertEqual(restartResult, .startedRecording)
+        XCTAssertEqual(stopResult, .completed(insertedText: "second take"))
+        XCTAssertEqual(insertedTexts, ["second take"])
+    }
+
     func testDuplicateStartWhileRecordingIsIgnored() async {
         let recorder = RecordingProbe()
         let sink = TextSinkProbe()

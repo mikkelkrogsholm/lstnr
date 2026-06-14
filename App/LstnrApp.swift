@@ -5,8 +5,8 @@ struct LstnrApp: App {
     @State private var state = AppState()
 
     var body: some Scene {
-        WindowGroup("Lstnr", id: "main") {
-            LstnrDashboardView(state: state)
+        WindowGroup("Vara", id: "main") {
+            MainWindowRoot(state: state)
         }
         .defaultSize(width: 860, height: 620)
 
@@ -14,14 +14,34 @@ struct LstnrApp: App {
             MenuBarContent(state: state)
         } label: {
             Label(
-                state.isRecording ? "lstnr •" : "lstnr",
+                state.isRecording ? "Vara •" : "Vara",
                 systemImage: state.isRecording ? "mic.fill" : "mic"
             )
         }
         .menuBarExtraStyle(.window)
 
+        Window("Diagnostics", id: "diagnostics") {
+            DiagnosticsView(state: state)
+        }
+        .defaultSize(width: 640, height: 420)
+
         Settings {
             LstnrSettingsView()
+        }
+    }
+}
+
+/// Shows the welcome flow on first launch (or when reopened from Settings),
+/// otherwise the dashboard.
+private struct MainWindowRoot: View {
+    let state: AppState
+    @AppStorage(VaraOnboarding.completedDefaultsKey) private var onboardingCompleted = false
+
+    var body: some View {
+        if onboardingCompleted {
+            LstnrDashboardView(state: state)
+        } else {
+            OnboardingView(state: state)
         }
     }
 }

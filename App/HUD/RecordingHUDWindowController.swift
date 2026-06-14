@@ -22,50 +22,61 @@ final class RecordingHUDWindowController {
     }
 
     private let placement: Placement
+    private let state: RecordingHUDState
     private var panel: RecordingHUDPanel?
-    private var hostingView: NSHostingView<RecordingHUDView>?
 
     var isVisible: Bool {
         panel?.isVisible == true
     }
 
-    init(placement: Placement = .menuBar) {
+    init(state: RecordingHUDState, placement: Placement = .insertionPoint) {
+        self.state = state
         self.placement = placement
     }
 
-    func show(model: RecordingHUDModel) {
-        let panel = panel(for: model)
-        update(model: model)
-        position(panel)
-        panel.orderFrontRegardless()
-    }
-
-    func update(model: RecordingHUDModel) {
-        guard let hostingView else { return }
-        hostingView.rootView = RecordingHUDView(model: model)
-        hostingView.layoutSubtreeIfNeeded()
-        panel?.setContentSize(hostingView.fittingSize)
+    /// Orders the panel in with a short fade. The hosted SwiftUI view observes
+    /// `state`, so phase/level changes render without further calls here.
+    func show() {
+        let panel = ensurePanel()
+        if !panel.isVisible {
+            position(panel)
+            panel.alphaValue = 0
+            panel.orderFrontRegardless()
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.16
+            panel.animator().alphaValue = 1
+        }
     }
 
     func hide() {
-        panel?.orderOut(nil)
+        guard let panel, panel.isVisible else { return }
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.22
+            panel.animator().alphaValue = 0
+        }, completionHandler: {
+            Task { @MainActor [weak self] in
+                self?.panel?.orderOut(nil)
+            }
+        })
     }
 
-    private func panel(for model: RecordingHUDModel) -> RecordingHUDPanel {
+    private func ensurePanel() -> RecordingHUDPanel {
         if let panel {
             return panel
         }
 
-        let hostingView = NSHostingView(rootView: RecordingHUDView(model: model))
+        let hostingView = NSHostingView(rootView: RecordingHUDView(state: state))
         hostingView.translatesAutoresizingMaskIntoConstraints = false
 
         let panel = RecordingHUDPanel(
-            contentRect: NSRect(origin: .zero, size: hostingView.fittingSize),
+            contentRect: NSRect(origin: .zero, size: RecordingHUDView.size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: true
         )
         panel.contentView = hostingView
+        panel.setContentSize(RecordingHUDView.size)
         panel.level = .floating
         panel.backgroundColor = .clear
         panel.isOpaque = false
@@ -74,7 +85,6 @@ final class RecordingHUDWindowController {
         panel.isFloatingPanel = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
 
-        self.hostingView = hostingView
         self.panel = panel
         return panel
     }
