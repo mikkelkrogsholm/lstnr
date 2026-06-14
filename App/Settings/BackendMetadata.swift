@@ -30,13 +30,13 @@ extension LstnrSpeechBackendChoice {
              .openAIGPT4OTranscribe,
              .openAIGPT4OMiniTranscribe20251215:
             .recommended
-        case .elevenLabsScribe, .localHviske:
+        case .elevenLabsScribe, .localHviske, .localWhisperKit:
             .advanced
         }
     }
 
     var isLocal: Bool {
-        self == .localHviske
+        self == .localHviske || self == .localWhisperKit
     }
 
     var symbolName: String {
@@ -46,6 +46,7 @@ extension LstnrSpeechBackendChoice {
         case .openAIRealtimeWhisper: "dot.radiowaves.left.and.right"
         case .openAIGPT4OTranscribe, .openAIGPT4OMiniTranscribe20251215: "cloud"
         case .localHviske: "internaldrive"
+        case .localWhisperKit: "cpu"
         }
     }
 
@@ -55,7 +56,7 @@ extension LstnrSpeechBackendChoice {
         case .elevenLabsScribe: .elevenLabs
         case .groqWhisper: .groq
         case .openAIRealtimeWhisper, .openAIGPT4OTranscribe, .openAIGPT4OMiniTranscribe20251215: .openAI
-        case .localHviske: nil
+        case .localHviske, .localWhisperKit: nil
         }
     }
 
@@ -69,6 +70,8 @@ extension LstnrSpeechBackendChoice {
             String(localized: "Batch", comment: "Engine latency hint")
         case .localHviske:
             String(localized: "Runs on this Mac — Danish", comment: "Engine latency hint")
+        case .localWhisperKit:
+            String(localized: "Runs on this Mac — Neural Engine", comment: "Engine latency hint")
         }
     }
 
@@ -81,7 +84,23 @@ extension LstnrSpeechBackendChoice {
         case .openAIGPT4OMiniTranscribe20251215: "GPT-4o Mini Transcribe"
         // Localized "Local" tag instead of the hardcoded Danish "(lokal)" leak.
         case .localHviske: "Hviske (\(String(localized: "Local", comment: "Engine name suffix marking an on-device engine")))"
+        case .localWhisperKit: "WhisperKit (\(String(localized: "Local", comment: "Engine name suffix marking an on-device engine")))"
         }
+    }
+}
+
+/// Localized label for a WhisperKit CoreML model id (the App layer owns
+/// presentation; `WhisperKitBackend.availableModelIDs` owns the raw names).
+func whisperKitModelLabel(_ modelID: String) -> String {
+    switch modelID {
+    case "large-v3-v20240930_turbo":
+        String(localized: "Large v3 Turbo — fastest", comment: "WhisperKit model option")
+    case "large-v3-v20240930_626MB":
+        String(localized: "Large v3 Turbo (compressed) — best for Danish", comment: "WhisperKit model option")
+    case "small":
+        String(localized: "Small — lightweight, lower accuracy", comment: "WhisperKit model option")
+    default:
+        modelID
     }
 }
 

@@ -188,9 +188,32 @@ struct LstnrSettingsView: View {
                 Text("Most people use Groq or OpenAI. ElevenLabs and on-device Hviske are advanced — set them up under the Advanced tab.", comment: "Engine section footer")
             }
 
+            if draft.speechBackend == .localWhisperKit {
+                whisperKitModelSection
+            }
+
             if let provider = draft.speechBackend.credentialProvider {
                 apiKeySection(for: provider)
             }
+        }
+    }
+
+    /// Model picker shown only when the on-device WhisperKit engine is selected.
+    /// The selected variant downloads on first use and is cached on this Mac.
+    @ViewBuilder
+    private var whisperKitModelSection: some View {
+        Section {
+            Picker(selection: $draft.whisperKitModel) {
+                ForEach(WhisperKitBackend.availableModelIDs, id: \.self) { modelID in
+                    Text(whisperKitModelLabel(modelID)).tag(modelID)
+                }
+            } label: {
+                Text("Model", comment: "WhisperKit model picker label")
+            }
+        } header: {
+            Text("WhisperKit model", comment: "WhisperKit model section header")
+        } footer: {
+            Text("Models download once on first use and are cached on this Mac. The compressed Large v3 Turbo is the best balance for Danish; the full Turbo is fastest; Small is a lightweight fallback.", comment: "WhisperKit model picker footer")
         }
     }
 
@@ -848,6 +871,7 @@ struct LstnrAppSettings: Codable, Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
     var speechBackend: LstnrSpeechBackendChoice
+    var whisperKitModel: String
     var pasteAutomatically: Bool
     var showHUD: Bool
     var keepRecentTranscript: Bool
@@ -863,6 +887,7 @@ struct LstnrAppSettings: Codable, Hashable {
         shortcut: .rightCommand,
         language: .automatic,
         speechBackend: .groqWhisper,
+        whisperKitModel: WhisperKitBackend.defaultModel,
         pasteAutomatically: true,
         showHUD: true,
         keepRecentTranscript: true,
@@ -883,6 +908,7 @@ struct LstnrAppSettings: Codable, Hashable {
         shortcut: LstnrShortcutChoice,
         language: LstnrLanguageChoice,
         speechBackend: LstnrSpeechBackendChoice,
+        whisperKitModel: String,
         pasteAutomatically: Bool,
         showHUD: Bool,
         keepRecentTranscript: Bool,
@@ -897,6 +923,7 @@ struct LstnrAppSettings: Codable, Hashable {
         self.shortcut = shortcut
         self.language = language
         self.speechBackend = speechBackend
+        self.whisperKitModel = whisperKitModel
         self.pasteAutomatically = pasteAutomatically
         self.showHUD = showHUD
         self.keepRecentTranscript = keepRecentTranscript
@@ -914,6 +941,7 @@ struct LstnrAppSettings: Codable, Hashable {
             shortcut: draft.shortcut,
             language: draft.language,
             speechBackend: draft.speechBackend,
+            whisperKitModel: draft.whisperKitModel,
             pasteAutomatically: draft.pasteAutomatically,
             showHUD: draft.showHUD,
             keepRecentTranscript: draft.keepRecentTranscript,
@@ -932,6 +960,7 @@ struct LstnrAppSettings: Codable, Hashable {
             shortcut: shortcut,
             language: language,
             speechBackend: speechBackend,
+            whisperKitModel: whisperKitModel,
             pasteAutomatically: pasteAutomatically,
             showHUD: showHUD,
             keepRecentTranscript: keepRecentTranscript,
@@ -964,6 +993,7 @@ struct LstnrAppSettings: Codable, Hashable {
         case shortcut
         case language
         case speechBackend
+        case whisperKitModel
         case pasteAutomatically
         case showHUD
         case keepRecentTranscript
@@ -982,6 +1012,7 @@ struct LstnrAppSettings: Codable, Hashable {
             shortcut: try container.decodeIfPresent(LstnrShortcutChoice.self, forKey: .shortcut) ?? Self.defaults.shortcut,
             language: try container.decodeIfPresent(LstnrLanguageChoice.self, forKey: .language) ?? Self.defaults.language,
             speechBackend: try container.decodeIfPresent(LstnrSpeechBackendChoice.self, forKey: .speechBackend) ?? Self.defaults.speechBackend,
+            whisperKitModel: try container.decodeIfPresent(String.self, forKey: .whisperKitModel) ?? Self.defaults.whisperKitModel,
             pasteAutomatically: try container.decodeIfPresent(Bool.self, forKey: .pasteAutomatically) ?? Self.defaults.pasteAutomatically,
             showHUD: try container.decodeIfPresent(Bool.self, forKey: .showHUD) ?? Self.defaults.showHUD,
             keepRecentTranscript: try container.decodeIfPresent(Bool.self, forKey: .keepRecentTranscript) ?? Self.defaults.keepRecentTranscript,
@@ -1165,6 +1196,7 @@ struct LstnrSettingsDraft: Hashable {
     var shortcut: LstnrShortcutChoice
     var language: LstnrLanguageChoice
     var speechBackend: LstnrSpeechBackendChoice
+    var whisperKitModel: String
     var pasteAutomatically: Bool
     var showHUD: Bool
     var keepRecentTranscript: Bool
@@ -1186,6 +1218,7 @@ enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
     case openAIGPT4OTranscribe
     case openAIGPT4OMiniTranscribe20251215
     case localHviske
+    case localWhisperKit
 
     var id: String { rawValue }
 
@@ -1197,6 +1230,7 @@ enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
         case .openAIGPT4OTranscribe: "OpenAI GPT-4o Transcribe"
         case .openAIGPT4OMiniTranscribe20251215: "OpenAI GPT-4o Mini Transcribe 2025-12-15"
         case .localHviske: "Local Hviske v5.3"
+        case .localWhisperKit: "Local WhisperKit (large-v3 turbo)"
         }
     }
 
@@ -1210,7 +1244,7 @@ enum LstnrSpeechBackendChoice: String, CaseIterable, Codable, Identifiable {
             String(localized: "Realtime network transcription via OpenAI", comment: "Privacy panel: where audio is processed")
         case .openAIGPT4OTranscribe, .openAIGPT4OMiniTranscribe20251215:
             String(localized: "Network file transcription via OpenAI", comment: "Privacy panel: where audio is processed")
-        case .localHviske:
+        case .localHviske, .localWhisperKit:
             String(localized: "Local transcription on this Mac", comment: "Privacy panel: where audio is processed")
         }
     }

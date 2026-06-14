@@ -262,6 +262,8 @@ final class AppState {
             )
         case .localHviske:
             return configureLocalHviskeBackend()
+        case .localWhisperKit:
+            return configureWhisperKitBackend()
         }
     }
 
@@ -394,6 +396,28 @@ final class AppState {
         lastError = nil
         statusMessage = readyStatusMessage
         log("Local Hviske backend ready. hfHome=\(runtimeStatus.hfHomeURL.path)")
+        return true
+    }
+
+    @discardableResult
+    private func configureWhisperKitBackend() -> Bool {
+        // WhisperKit needs no key and no Terminal setup: the CoreML model is
+        // fetched + cached automatically on the first dictation, so we can wire
+        // the backend up eagerly. The (potentially slow) first-run download and
+        // model load happen lazily inside the backend and are surfaced via the
+        // diagnostic log.
+        let model = settings.whisperKitModel
+        let backend = WhisperKitBackend(
+            model: model,
+            diagnosticLog: { [weak self] message in
+                await MainActor.run { self?.log(message) }
+            }
+        )
+        self.backend = backend
+        dictationSession = makeDictationSession(backend: backend)
+        lastError = nil
+        statusMessage = readyStatusMessage
+        log("Local WhisperKit backend ready. model=\(model). Model downloads on first use to \(WhisperKitBackend.downloadBaseURL.path)")
         return true
     }
 

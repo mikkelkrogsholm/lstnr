@@ -10,10 +10,16 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.4.0"),
+        // On-device Whisper via Core ML + Apple Neural Engine. No Python, no key —
+        // the CoreML model is fetched from HuggingFace on first use. See WhisperKitBackend.
+        .package(url: "https://github.com/argmaxinc/WhisperKit", exact: "1.0.0"),
     ],
     targets: [
         .target(
             name: "LstnrCore",
+            dependencies: [
+                .product(name: "WhisperKit", package: "WhisperKit"),
+            ],
             path: "Sources/LstnrCore"
         ),
         .executableTarget(
