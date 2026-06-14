@@ -15,3 +15,6 @@ xcuserdata/
 # Local assistant/editor state.
 .agents/
 .claude/
+
+# graphify knowledge-graph output (auto-rebuilt by post-commit hook)
+graphify-out/
