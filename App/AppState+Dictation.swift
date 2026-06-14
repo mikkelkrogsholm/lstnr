@@ -539,24 +539,64 @@ extension AppState {
         return "Chat completion HTTP \(status): <\(byteCount) bytes redacted>"
     }
 
+    /// Runs `operation`, throwing `AppStateTimeoutError` if it does not finish in
+    /// `seconds`. Unlike a structured task group — which on timeout would block
+    /// until the operation child finishes — this races via a resume-once
+    /// continuation: whichever of operation/timeout wins resumes the caller, and a
+    /// stuck operation is ABANDONED rather than awaited. Critical for WhisperKit:
+    /// a single CoreML inference can't be cancelled, so without this a hung model
+    /// would freeze the dictation forever instead of falling back to raw.
     nonisolated private static func withTimeout<T: Sendable>(
         seconds: Double,
         operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask {
-                try await operation()
+        let latch = ResumeOnceLatch()
+        let opBox = CancellableTaskBox()
+        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<T, Error>) in
+            let timeout = Task {
+                try? await Task.sleep(for: .seconds(seconds))
+                if latch.claim() {
+                    cont.resume(throwing: AppStateTimeoutError(seconds: seconds))
+                    // Best-effort cancel of the in-flight operation: a cancellable
+                    // network op (LLM cleanup over Ollama/DGX) aborts its request;
+                    // an uncancellable CoreML inference ignores it and is simply
+                    // abandoned (its later resume is dropped by the latch).
+                    opBox.cancel()
+                }
             }
-            group.addTask {
-                try await Task.sleep(for: .seconds(seconds))
-                throw AppStateTimeoutError(seconds: seconds)
+            let op = Task {
+                defer { timeout.cancel() }
+                do {
+                    let result = try await operation()
+                    if latch.claim() { cont.resume(returning: result) }
+                } catch {
+                    if latch.claim() { cont.resume(throwing: error) }
+                }
             }
-
-            guard let result = try await group.next() else {
-                throw AppStateTimeoutError(seconds: seconds)
-            }
-            group.cancelAll()
-            return result
+            opBox.set(op)
         }
     }
+}
+
+/// One-shot latch so a `CheckedContinuation` is resumed exactly once when two
+/// tasks (operation vs. timeout) race — resuming a continuation twice traps.
+private final class ResumeOnceLatch: @unchecked Sendable {
+    private let lock = NSLock()
+    private var claimed = false
+    func claim() -> Bool {
+        lock.withLock {
+            if claimed { return false }
+            claimed = true
+            return true
+        }
+    }
+}
+
+/// Thread-safe holder so the timeout task can cancel the operation task that is
+/// created just after it (resolves the chicken-and-egg of two racing tasks).
+private final class CancellableTaskBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: Task<Void, Never>?
+    func set(_ task: Task<Void, Never>) { lock.withLock { self.task = task } }
+    func cancel() { lock.withLock { task }?.cancel() }
 }

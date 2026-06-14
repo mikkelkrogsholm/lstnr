@@ -26,7 +26,9 @@ public struct WhisperKitBackend: SpeechToTextBackend {
     /// lightweight fallback for weaker machines or tighter disk budgets.
     public static let availableModelIDs: [String] = [
         "large-v3-v20240930_turbo",
-        "large-v3-v20240930_626MB",
+        // NOTE: the compressed "large-v3-v20240930_626MB" variant ships without
+        // TextDecoderContextPrefill and hangs at transcribe time on the ANE here,
+        // so it is intentionally NOT offered. See isModelDownloaded notes.
         "small",
     ]
 
@@ -108,22 +110,42 @@ public struct WhisperKitBackend: SpeechToTextBackend {
         return String(code.prefix(2)).lowercased()
     }
 
-    /// Whether the CoreML model is already cached on disk (so selecting it needs
-    /// no download). WhisperKit stores variants prefixed under the repo path
-    /// (e.g. `openai_whisper-<variant>`), so we match the variant suffix and
-    /// require at least one compiled `.mlmodelc` to call it ready.
+    /// The compiled CoreML models every WhisperKit variant ships and needs to
+    /// run. `TextDecoderContextPrefill` is deliberately NOT here: it is an
+    /// optional prefill optimization that some variants ship and others (e.g.
+    /// `large-v3-v20240930_626MB`) do not.
+    private static let requiredModelArtifacts = [
+        "AudioEncoder.mlmodelc",
+        "MelSpectrogram.mlmodelc",
+        "TextDecoder.mlmodelc",
+    ]
+
+    /// Whether the CoreML model is fully cached on disk (so selecting it needs no
+    /// download). WhisperKit stores variants prefixed under the repo path (e.g.
+    /// `openai_whisper-<variant>`), so we match the variant suffix. We require the
+    /// core compiled models AND `config.json`, each non-empty — a partial/aborted
+    /// download can leave the folder present but with an empty `.mlmodelc` or a
+    /// missing config, which would later hang at transcribe time. (Note: this
+    /// detects *incomplete* downloads, not a complete-but-broken variant.)
     public static func isModelDownloaded(_ model: String) -> Bool {
+        let fm = FileManager.default
         let repoDir = downloadBaseURL
             .appendingPathComponent("models/argmaxinc/whisperkit-coreml", isDirectory: true)
-        guard let entries = try? FileManager.default.contentsOfDirectory(atPath: repoDir.path) else {
-            return false
-        }
-        guard let match = entries.first(where: { $0 == model || $0.hasSuffix("-\(model)") }) else {
+        guard let entries = try? fm.contentsOfDirectory(atPath: repoDir.path),
+              let match = entries.first(where: { $0 == model || $0.hasSuffix("-\(model)") }) else {
             return false
         }
         let modelDir = repoDir.appendingPathComponent(match, isDirectory: true)
-        let contents = (try? FileManager.default.contentsOfDirectory(atPath: modelDir.path)) ?? []
-        return contents.contains { $0.hasSuffix(".mlmodelc") }
+
+        for artifact in requiredModelArtifacts {
+            let dir = modelDir.appendingPathComponent(artifact)
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: dir.path, isDirectory: &isDir), isDir.boolValue,
+                  let inner = try? fm.contentsOfDirectory(atPath: dir.path), !inner.isEmpty else {
+                return false
+            }
+        }
+        return fm.fileExists(atPath: modelDir.appendingPathComponent("config.json").path)
     }
 
     /// Downloads a CoreML model from HuggingFace, streaming download progress as a

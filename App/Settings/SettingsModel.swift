@@ -57,7 +57,12 @@ struct LstnrAppSettings: Codable, Hashable {
         self.shortcut = shortcut
         self.language = language
         self.speechBackend = speechBackend
-        self.whisperKitModel = whisperKitModel
+        // Migrate away from a removed/unknown WhisperKit model (e.g. the dropped
+        // 626MB variant a user may have persisted) to the default, so settings
+        // never point the engine at a model the picker no longer offers.
+        self.whisperKitModel = WhisperKitBackend.availableModelIDs.contains(whisperKitModel)
+            ? whisperKitModel
+            : WhisperKitBackend.defaultModel
         self.pasteAutomatically = pasteAutomatically
         self.showHUD = showHUD
         self.keepRecentTranscript = keepRecentTranscript
