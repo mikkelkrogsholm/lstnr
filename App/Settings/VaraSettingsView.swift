@@ -20,6 +20,11 @@ struct VaraSettingsView: View {
     @State private var openAICredentialStatus: String?
     @State private var anthropicAPIKey: String = ""
     @State private var anthropicCredentialStatus: String?
+    @State private var geminiAPIKey: String = ""
+    @State private var geminiCredentialStatus: String?
+    // Installed coding CLIs (claude/codex/gemini), resolved once on appear so the
+    // picker never re-stats the filesystem on every SwiftUI re-render.
+    @State private var installedCLITools: Set<VaraCLITool> = []
     @State private var accessibilityGranted = false
     @State private var editingModeIndex: Int?
     // Optional so the #Preview / `store: nil` path (no injected AppState) yields
@@ -77,6 +82,7 @@ struct VaraSettingsView: View {
                 ModeEditorView(
                     mode: $draft.modes[index],
                     customEndpoints: draft.customEndpoints,
+                    installedCLITools: installedCLITools,
                     onDelete: draft.modes[index].isBuiltIn ? nil : {
                         draft.modes.remove(at: index)
                     }
@@ -90,6 +96,7 @@ struct VaraSettingsView: View {
         }
         .onAppear {
             loadCredentials()
+            installedCLITools = CLIChatClient.detectInstalledTools()
             refreshAccessibility(prompt: false)
             if let pendingSection = SettingsDeepLink.consumePending() {
                 selectedSection = pendingSection
@@ -228,6 +235,7 @@ struct VaraSettingsView: View {
         case .groq: groqAPIKey
         case .openAI: openAIAPIKey
         case .anthropic: anthropicAPIKey
+        case .gemini: geminiAPIKey
         }
         if let savedKey, !savedKey.isEmpty { return true }
         return (try? EnvLoader.resolveForApp(provider.environmentVariableName)).map { !$0.isEmpty } ?? false
@@ -294,14 +302,16 @@ struct VaraSettingsView: View {
                 LLMSelectionPicker(
                     selection: $draft.defaultLLM,
                     customEndpoints: draft.customEndpoints,
-                    allowsDefault: false
+                    allowsDefault: false,
+                    installedCLITools: installedCLITools
                 )
 
                 if let provider = draft.defaultLLM?.provider {
                     switch provider {
                     case .openAI where !hasKey(for: .openAI),
                          .groq where !hasKey(for: .groq),
-                         .anthropic where !hasKey(for: .anthropic):
+                         .anthropic where !hasKey(for: .anthropic),
+                         .gemini where !hasKey(for: .gemini):
                         Label {
                             Text("Missing API key — add it below.", comment: "Missing LLM key warning")
                         } icon: {
@@ -311,6 +321,13 @@ struct VaraSettingsView: View {
                     case .ollama:
                         Label {
                             Text("Runs against http://localhost:11434 — this chain sends nothing to the cloud. Start Ollama if it isn't running.", comment: "Ollama info")
+                        } icon: {
+                            Image(systemName: "lock.fill")
+                        }
+                        .foregroundStyle(.green)
+                    case .claudeCLI, .codexCLI, .geminiCLI:
+                        Label {
+                            Text("No key needed — uses your \(provider.displayTitle) subscription · slower.", comment: "CLI provider model footnote")
                         } icon: {
                             Image(systemName: "lock.fill")
                         }
@@ -397,8 +414,8 @@ struct VaraSettingsView: View {
 
     private func providerNeedsKeySection(_ provider: LLMProvider) -> Bool {
         switch provider {
-        case .openAI, .groq, .anthropic: true
-        case .ollama, .custom: false
+        case .openAI, .groq, .anthropic, .gemini: true
+        case .ollama, .custom, .claudeCLI, .codexCLI, .geminiCLI: false
         }
     }
 
@@ -407,17 +424,20 @@ struct VaraSettingsView: View {
         case .openAI: .openAI
         case .groq: .groq
         case .anthropic: .anthropic
-        case .ollama, .custom: nil
+        case .gemini: .gemini
+        case .ollama, .custom, .claudeCLI, .codexCLI, .geminiCLI: nil
         }
     }
 
-    /// Whether the LLM half of the chain stays on the local network: built-in
-    /// Ollama or a custom OpenAI-compatible endpoint (DGX/LM Studio on the LAN).
-    /// Cloud providers (OpenAI/Groq/Anthropic) and an unset model do not qualify.
+    /// Whether the LLM half of the chain stays on the local machine/network:
+    /// built-in Ollama, a custom OpenAI-compatible endpoint (DGX/LM Studio on the
+    /// LAN), or a CLI running under the user's own subscription on this Mac.
+    /// Cloud providers (OpenAI/Groq/Anthropic/Gemini) and an unset model do not
+    /// qualify.
     private func isLocalLLMChain(_ provider: LLMProvider?) -> Bool {
         switch provider {
-        case .ollama, .custom: true
-        case .openAI, .groq, .anthropic, .none: false
+        case .ollama, .custom, .claudeCLI, .codexCLI, .geminiCLI: true
+        case .openAI, .groq, .anthropic, .gemini, .none: false
         }
     }
 
@@ -522,6 +542,7 @@ struct VaraSettingsView: View {
         case .groq: $groqAPIKey
         case .openAI: $openAIAPIKey
         case .anthropic: $anthropicAPIKey
+        case .gemini: $geminiAPIKey
         }
     }
 
@@ -531,6 +552,7 @@ struct VaraSettingsView: View {
         case .groq: $groqCredentialStatus
         case .openAI: $openAICredentialStatus
         case .anthropic: $anthropicCredentialStatus
+        case .gemini: $geminiCredentialStatus
         }
     }
 

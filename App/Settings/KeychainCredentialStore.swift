@@ -6,6 +6,7 @@ enum VaraCredentialProvider: String, CaseIterable, Identifiable {
     case groq
     case openAI
     case anthropic
+    case gemini
 
     var id: String { rawValue }
 
@@ -15,6 +16,7 @@ enum VaraCredentialProvider: String, CaseIterable, Identifiable {
         case .groq: "groq.api-key"
         case .openAI: "openai.api-key"
         case .anthropic: "anthropic.api-key"
+        case .gemini: "gemini.api-key"
         }
     }
 }

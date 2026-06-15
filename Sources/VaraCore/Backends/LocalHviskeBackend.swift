@@ -170,30 +170,6 @@ private extension LocalHviskeBackend {
         }
     }
 
-    final class ProcessBox: @unchecked Sendable {
-        private let lock = NSLock()
-        private var process: Process?
-
-        func set(_ process: Process) {
-            lock.withLock {
-                self.process = process
-            }
-        }
-
-        func clear() {
-            lock.withLock {
-                process = nil
-            }
-        }
-
-        func terminate() {
-            lock.withLock {
-                guard let process, process.isRunning else { return }
-                process.terminate()
-            }
-        }
-    }
-
     static var applicationSupportURL: URL {
         let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
@@ -315,65 +291,23 @@ private extension LocalHviskeBackend {
         environment: [String: String],
         stdin: String?
     ) async throws -> (stdout: String, stderr: String) {
-        let processBox = ProcessBox()
-
-        return try await withTaskCancellationHandler {
-            try await Task.detached {
-                try Task.checkCancellation()
-
-                let process = Process()
-                process.executableURL = executableURL
-                process.arguments = arguments
-                process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
-
-                let stdoutPipe = Pipe()
-                let stderrPipe = Pipe()
-                process.standardOutput = stdoutPipe
-                process.standardError = stderrPipe
-
-                let stdoutTask = Task.detached {
-                    stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                }
-                let stderrTask = Task.detached {
-                    stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                }
-
-                processBox.set(process)
-                defer { processBox.clear() }
-
-                if let stdin {
-                    let stdinPipe = Pipe()
-                    process.standardInput = stdinPipe
-                    try process.run()
-                    if let data = stdin.data(using: .utf8) {
-                        try stdinPipe.fileHandleForWriting.write(contentsOf: data)
-                    }
-                    try stdinPipe.fileHandleForWriting.close()
-                } else {
-                    try process.run()
-                }
-
-                process.waitUntilExit()
-                let stdoutData = await stdoutTask.value
-                let stderrData = await stderrTask.value
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-
-                if Task.isCancelled {
-                    throw CancellationError()
-                }
-
-                guard process.terminationStatus == 0 else {
-                    throw LocalHviskeBackendError.processFailed(
-                        exitCode: process.terminationStatus,
-                        stderr: stderr.isEmpty ? stdout : stderr
-                    )
-                }
-                return (stdout: stdout, stderr: stderr)
-            }.value
-        } onCancel: {
-            processBox.terminate()
+        // Delegates to the shared `runSubprocess` helper (which keeps the
+        // non-Sendable Process, dual-pipe drain and cancellation discipline in
+        // one place) and preserves this backend's exact contract: a non-zero
+        // exit throws `processFailed` with stderr (or stdout when stderr empty).
+        let result = try await runSubprocess(
+            executableURL: executableURL,
+            arguments: arguments,
+            environment: environment,
+            stdin: stdin
+        )
+        guard result.exitCode == 0 else {
+            throw LocalHviskeBackendError.processFailed(
+                exitCode: result.exitCode,
+                stderr: result.stderr.isEmpty ? result.stdout : result.stderr
+            )
         }
+        return (stdout: result.stdout, stderr: result.stderr)
     }
 
     static func writePCM16WAV(data: Data, sampleRate: Int, to url: URL) throws {

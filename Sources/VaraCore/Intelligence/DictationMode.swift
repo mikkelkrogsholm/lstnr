@@ -7,6 +7,16 @@ public enum LLMProvider: Codable, Hashable, Sendable {
     case anthropic
     case ollama
     case custom(endpointID: UUID)
+    /// Google Gemini via its OpenAI-compatible endpoint (a GEMINI_API_KEY).
+    case gemini
+    /// Cleanup shelled out to an installed coding CLI under the user's own
+    /// subscription — no API key. The associated `model` defaults the picker and
+    /// display; `LLMSelection.model` stays the authoritative model string passed
+    /// to the factory. Reasoning is fixed to low inside `CLIChatClient`, so it
+    /// never needs to round-trip through Codable.
+    case claudeCLI(model: String)
+    case codexCLI(model: String)
+    case geminiCLI(model: String)
 
     public var displayName: String {
         switch self {
@@ -15,20 +25,26 @@ public enum LLMProvider: Codable, Hashable, Sendable {
         case .anthropic: "Anthropic (Claude)"
         case .ollama: "Ollama (local)"
         case .custom: "Custom endpoint"
+        case .gemini: "Gemini"
+        case .claudeCLI: "Claude Code (CLI)"
+        case .codexCLI: "Codex (CLI)"
+        case .geminiCLI: "Gemini CLI"
         }
     }
 
     public var requiresAPIKey: Bool {
         switch self {
-        case .openAI, .groq, .anthropic: true
-        case .ollama, .custom: false
+        case .openAI, .groq, .anthropic, .gemini: true
+        case .ollama, .custom, .claudeCLI, .codexCLI, .geminiCLI: false
         }
     }
 
     public var runsLocally: Bool {
         switch self {
-        case .ollama: true
-        case .openAI, .groq, .anthropic, .custom: false
+        // The CLIs run on this Mac (under the user's subscription); Gemini's API
+        // is cloud like the other keyed providers.
+        case .ollama, .claudeCLI, .codexCLI, .geminiCLI: true
+        case .openAI, .groq, .anthropic, .custom, .gemini: false
         }
     }
 
@@ -39,6 +55,10 @@ public enum LLMProvider: Codable, Hashable, Sendable {
         case .anthropic: "claude-haiku-4-5-20251001"
         case .ollama: "gemma3"
         case .custom: ""
+        case .gemini: "gemini-2.5-flash"
+        case .claudeCLI(let model): model.isEmpty ? VaraCLITool.claude.defaultModel : model
+        case .codexCLI(let model): model.isEmpty ? VaraCLITool.codex.defaultModel : model
+        case .geminiCLI(let model): model.isEmpty ? VaraCLITool.gemini.defaultModel : model
         }
     }
 
@@ -48,7 +68,26 @@ public enum LLMProvider: Codable, Hashable, Sendable {
         case .openAI: URL(string: "https://api.openai.com/v1")
         case .groq: URL(string: "https://api.groq.com/openai/v1")
         case .ollama: URL(string: "http://localhost:11434/v1")
-        case .anthropic, .custom: nil
+        // Google's OpenAI-compatible route; OpenAICompatibleChatClient appends
+        // `chat/completions` to this base.
+        case .gemini: URL(string: "https://generativelanguage.googleapis.com/v1beta/openai")
+        case .anthropic, .custom, .claudeCLI, .codexCLI, .geminiCLI: nil
+        }
+    }
+
+    /// Whether this provider shells out to a local coding CLI.
+    public var isCLI: Bool {
+        cliTool != nil
+    }
+
+    /// The CLI tool this provider maps to, or nil for the API providers. Lets the
+    /// factory, UI and timeout branch without re-pattern-matching every case.
+    public var cliTool: VaraCLITool? {
+        switch self {
+        case .claudeCLI: .claude
+        case .codexCLI: .codex
+        case .geminiCLI: .gemini
+        case .openAI, .groq, .anthropic, .ollama, .custom, .gemini: nil
         }
     }
 }

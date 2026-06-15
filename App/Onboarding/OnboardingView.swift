@@ -719,6 +719,7 @@ struct OnboardingView: View {
         case .openAI: URL(string: "https://platform.openai.com/api-keys")
         case .anthropic: URL(string: "https://console.anthropic.com/settings/keys")
         case .elevenLabs: URL(string: "https://elevenlabs.io/app/settings/api-keys")
+        case .gemini: URL(string: "https://aistudio.google.com/apikey")
         }
     }
 

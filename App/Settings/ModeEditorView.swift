@@ -6,6 +6,7 @@ import SwiftUI
 struct ModeEditorView: View {
     @Binding var mode: DictationMode
     let customEndpoints: [CustomLLMEndpoint]
+    var installedCLITools: Set<VaraCLITool> = []
     let onDelete: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
 
@@ -67,7 +68,8 @@ struct ModeEditorView: View {
                         LLMSelectionPicker(
                             selection: $mode.llm,
                             customEndpoints: customEndpoints,
-                            allowsDefault: true
+                            allowsDefault: true,
+                            installedCLITools: installedCLITools
                         )
                     } header: {
                         Text("Model", comment: "Mode editor LLM section header")
@@ -109,6 +111,9 @@ struct LLMSelectionPicker: View {
     @Binding var selection: LLMSelection?
     let customEndpoints: [CustomLLMEndpoint]
     var allowsDefault: Bool
+    /// Which coding CLIs are installed — only these are offered, so the picker
+    /// never lists a tool that would fail to spawn. Resolved once by the caller.
+    var installedCLITools: Set<VaraCLITool> = []
 
     private enum ProviderTag: Hashable {
         case appDefault
@@ -122,6 +127,16 @@ struct LLMSelectionPicker: View {
         return .appDefault
     }
 
+    /// The CLI provider case for an installed tool, with its per-tool default
+    /// model carried as the associated value so the picker seeds it correctly.
+    private func cliProvider(for tool: VaraCLITool) -> LLMProvider {
+        switch tool {
+        case .claude: .claudeCLI(model: tool.defaultModel)
+        case .codex: .codexCLI(model: tool.defaultModel)
+        case .gemini: .geminiCLI(model: tool.defaultModel)
+        }
+    }
+
     var body: some View {
         Picker(selection: providerBinding) {
             if allowsDefault {
@@ -131,7 +146,14 @@ struct LLMSelectionPicker: View {
             Text(LLMProvider.anthropic.displayTitle).tag(ProviderTag.provider(.anthropic))
             Text(LLMProvider.openAI.displayTitle).tag(ProviderTag.provider(.openAI))
             Text(LLMProvider.groq.displayTitle).tag(ProviderTag.provider(.groq))
+            Text(LLMProvider.gemini.displayTitle).tag(ProviderTag.provider(.gemini))
             Text(LLMProvider.ollama.displayTitle).tag(ProviderTag.provider(.ollama))
+            ForEach(VaraCLITool.allCases, id: \.self) { tool in
+                if installedCLITools.contains(tool) {
+                    let provider = cliProvider(for: tool)
+                    Text(provider.displayTitle).tag(ProviderTag.provider(provider))
+                }
+            }
             ForEach(customEndpoints) { endpoint in
                 Text(endpoint.name).tag(ProviderTag.provider(.custom(endpointID: endpoint.id)))
             }
@@ -144,6 +166,12 @@ struct LLMSelectionPicker: View {
                 Text("Model", comment: "LLM model field label")
             }
             .autocorrectionDisabled()
+
+            if selection?.provider.isCLI == true {
+                Text("No key needed — uses your \(selection!.provider.displayTitle) subscription · slower.", comment: "CLI provider model footnote")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

@@ -52,6 +52,10 @@ extension LLMProvider {
         case .anthropic: String(localized: "Anthropic (Claude)", comment: "LLM provider name")
         case .ollama: String(localized: "Ollama (local)", comment: "LLM provider name")
         case .custom: String(localized: "Custom endpoint", comment: "LLM provider name")
+        case .gemini: String(localized: "Gemini", comment: "LLM provider name")
+        case .claudeCLI: String(localized: "Claude Code (CLI)", comment: "LLM provider name — local coding CLI")
+        case .codexCLI: String(localized: "Codex (CLI)", comment: "LLM provider name — local coding CLI")
+        case .geminiCLI: String(localized: "Gemini CLI", comment: "LLM provider name — local coding CLI")
         }
     }
 }

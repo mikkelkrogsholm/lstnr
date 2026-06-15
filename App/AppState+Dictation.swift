@@ -100,7 +100,22 @@ extension AppState {
         // gets a tighter 15s local budget so a hung Ollama/DGX falls back to the
         // raw transcript faster; network backends answer fast so 20s is plenty.
         // Either way the words are kept — the timeout always falls back to raw.
-        let llmTimeoutSeconds = backend.capabilities.runsLocally ? 15.0 : 20.0
+        //
+        // A CLI provider (claude/codex/gemini) is far slower — ~6-16s typical — so
+        // a 15/20s budget would trip on a normal run and defeat the feature. When
+        // the default OR any available mode could resolve to a CLI provider, raise
+        // the ceiling to 60s. Because the timeout only ever falls back to raw
+        // (never loses words), the broad check is low-risk; a per-digit override
+        // to a CLI mode that wasn't anticipated just gets the 15/20s budget and
+        // falls back to raw — annoying, not data-losing.
+        let usesCLIProvider = (settings.defaultLLM?.provider.isCLI ?? false)
+            || settings.modes.contains { $0.llm?.provider.isCLI == true }
+        let llmTimeoutSeconds: Double
+        if usesCLIProvider {
+            llmTimeoutSeconds = 60.0
+        } else {
+            llmTimeoutSeconds = backend.capabilities.runsLocally ? 15.0 : 20.0
+        }
         let instrumentAudio: @Sendable (SpeechToTextAudio) -> SpeechToTextAudio = { [weak self] audio in
             Self.instrument(audio: audio) { message in
                 await MainActor.run { self?.log(message) }
@@ -292,6 +307,24 @@ extension AppState {
                     apiKey: nil,
                     model: selection.model
                 )
+            case .gemini:
+                // Google's OpenAI-compatible endpoint: same client shape as the
+                // openAI/groq cases, just a different base URL + key.
+                let key = try Self.resolveLLMKey(credentialStore, .gemini, env: "GEMINI_API_KEY")
+                return OpenAICompatibleChatClient(
+                    id: "gemini",
+                    baseURL: LLMProvider.gemini.defaultBaseURL!,
+                    apiKey: key,
+                    model: selection.model
+                )
+            case .claudeCLI, .codexCLI, .geminiCLI:
+                // Shell out to the installed coding CLI under the user's own
+                // subscription — no API key. The provider's `cliTool` names which
+                // binary; `selection.model` stays the authoritative model string.
+                guard let tool = selection.provider.cliTool else {
+                    throw LLMConfigurationError.unknownCustomEndpoint
+                }
+                return CLIChatClient(tool: tool, model: selection.model)
             case .custom(let endpointID):
                 guard let endpoint = customEndpoints.first(where: { $0.id == endpointID }),
                       let baseURL = endpoint.baseURL else {

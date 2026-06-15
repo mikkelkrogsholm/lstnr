@@ -52,7 +52,6 @@
 		253CA6E846D493141E1E254B /* Vara.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vara.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		257B6B1B3B8ACDF5457BCFC5 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Fonts; path = App/Resources/Fonts; sourceTree = SOURCE_ROOT; };
 		278AC424779C031A2D9683D2 /* BSTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BSTheme.swift; sourceTree = "<group>"; };
-		34E14D0BDCFE55E11CE0835F /* lstnr */ = {isa = PBXFileReference; lastKnownFileType = folder; name = lstnr; path = .; sourceTree = SOURCE_ROOT; };
 		35B06E7C98BBD1DB6BEE35F4 /* RecordingHUDWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHUDWindowController.swift; sourceTree = "<group>"; };
 		3C4B5D8EC52E5B3AC3E39518 /* RecordingHUDState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHUDState.swift; sourceTree = "<group>"; };
 		4047344E8D03C7F14465A72C /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
@@ -83,6 +82,7 @@
 		E96E5CAB230B56139FC79374 /* SettingsEnums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsEnums.swift; sourceTree = "<group>"; };
 		EAB94F8F90B2909144A4B897 /* AppState+Hotkey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppState+Hotkey.swift"; sourceTree = "<group>"; };
 		F074535333A202F6B5F597CD /* SettingsDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDeepLink.swift; sourceTree = "<group>"; };
+		F7138CABEF7A9E1585D2A390 /* vara */ = {isa = PBXFileReference; lastKnownFileType = folder; name = vara; path = .; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,7 +139,7 @@
 		308CD067AA040A03793BF98D /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				34E14D0BDCFE55E11CE0835F /* lstnr */,
+				F7138CABEF7A9E1585D2A390 /* vara */,
 			);
 			name = Packages;
 			sourceTree = "<group>";

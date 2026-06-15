@@ -111,6 +111,7 @@ extension VaraCredentialProvider {
         case .groq: "Groq"
         case .openAI: "OpenAI"
         case .anthropic: "Anthropic"
+        case .gemini: "Gemini"
         }
     }
 
@@ -120,6 +121,7 @@ extension VaraCredentialProvider {
         case .groq: "GROQ_API_KEY"
         case .openAI: "OPENAI_API_KEY"
         case .anthropic: "ANTHROPIC_API_KEY"
+        case .gemini: "GEMINI_API_KEY"
         }
     }
 }
@@ -133,7 +135,7 @@ extension LLMProvider {
         switch self {
         case .groq, .openAI:
             .recommended
-        case .anthropic, .ollama, .custom:
+        case .anthropic, .ollama, .custom, .gemini, .claudeCLI, .codexCLI, .geminiCLI:
             .advanced
         }
     }

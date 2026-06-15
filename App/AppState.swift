@@ -100,12 +100,19 @@ final class AppState {
             return hasLLMKey(.groq)
         case .anthropic:
             return hasLLMKey(.anthropic)
+        case .gemini:
+            return hasLLMKey(.gemini)
         case .ollama:
             // Only "ready" if a probe has actually reached the local endpoint.
             // Before the first probe (nil) we optimistically allow it so the
             // badge isn't briefly wrong on a working setup; once probed, the
             // cached truth wins.
             return ollamaReachable ?? true
+        case .claudeCLI, .codexCLI, .geminiCLI:
+            // Ready when the CLI binary is installed; auth is assumed (a
+            // logged-out run exits non-zero and the cleanup falls back to raw).
+            guard let tool = selection.provider.cliTool else { return false }
+            return CLIChatClient.detectInstalledTools().contains(tool)
         case .custom(let endpointID):
             return settings.customEndpoints.contains { $0.id == endpointID }
         }
