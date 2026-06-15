@@ -6,6 +6,9 @@ import SwiftUI
 /// (transcription + LLM cleanup), and the outcome.
 struct RecordingHUDView: View {
     let state: RecordingHUDState
+    /// Invoked when the user clicks the HUD's close (X) control. Wired to
+    /// `cancelDictation()` on the MainActor by the window controller.
+    var onCancel: (() -> Void)?
 
     static let size = CGSize(width: 312, height: 96)
 
@@ -61,6 +64,39 @@ struct RecordingHUDView: View {
                         .monospacedDigit()
                 }
             }
+
+            if showsCloseButton {
+                closeButton
+            }
+        }
+    }
+
+    /// Small close (X) that cancels the dictation. Shown while recording and
+    /// forging so the user always has a visible way out — Esc is the keyboard
+    /// twin. The host panel is a `.nonactivatingPanel` with `canBecomeKey=false`
+    /// and does NOT set `ignoresMouseEvents`, so this click is delivered to the
+    /// button WITHOUT pulling key focus away from the frontmost app (the paste
+    /// target). `.plain` button style keeps it from drawing a focus ring.
+    @ViewBuilder
+    private var closeButton: some View {
+        Button {
+            onCancel?()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(HUDPalette.muted)
+                .frame(width: 16, height: 16)
+                .background(HUDPalette.muted.opacity(0.12), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Cancel", comment: "HUD close button cancels the dictation"))
+    }
+
+    private var showsCloseButton: Bool {
+        switch state.phase {
+        case .recording, .forging: true
+        default: false
         }
     }
 
@@ -68,13 +104,20 @@ struct RecordingHUDView: View {
     private var middleRow: some View {
         switch state.phase {
         case .recording:
-            WaveformView(levels: state.levels, tint: HUDPalette.emberGlow)
+            WaveformView(levels: state.levels, tint: HUDPalette.emberGlow, animated: true)
                 .frame(height: 24)
         case .forging:
-            WaveformView(levels: state.levels, tint: HUDPalette.ember.opacity(0.45))
-                .frame(height: 24)
-                .overlay { ForgeShimmer() }
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+            // Frozen waveform (no animation — levels are static now) plus one
+            // lightweight indeterminate spinner. This replaces the old
+            // ForgeShimmer + repeating symbol pulse, whose unbounded
+            // `repeatForever` redraw loops pegged a CPU core in the floating panel.
+            HStack(spacing: 8) {
+                WaveformView(levels: state.levels, tint: HUDPalette.ember.opacity(0.35), animated: false)
+                    .frame(height: 24)
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(HUDPalette.ember)
+            }
         case .inserted, .heardNothing, .cancelled:
             Text(state.transcriptPreview.isEmpty ? subtitle : state.transcriptPreview)
                 .font(.system(size: 11))
@@ -114,6 +157,12 @@ struct RecordingHUDView: View {
                 Text("Release · Esc · 1–9", comment: "HUD hint: release key to insert, Esc cancels, digits switch mode")
                     .font(.system(size: 10))
                     .foregroundStyle(HUDPalette.muted)
+            } else if state.phase == .forging {
+                // Forging is now escapable — surface the Esc hint so the user
+                // isn't trapped if the backend hangs.
+                Text("Esc · cancel", comment: "HUD hint while forging: Esc cancels")
+                    .font(.system(size: 10))
+                    .foregroundStyle(HUDPalette.muted)
             }
         }
     }
@@ -131,7 +180,14 @@ struct RecordingHUDView: View {
         switch state.phase {
         case .hidden: ""
         case .recording: String(localized: "Vara is listening …", comment: "HUD title while recording")
-        case .forging: String(localized: "Vara is forging the text …", comment: "HUD title while transcribing/cleaning")
+        // WHY: while WhisperKit specializes the CoreML model on first run, the
+        // forge legitimately blocks on that one-time compile — say so instead of
+        // the normal "forging" copy. Only the title changes; the .forging glyph,
+        // spinner, border tint and Esc/X cancel hint stay keyed on `case .forging`.
+        case .forging:
+            state.forgePreparingModel
+                ? String(localized: "Preparing the model (one-time) …", comment: "HUD title while WhisperKit specializes the CoreML model on first run")
+                : String(localized: "Vara is forging the text …", comment: "HUD title while transcribing/cleaning")
         case .inserted(let words): String(localized: "\(words) words inserted", comment: "HUD title after insertion")
         case .heardNothing: String(localized: "Vara heard nothing", comment: "HUD title for empty transcript")
         case .cancelled: String(localized: "Cancelled", comment: "HUD title after Esc cancel")
@@ -155,10 +211,12 @@ struct RecordingHUDView: View {
             case .recording:
                 PulsingDot(color: HUDPalette.emberGlow)
             case .forging:
+                // Static glyph — the old `.symbolEffect(.pulse, options:
+                // .repeating)` ran an unbounded redraw loop; the forging spinner
+                // in the middle row now carries the "working" motion instead.
                 Image(systemName: "hammer.fill")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(HUDPalette.emberGlow)
-                    .symbolEffect(.pulse, options: .repeating)
             case .inserted:
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 13, weight: .semibold))
@@ -204,6 +262,9 @@ private enum HUDPalette {
 private struct WaveformView: View {
     let levels: [Double]
     let tint: Color
+    /// Drives the per-sample slide animation only while recording. During forging
+    /// the levels are frozen, so animating them would needlessly redraw the panel.
+    var animated: Bool = true
 
     var body: some View {
         Canvas { context, size in
@@ -229,7 +290,7 @@ private struct WaveformView: View {
                 )
             }
         }
-        .animation(.linear(duration: 0.08), value: levels)
+        .animation(animated ? .linear(duration: 0.08) : nil, value: levels)
     }
 }
 
@@ -248,29 +309,6 @@ private struct PulsingDot: View {
                     pulsing = true
                 }
             }
-    }
-}
-
-/// Gold sweep across the frozen waveform while the LLM works.
-private struct ForgeShimmer: View {
-    @State private var offset: CGFloat = -1
-
-    var body: some View {
-        GeometryReader { proxy in
-            LinearGradient(
-                colors: [.clear, HUDPalette.emberGlow.opacity(0.5), .clear],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .frame(width: proxy.size.width * 0.45)
-            .offset(x: offset * proxy.size.width)
-            .onAppear {
-                withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) {
-                    offset = 1.1
-                }
-            }
-        }
-        .allowsHitTesting(false)
     }
 }
 

@@ -24,6 +24,10 @@ final class RecordingHUDWindowController {
     private let placement: Placement
     private let state: RecordingHUDState
     private var panel: RecordingHUDPanel?
+    /// Invoked when the user clicks the HUD's close (X). Set by AppState to call
+    /// `cancelDictation()`; the click reaches the button without stealing key
+    /// focus because the panel is non-activating (see RecordingHUDPanel).
+    var onCancel: (() -> Void)?
 
     var isVisible: Bool {
         panel?.isVisible == true
@@ -66,7 +70,11 @@ final class RecordingHUDWindowController {
             return panel
         }
 
-        let hostingView = NSHostingView(rootView: RecordingHUDView(state: state))
+        let hostingView = NSHostingView(
+            rootView: RecordingHUDView(state: state, onCancel: { [weak self] in
+                self?.onCancel?()
+            })
+        )
         hostingView.translatesAutoresizingMaskIntoConstraints = false
 
         let panel = RecordingHUDPanel(

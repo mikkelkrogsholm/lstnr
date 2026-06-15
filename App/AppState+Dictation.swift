@@ -10,8 +10,33 @@ extension AppState {
     func cancelDictation() {
         guard let dictationSession else { return }
         log("Cancelling dictation")
+        // Bump the generation FIRST so any in-flight forge's late result (paste +
+        // history append) is dropped on arrival — see `dictationGeneration`. This
+        // is the authoritative guard: cancelling `forgingTask` can't stop an
+        // uncancellable WhisperKit inference or a paste already mid-flight.
+        dictationGeneration &+= 1
+        let wasForging = isTranscribing
         isRecording = false
         isTranscribing = false
+        // Abandon the stored forge task (best-effort; a cancellable network LLM
+        // step aborts, an uncancellable inference is simply ignored).
+        forgingTask?.cancel()
+        forgingTask = nil
+        if wasForging {
+            // During forging the session is .transcribing/.inserting, so
+            // `cancelRecording()` would no-op. Drive the cancelled HUD directly
+            // instead and insert NOTHING — Esc/click during forge means cancel.
+            activeModeOverride = nil
+            activeAppRuleMode = nil
+            statusMessage = readyStatusMessage
+            log("Dictation cancelled during forging")
+            hudState.phase = .cancelled
+            hideHUDAfterDelay()
+            runDeferredReloadIfNeeded()
+            return
+        }
+        // Cancelling while still recording: let the session discard the audio.
+        // Do NOT await the abandoned forge task here.
         Task { @MainActor [weak self] in
             let result = await dictationSession.cancelRecording()
             self?.apply(commandResult: result)
@@ -70,11 +95,12 @@ extension AppState {
         let timeoutSeconds = backend.capabilities.runsLocally
             ? 180.0
             : (backend.capabilities.supportsStreamingTranscription ? 30.0 : 120.0)
-        // Local backends (Hviske) can be slow on first model load but stream no
-        // intermediate signal, so give the LLM cleanup the same generous budget;
-        // network backends usually answer fast, so 20s is plenty before we fall
-        // back to the raw transcript. Either way the words are kept.
-        let llmTimeoutSeconds = backend.capabilities.runsLocally ? 30.0 : 20.0
+        // The long transcription budget stays (a first WhisperKit model download
+        // genuinely needs it) now that .forging is escapable, but the LLM cleanup
+        // gets a tighter 15s local budget so a hung Ollama/DGX falls back to the
+        // raw transcript faster; network backends answer fast so 20s is plenty.
+        // Either way the words are kept — the timeout always falls back to raw.
+        let llmTimeoutSeconds = backend.capabilities.runsLocally ? 15.0 : 20.0
         let instrumentAudio: @Sendable (SpeechToTextAudio) -> SpeechToTextAudio = { [weak self] audio in
             Self.instrument(audio: audio) { message in
                 await MainActor.run { self?.log(message) }
@@ -87,6 +113,15 @@ extension AppState {
                 guard let self else { return nil }
                 return (self.activeMode, self.makeModeProcessor(), self.dictationTargetAppName)
             }
+        }
+        // The generation this forge belongs to, read live on the MainActor and
+        // stamped onto the history entry. A cancel can land between any check here
+        // and `apply`, so the enqueue itself cannot be reliably gated; instead the
+        // save side drains entries whose generation is no longer current. (Because
+        // the session is `isBusy` while forging, no second forge can overlap, so
+        // `activeForgeGeneration` is stable for the life of this forge.)
+        let forgeGeneration: @Sendable () async -> Int = { [weak self] in
+            await MainActor.run { self?.activeForgeGeneration ?? 0 }
         }
         let recorder = MicrophoneDictationAudioRecorder(onLevel: { [weak self] level in
             Task { @MainActor in
@@ -168,13 +203,20 @@ extension AppState {
                     await logMessage("LLM step fell back to raw transcript: \(safeError)")
                 }
 
+                // Always enqueue, stamped with this forge's generation. If the
+                // user cancelled during forging, `apply` drops the result without
+                // saving and the matching `take(matching:)` later drains this
+                // orphan — so a cancelled dictation never reaches history and the
+                // FIFO stays balanced regardless of when the cancel lands.
+                let forgeGen = await forgeGeneration()
                 await pendingHistory.replace(
                     PendingDictationHistoryEntry(
                         rawResult: rawResult,
                         outcome: outcome,
                         modeName: mode.displayTitle,
                         targetAppName: targetAppName,
-                        requestedLanguage: request.languageCode
+                        requestedLanguage: request.languageCode,
+                        generation: forgeGen
                     )
                 )
                 return TranscriptionResult(
@@ -187,9 +229,18 @@ extension AppState {
                     rawJSON: rawResult.rawJSON
                 )
             },
-            textSink: { text in
+            textSink: { [weak self] text in
                 guard pasteAutomatically else { return }
                 await MainActor.run {
+                    guard let self else { return }
+                    // Drop a late paste from an abandoned forge: if the user
+                    // cancelled (or started a new interaction) the generation has
+                    // moved past the one this interaction owns, so pasting now
+                    // would dump text the user explicitly cancelled.
+                    guard self.dictationGeneration == self.activeForgeGeneration else {
+                        self.log("Paste dropped — dictation was cancelled during forging")
+                        return
+                    }
                     ClipboardPaster.pasteAtCursor(text: text)
                     self.log("Inserted transcript using cursor paste")
                 }
@@ -301,17 +352,46 @@ extension AppState {
             statusMessage = String(localized: "Vara is forging the text …", comment: "Status while transcribing/cleaning")
             isTranscribing = true
             hudState.phase = .forging
+            // Recompute fresh every forge (true OR false) so the flag never bleeds
+            // into a later already-warm forge: show the one-time-prep title only
+            // when WhisperKit is active AND not yet warm. Covers a cold dictation
+            // that beats prewarm — it legitimately waits on the gate for the
+            // compile, so the prep message is the correct thing to show.
+            hudState.forgePreparingModel = (settings.speechBackend == .localWhisperKit && !whisperKitWarmState.isWarm)
             presentHUD()
         }
         isRecording = false
         log("End dictation interaction")
-        Task { @MainActor [weak self] in
+        // Take a fresh generation for this forge. The paste and `apply` paths
+        // compare the live `dictationGeneration` against `activeForgeGeneration`;
+        // a later cancel bumps `dictationGeneration` so this result is dropped.
+        dictationGeneration &+= 1
+        activeForgeGeneration = dictationGeneration
+        let generation = dictationGeneration
+        forgingTask = Task { @MainActor [weak self] in
             let result = await dictationSession.endInteraction()
-            self?.apply(commandResult: result)
+            self?.apply(commandResult: result, generation: generation)
         }
     }
 
-    private func apply(commandResult: DictationSessionCommandResult) {
+    /// Applies a session result to UI/HUD state. When `generation` is non-nil
+    /// (the forge path), the result is dropped if the dictation generation has
+    /// advanced since the forge launched — i.e. the user cancelled or started a
+    /// new interaction. The non-forge callers (begin/cancel-while-recording) pass
+    /// nil and always apply.
+    private func apply(commandResult: DictationSessionCommandResult, generation: Int? = nil) {
+        if let generation, generation != dictationGeneration {
+            // Stale forge result — the interaction it belongs to was superseded.
+            // Insert nothing, touch no HUD state; the cancel path already drove
+            // the HUD to .cancelled.
+            log("Forge result dropped — generation \(generation) superseded by \(dictationGeneration)")
+            return
+        }
+        if generation != nil {
+            // This forge has now settled; drop the handle so cancel doesn't try
+            // to abandon an already-finished task.
+            forgingTask = nil
+        }
         switch commandResult {
         case .startedRecording:
             isRecording = true
@@ -348,8 +428,11 @@ extension AppState {
             activeAppRuleMode = nil
             statusMessage = readyStatusMessage
             let insertionStatus: DictationInsertionStatus = settings.pasteAutomatically ? .inserted : .notInserted
+            // Save this forge's own entry by generation so any orphan left by a
+            // cancelled forge is drained, never saved (see take(matching:)).
+            let saveGeneration = generation ?? dictationGeneration
             Task { @MainActor [weak self] in
-                await self?.savePendingHistory(insertionStatus: insertionStatus)
+                await self?.savePendingHistory(insertionStatus: insertionStatus, generation: saveGeneration)
             }
             if let insertedText {
                 log("Dictation completed. Inserted text length=\(insertedText.count), insertionStatus=\(insertionStatus.rawValue)")

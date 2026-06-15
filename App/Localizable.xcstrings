@@ -1596,6 +1596,17 @@
         }
       }
     },
+    "Model preparation failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forberedelse af modellen mislykkedes"
+          }
+        }
+      }
+    },
     "Modes": {
       "extractionState": "manual",
       "localizations": {
@@ -1948,6 +1959,28 @@
         }
       }
     },
+    "Preparing the model (one-time) …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbereder modellen (engangs) …"
+          }
+        }
+      }
+    },
+    "Preparing the model for your Mac — one-time, may take a couple of minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbereder model til din Mac — engangs, kan tage et par minutter"
+          }
+        }
+      }
+    },
     "Privacy": {
       "extractionState": "manual",
       "localizations": {
@@ -2175,6 +2208,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geninstallér Hviske"
+          }
+        }
+      }
+    },
+    "Esc · cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esc · annullér"
           }
         }
       }
@@ -2780,6 +2824,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transskriptionen mislykkedes. Prøv igen."
+          }
+        }
+      }
+    },
+    "Try again": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prøv igen"
           }
         }
       }

@@ -94,6 +94,24 @@ public struct WhisperKitBackend: SpeechToTextBackend {
         )
     }
 
+    /// Pays WhisperKit's one-time CoreML/ANE specialization (~175s on first run)
+    /// OFF the real-dictation path by running a short silent buffer through the
+    /// engine, then caching the warm pipe in-process. Idempotent (a no-op once
+    /// warm). The Task can be abandoned (cancelled on reconfigure), but an ANE
+    /// compile already in flight is uncancellable and runs to completion — it is
+    /// simply not awaited; a still-queued prewarm aborts at the gate's
+    /// `checkCancellation` without doing redundant work.
+    ///
+    /// WHY: loading the pipe is cheap; the cost is in the FIRST `pipe.transcribe`
+    /// (the ANE compile), so we must actually run one prediction here. Called from
+    /// AppState after a model download completes, never on the dictation path.
+    public func prewarm() async throws {
+        let log = diagnosticLog
+        try await engine.prewarm { message in
+            await log?(message)
+        }
+    }
+
     /// Base directory for the cached CoreML models. WhisperKit nests the model
     /// repo/name beneath this, so everything lives under the app's own folder
     /// instead of polluting `~/Documents`.
@@ -189,6 +207,18 @@ private final class WhisperKitEngine: @unchecked Sendable {
     private let downloadBase: URL
     private let lock = NSLock()
     private var pipe: WhisperKit?
+    /// Whether at least one prediction (prewarm or a real dictation) has already
+    /// run this session, so the ANE specialization is paid. Guarded by `lock`
+    /// (NOT the gate) so `prewarm()` can fast-return without serializing.
+    private var didPredict = false
+
+    /// Serializes ENTRY to `pipe.transcribe`. WHY: the non-Sendable `WhisperKit`
+    /// pipe stays put (the engine is deliberately not an actor — see the type
+    /// comment); a prewarm and a real dictation must never call `transcribe` on
+    /// the same pipe concurrently. A single-permit FIFO gate means a dictation
+    /// that starts mid-prewarm simply queues behind the in-flight compile, then
+    /// reuses the now-warm pipe — correct transcript, no recompile, no race.
+    private let gate = TranscribeGate()
 
     init(model: String, downloadBase: URL) {
         self.model = model
@@ -201,13 +231,44 @@ private final class WhisperKitEngine: @unchecked Sendable {
         log: @Sendable (String) async -> Void
     ) async throws -> (text: String, detectedLanguage: String?) {
         let pipe = try await loadedPipe(log: log)
+        // One transcribe at a time. `release()` in `defer` runs on every exit —
+        // return, throw, or cancellation — so the gate is never left held. A task
+        // cancelled while queued in the gate is still resumed FIFO by a later
+        // release(); it then aborts here at `checkCancellation` BEFORE the
+        // (uncancellable) ANE inference and hands the permit straight to the next
+        // waiter via `defer`, so a cancelled prewarm never runs redundant work.
+        await gate.acquire()
+        defer { gate.release() }
+        try Task.checkCancellation()
         let options = DecodingOptions(language: language)
         let results = try await pipe.transcribe(audioPath: audioPath, decodeOptions: options)
+        lock.withLock { didPredict = true }
         let text = results
             .map(\.text)
             .joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return (text, results.first?.language ?? language)
+    }
+
+    /// Triggers + caches the one-time ANE specialization without a real dictation.
+    /// Fast-returns if already warm this session; otherwise runs ~0.3s of silence
+    /// through `transcribe` (THROUGH the same gate, so it can't race a dictation).
+    func prewarm(log: @Sendable (String) async -> Void) async throws {
+        if lock.withLock({ pipe != nil && didPredict }) { return }
+        try Task.checkCancellation()
+
+        // 0.3s of 16 kHz mono PCM16 silence = 9600 zero samples * 2 bytes.
+        let silence = Data(count: Int(0.3 * 16_000) * 2)
+        let tmpURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("vara-whisperkit-prewarm-\(UUID().uuidString).wav")
+        try WhisperKitBackend.writePCM16WAV(data: silence, sampleRate: 16_000, to: tmpURL)
+        // Registered before any cancellation check below, so the temp file is
+        // removed on every exit (success, throw, or CancellationError unwind).
+        defer { try? FileManager.default.removeItem(at: tmpURL) }
+
+        await log("WhisperKit prewarm: specializing CoreML/ANE (one-time)…")
+        _ = try await transcribe(audioPath: tmpURL.path, language: nil, log: log)
+        await log("WhisperKit prewarm complete.")
     }
 
     private func loadedPipe(log: @Sendable (String) async -> Void) async throws -> WhisperKit {
@@ -303,6 +364,46 @@ private extension Data {
         var littleEndian = value.littleEndian
         Swift.withUnsafeBytes(of: &littleEndian) { bytes in
             append(contentsOf: bytes)
+        }
+    }
+}
+
+/// A single-permit FIFO async semaphore, built in the same `@unchecked Sendable`
+/// + `NSLock` idiom the codebase already trusts for cross-task coordination
+/// (cf. `ResumeOnceLatch` / `CancellableTaskBox`). The lock guards only the
+/// permit flag and the waiter queue and is NEVER held across an `await` (the
+/// only `await` is the continuation itself; resume is synchronous). One permit
+/// => only one holder runs at a time; FIFO dequeue => no starvation.
+private final class TranscribeGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var available = true
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    /// Acquire the permit, suspending FIFO behind any current holder/waiters.
+    func acquire() async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            lock.lock()
+            if available {
+                available = false
+                lock.unlock()
+                continuation.resume()
+            } else {
+                waiters.append(continuation)
+                lock.unlock()
+            }
+        }
+    }
+
+    /// Release the permit: hand it to the next waiter (FIFO), else mark free.
+    func release() {
+        lock.lock()
+        if !waiters.isEmpty {
+            let next = waiters.removeFirst()
+            lock.unlock()
+            next.resume()
+        } else {
+            available = true
+            lock.unlock()
         }
     }
 }

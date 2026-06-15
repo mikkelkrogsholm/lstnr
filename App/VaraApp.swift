@@ -26,7 +26,8 @@ struct VaraApp: App {
         .defaultSize(width: 640, height: 420)
 
         Settings {
-            VaraSettingsView()
+            // Inject AppState so WhisperKitModelSection can read the warm state.
+            VaraSettingsView().environment(state)
         }
     }
 }

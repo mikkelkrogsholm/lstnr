@@ -22,6 +22,9 @@ struct VaraSettingsView: View {
     @State private var anthropicCredentialStatus: String?
     @State private var accessibilityGranted = false
     @State private var editingModeIndex: Int?
+    // Optional so the #Preview / `store: nil` path (no injected AppState) yields
+    // nil instead of trapping; the warming/failed rows just fall back to .notNeeded.
+    @Environment(AppState.self) private var appState: AppState?
     private let store: VaraSettingsStore?
     private let credentialStore: VaraCredentialStoring?
 
@@ -182,7 +185,11 @@ struct VaraSettingsView: View {
             }
 
             if draft.speechBackend == .localWhisperKit {
-                WhisperKitModelSection(draft: $draft)
+                WhisperKitModelSection(
+                    draft: $draft,
+                    warmState: appState?.whisperKitWarmState ?? .notNeeded,
+                    onRetryPrewarm: { appState?.retryWhisperKitPrewarm() }
+                )
             }
 
             if let provider = draft.speechBackend.credentialProvider {

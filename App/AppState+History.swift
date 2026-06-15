@@ -38,8 +38,8 @@ extension AppState {
         }
     }
 
-    func savePendingHistory(insertionStatus: DictationInsertionStatus) async {
-        guard let pendingEntry = await pendingHistory.take() else { return }
+    func savePendingHistory(insertionStatus: DictationInsertionStatus, generation: Int) async {
+        guard let pendingEntry = await pendingHistory.take(matching: generation) else { return }
         do {
             _ = try await historyStore.add(
                 rawTranscript: pendingEntry.rawResult.text,

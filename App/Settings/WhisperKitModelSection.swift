@@ -8,6 +8,12 @@ import SwiftUI
 /// progress bar) up front, rather than stalling the first dictation.
 struct WhisperKitModelSection: View {
     @Binding var draft: VaraSettingsDraft
+    /// Live WhisperKit warm state from AppState; drives the post-download
+    /// specialization progress / failed rows. `.notNeeded` when no AppState is
+    /// injected (e.g. previews) — the rows simply don't show.
+    var warmState: WhisperKitWarmState = .notNeeded
+    /// Re-triggers prewarm from the `.failed` retry row.
+    var onRetryPrewarm: () -> Void = {}
 
     // WhisperKit model download flow (confirm dialog + progress).
     @State private var whisperKitPendingModel: String?
@@ -116,13 +122,43 @@ struct WhisperKitModelSection: View {
                 .controlSize(.small)
             }
         } else {
-            Label {
-                Text("Downloaded — ready on this Mac", comment: "WhisperKit model ready label")
-            } icon: {
-                Image(systemName: "checkmark.circle")
+            // Model is on disk; the warm state tells us whether the one-time ANE
+            // specialization is still running (warming), failed, or done (warm).
+            switch warmState {
+            case .warming:
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Preparing the model for your Mac — one-time, may take a couple of minutes", comment: "WhisperKit specialization in-progress label")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+            case .failed:
+                VStack(alignment: .leading, spacing: 4) {
+                    Label {
+                        Text("Model preparation failed", comment: "WhisperKit specialization failed label")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    Button {
+                        onRetryPrewarm()
+                    } label: {
+                        Text("Try again", comment: "Retry model download button")
+                    }
+                    .controlSize(.small)
+                }
+            case .warm, .notNeeded:
+                Label {
+                    Text("Downloaded — ready on this Mac", comment: "WhisperKit model ready label")
+                } icon: {
+                    Image(systemName: "checkmark.circle")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
     }
 

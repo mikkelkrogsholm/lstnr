@@ -36,6 +36,30 @@ final class AppState {
     var backend: (any SpeechToTextBackend)?
     // Built in AppState+Backends, used by the dictation flow (AppState+Dictation).
     var dictationSession: DictationSession?
+    /// The in-flight transcription/forging Task launched by
+    /// `endDictationInteraction()`. Stored so `cancelDictation()` can `.cancel()`
+    /// it — though cancellation alone can't stop an uncancellable inference or the
+    /// in-actor paste, so the generation token below is the authoritative drop.
+    var forgingTask: Task<Void, Never>?
+    /// Monotonically increasing token bumped at the start of every interaction and
+    /// on every cancel. This is the ONLY reliable way to guarantee a late result
+    /// from an abandoned forge can never paste text or append history after the
+    /// user cancelled — Task.cancel() can't interrupt CoreML inference or a
+    /// synchronous paste.
+    var dictationGeneration: Int = 0
+    /// The generation the currently in-flight forge belongs to, captured when its
+    /// Task launches. The paste/apply path compares `dictationGeneration` against
+    /// this: if they differ, the interaction that produced this result was
+    /// superseded (cancelled or replaced) and its output must be dropped.
+    var activeForgeGeneration: Int = 0
+    /// Per-session WhisperKit warm-state machine (reset every launch since
+    /// AppState is constructed once). Drives the HUD one-time-prep fallback and
+    /// the Settings warming/failed rows. Only ever mutated on the MainActor.
+    var whisperKitWarmState: WhisperKitWarmState = .notNeeded
+    /// The in-flight background prewarm Task, stored so a reconfigure (model
+    /// change / settings change) can cancel and restart it. Not `private` so the
+    /// AppState+Backends extension (separate file) can manage it.
+    var whisperKitPrewarmTask: Task<Void, Never>?
     // Installed/torn down in AppState+Hotkey and AppState+Backends.
     var hotkey: GlobalHotkey?
     /// PID of the app currently reported as holding secure keyboard input (which
@@ -138,6 +162,13 @@ final class AppState {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.reloadConfiguration() }
+        }
+        // The HUD's close (X) cancels the dictation — same path as Esc. Set after
+        // all stored properties are initialized so the closure can capture self.
+        // Safe to call from the click handler: the panel is non-activating so the
+        // click never pulls key focus from the frontmost paste target.
+        hudController.onCancel = { [weak self] in
+            self?.cancelDictation()
         }
         log("App started. \(Self.runtimeIdentityDescription())")
         log("Microphone: \(microphoneName), permission=\(microphonePermissionStatus)")
@@ -320,6 +351,25 @@ final class AppState {
         let bundlePath = Bundle.main.bundleURL.path
         let executablePath = Bundle.main.executableURL?.path ?? CommandLine.arguments.first ?? "unknown-executable"
         return "Runtime identity: bundleID=\(bundleID), bundlePath=\(bundlePath), executablePath=\(executablePath), pid=\(ProcessInfo.processInfo.processIdentifier)"
+    }
+}
+
+/// Per-session lifecycle of WhisperKit's one-time CoreML/ANE specialization.
+/// App-side only (never crosses into VaraCore — `prewarm()` takes no state type).
+enum WhisperKitWarmState: Equatable {
+    /// WhisperKit isn't the active backend, or its model isn't downloaded yet
+    /// (the download UI owns that phase); no prewarm is pending.
+    case notNeeded
+    /// Prewarm is running; `since` lets the UI show how long it's been going.
+    case warming(since: Date)
+    /// Specialization is paid and cached in-process — first dictation is fast.
+    case warm
+    /// Prewarm failed; the string is the user-facing error for the retry row.
+    case failed(String)
+
+    var isWarm: Bool {
+        if case .warm = self { return true }
+        return false
     }
 }
 
@@ -591,6 +641,11 @@ struct PendingDictationHistoryEntry: Sendable {
     let modeName: String
     let targetAppName: String?
     let requestedLanguage: String?
+    /// The dictation generation this entry belongs to. The save side dequeues by
+    /// generation so a forge cancelled mid-flight (Esc/X during forging) can
+    /// enqueue an entry that is later drained instead of saved — see
+    /// `PendingDictationHistoryStore.take(matching:)`.
+    let generation: Int
 
     var cleanedTranscriptForHistory: String? {
         guard outcome.usedLLM, outcome.text != rawResult.text else { return nil }
@@ -609,11 +664,32 @@ actor PendingDictationHistoryStore {
 
     func replace(_ entry: PendingDictationHistoryEntry) {
         entries.append(entry)
+        // Safety bound. Legitimate coexistence is at most ~2 (a completed
+        // dictation's entry awaiting its async save while the next is enqueued);
+        // anything beyond is accumulated orphans from forges cancelled before they
+        // completed (drained lazily by `take(matching:)`). Cap so a user who
+        // repeatedly forges-then-cancels without ever completing can't grow this
+        // unbounded. The dropped entries are always the oldest = most stale.
+        let cap = 16
+        if entries.count > cap {
+            entries.removeFirst(entries.count - cap)
+        }
     }
 
-    func take() -> PendingDictationHistoryEntry? {
-        guard !entries.isEmpty else { return nil }
-        return entries.removeFirst()
+    /// Dequeues the entry for `generation`, discarding any stale entries ahead of
+    /// it. A forge cancelled mid-flight can race: it passes the enqueue point and
+    /// appends an entry, but its `apply` then drops the result without dequeuing
+    /// (the generation moved). Draining by generation here guarantees that
+    /// orphan is never saved and never shifts the FIFO for the next dictation, so
+    /// the "enqueue one, save one" balance holds under any cancel interleaving.
+    func take(matching generation: Int) -> PendingDictationHistoryEntry? {
+        while let first = entries.first {
+            if first.generation == generation {
+                return entries.removeFirst()
+            }
+            entries.removeFirst()
+        }
+        return nil
     }
 }
 

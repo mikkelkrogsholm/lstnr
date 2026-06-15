@@ -26,6 +26,10 @@ final class RecordingHUDState {
     var modeTitle: String = ""
     var modeSymbol: String = "waveform"
     var transcriptPreview: String = ""
+    /// When the forge begins while WhisperKit is active but not yet warm, the HUD
+    /// title shows a one-time-prep message instead of the normal forging copy.
+    /// Read only while `phase == .forging`; recomputed on every forge entry.
+    var forgePreparingModel: Bool = false
 
     func pushLevel(_ level: Double) {
         levels.append(level)
@@ -37,6 +41,7 @@ final class RecordingHUDState {
     func beginRecording(startedAt: Date) {
         levels.removeAll()
         transcriptPreview = ""
+        forgePreparingModel = false
         recordingStartedAt = startedAt
         phase = .recording
     }

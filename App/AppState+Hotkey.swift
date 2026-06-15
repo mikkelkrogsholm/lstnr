@@ -48,9 +48,14 @@ extension AppState {
         // Forward Esc/1–9 based on whether we're recording, not the hotkey's own
         // `isDown` flag — a watchdog rearm can reset `isDown` while the shortcut
         // is still physically held, which would otherwise drop Esc-to-cancel and
-        // digit mode selection mid-dictation.
+        // digit mode selection mid-dictation. Also forward while transcribing so
+        // Esc can cancel the .forging phase; both this gate and the in-handler
+        // guard must include `isTranscribing` or Esc never reaches the handler.
         hotkey.shouldForwardKeyDown = { [weak self] in
-            MainActor.assumeIsolated { self?.isRecording ?? false }
+            MainActor.assumeIsolated {
+                guard let self else { return false }
+                return self.isRecording || self.isTranscribing
+            }
         }
         hotkey.onTapBlocked = { [weak self] holderPID in
             Task { @MainActor in self?.reportTapBlocked(holderPID: holderPID) }
@@ -90,15 +95,19 @@ extension AppState {
         log("Secure input held by \(holderName) (pid \(holderPID)) — hotkey blocked system-wide")
     }
 
-    /// Esc cancels; 1–9 picks a mode for the ongoing dictation only.
+    /// Esc cancels during recording AND the transcribing/.forging phase; 1–9
+    /// picks a mode for the ongoing dictation only (recording only).
     private func handleKeyWhileDictating(keyCode: UInt16) {
-        guard isRecording else { return }
-
         let escKeyCode: UInt16 = 53
+        // Esc must work in both phases so the user can escape a hung forge.
         if keyCode == escKeyCode {
+            guard isRecording || isTranscribing else { return }
             cancelDictation()
             return
         }
+
+        // Digit mode-switch only makes sense while still recording.
+        guard isRecording else { return }
 
         let digitKeyCodes: [UInt16: Int] = [
             18: 1, 19: 2, 20: 3, 21: 4, 23: 5, 22: 6, 26: 7, 28: 8, 25: 9,
