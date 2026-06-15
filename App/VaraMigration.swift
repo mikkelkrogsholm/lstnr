@@ -107,26 +107,41 @@ enum VaraMigration {
 
     // MARK: - Step 4: Keychain generic-password items
 
-    /// Copies every generic-password item from the old service to the new one.
-    /// Enumerates ALL items (so per-endpoint `custom-endpoint.<uuid>.api-key`
-    /// accounts come along), skips any account already present under the new
-    /// service, and matches the existing store's accessibility class. Old items
-    /// are left in place (copy, not move).
+    /// Best-effort copy of every generic-password item from the old service to
+    /// the new one. Enumerates ALL items (so per-endpoint
+    /// `custom-endpoint.<uuid>.api-key` accounts come along), skips any account
+    /// already present under the new service, and matches the existing store's
+    /// accessibility class. Old items are left in place (copy, not move).
+    ///
+    /// CROSS-SIGNATURE CAVEAT: the old items were created under the previous code
+    /// signature (dk.56n.lstnr). A differently-signed binary (dk.56n.vara)
+    /// reading their *data* triggers a keychain ACL check, which would otherwise
+    /// (a) pop an interactive authorization dialog on every launch and (b) return
+    /// an error when run headlessly. We therefore suppress that UI
+    /// (`kSecUseAuthenticationUIFail`) and treat an unreadable old store as
+    /// "nothing to migrate" — returning cleanly rather than throwing. The keys
+    /// are recoverable via the `~/.vara/.env` fallback or re-entry, so a
+    /// cross-signature read failure must NEVER wedge the whole migration: if this
+    /// step threw, `runIfNeeded`'s completion flag would never be set and the
+    /// entire migration would re-run on every single launch.
     private static func migrateKeychain() throws {
         let copyQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: oldKeychainService,
             kSecMatchLimit as String: kSecMatchLimitAll,
             kSecReturnAttributes as String: true,
-            kSecReturnData as String: true
+            kSecReturnData as String: true,
+            // Never block launch on a keychain prompt; fail the read instead.
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail
         ]
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(copyQuery as CFDictionary, &result)
-        if status == errSecItemNotFound { return }
-        guard status == errSecSuccess else {
-            throw VaraKeychainError.unhandledStatus(status)
-        }
+        // errSecItemNotFound: no old items. errSecInteractionNotAllowed /
+        // errSecAuthFailed: old items exist but are locked to the previous code
+        // signature and cannot be read without UI. All of these mean "nothing we
+        // can migrate" — return cleanly so the completion flag is allowed to set.
+        guard status == errSecSuccess else { return }
         guard let items = result as? [[String: Any]] else { return }
 
         for item in items {
