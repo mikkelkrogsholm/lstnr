@@ -114,6 +114,16 @@ struct LLMSelectionPicker: View {
     /// Which coding CLIs are installed — only these are offered, so the picker
     /// never lists a tool that would fail to spawn. Resolved once by the caller.
     var installedCLITools: Set<VaraCLITool> = []
+    /// Privacy-first ordering for onboarding: emit local/no-key options first
+    /// (Ollama, installed CLIs, custom endpoints) BEFORE the keyed cloud
+    /// providers (Groq, OpenAI, Anthropic, Gemini). Settings leaves this off and
+    /// keeps the cloud-first order.
+    var localFirst: Bool = false
+    /// Onboarding "More options" gate: when true the picker shows only the two
+    /// recommended picks (Ollama + Groq) and hides the secondary providers
+    /// (installed CLIs, OpenAI, Anthropic, Gemini, custom endpoints) until the
+    /// user expands the disclosure. Settings leaves this off (all rows shown).
+    var recommendedOnly: Bool = false
 
     private enum ProviderTag: Hashable {
         case appDefault
@@ -143,19 +153,12 @@ struct LLMSelectionPicker: View {
                 Text("App default", comment: "LLM picker option using the global default")
                     .tag(ProviderTag.appDefault)
             }
-            Text(LLMProvider.anthropic.displayTitle).tag(ProviderTag.provider(.anthropic))
-            Text(LLMProvider.openAI.displayTitle).tag(ProviderTag.provider(.openAI))
-            Text(LLMProvider.groq.displayTitle).tag(ProviderTag.provider(.groq))
-            Text(LLMProvider.gemini.displayTitle).tag(ProviderTag.provider(.gemini))
-            Text(LLMProvider.ollama.displayTitle).tag(ProviderTag.provider(.ollama))
-            ForEach(VaraCLITool.allCases, id: \.self) { tool in
-                if installedCLITools.contains(tool) {
-                    let provider = cliProvider(for: tool)
-                    Text(provider.displayTitle).tag(ProviderTag.provider(provider))
-                }
-            }
-            ForEach(customEndpoints) { endpoint in
-                Text(endpoint.name).tag(ProviderTag.provider(.custom(endpointID: endpoint.id)))
+            if localFirst {
+                localProviderRows
+                cloudProviderRows
+            } else {
+                cloudProviderRows
+                localProviderRows
             }
         } label: {
             Text("Provider", comment: "LLM picker label")
@@ -171,6 +174,47 @@ struct LLMSelectionPicker: View {
                 Text("No key needed — uses your \(selection!.provider.displayTitle) subscription · slower.", comment: "CLI provider model footnote")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// The keyed cloud providers. Settings keeps its established order
+    /// (Anthropic, OpenAI, Groq, Gemini); onboarding's local-first mode leads with
+    /// the free/recommended Groq then the rest (Groq, OpenAI, Anthropic, Gemini).
+    @ViewBuilder
+    private var cloudProviderRows: some View {
+        if localFirst {
+            // Onboarding: lead with free Groq; the rest only when expanded.
+            Text(LLMProvider.groq.displayTitle).tag(ProviderTag.provider(.groq))
+            if !recommendedOnly {
+                Text(LLMProvider.openAI.displayTitle).tag(ProviderTag.provider(.openAI))
+                Text(LLMProvider.anthropic.displayTitle).tag(ProviderTag.provider(.anthropic))
+                Text(LLMProvider.gemini.displayTitle).tag(ProviderTag.provider(.gemini))
+            }
+        } else {
+            // Settings: the established cloud-first order, unchanged.
+            Text(LLMProvider.anthropic.displayTitle).tag(ProviderTag.provider(.anthropic))
+            Text(LLMProvider.openAI.displayTitle).tag(ProviderTag.provider(.openAI))
+            Text(LLMProvider.groq.displayTitle).tag(ProviderTag.provider(.groq))
+            Text(LLMProvider.gemini.displayTitle).tag(ProviderTag.provider(.gemini))
+        }
+    }
+
+    /// The local / no-key providers: Ollama (recommended-if-reachable), the
+    /// installed coding CLIs, and any custom endpoints. recommendedOnly trims to
+    /// just Ollama.
+    @ViewBuilder
+    private var localProviderRows: some View {
+        Text(LLMProvider.ollama.displayTitle).tag(ProviderTag.provider(.ollama))
+        if !recommendedOnly {
+            ForEach(VaraCLITool.allCases, id: \.self) { tool in
+                if installedCLITools.contains(tool) {
+                    let provider = cliProvider(for: tool)
+                    Text(provider.displayTitle).tag(ProviderTag.provider(provider))
+                }
+            }
+            ForEach(customEndpoints) { endpoint in
+                Text(endpoint.name).tag(ProviderTag.provider(.custom(endpointID: endpoint.id)))
             }
         }
     }

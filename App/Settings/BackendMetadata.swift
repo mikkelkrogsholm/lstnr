@@ -87,6 +87,36 @@ extension VaraSpeechBackendChoice {
         case .localWhisperKit: "WhisperKit (\(String(localized: "Local", comment: "Engine name suffix marking an on-device engine")))"
         }
     }
+
+    /// Short, brand-free name for the onboarding engine chooser rows. No model
+    /// VERSION names (they churn).
+    var onboardingTitle: String {
+        switch self {
+        case .localWhisperKit: "WhisperKit"
+        case .localHviske: "Hviske"
+        case .groqWhisper: "Groq"
+        case .openAIRealtimeWhisper, .openAIGPT4OTranscribe, .openAIGPT4OMiniTranscribe20251215: "OpenAI"
+        case .elevenLabsScribe: "ElevenLabs Scribe"
+        }
+    }
+
+    /// Plain-language subtitle for the onboarding engine chooser — describes the
+    /// privacy/setup tradeoff (distinct from the Settings `latencyHint`), no
+    /// model VERSION names.
+    var onboardingSubtitle: String {
+        switch self {
+        case .localWhisperKit:
+            String(localized: "Built in · downloads a model once, then runs entirely on your Mac", comment: "Onboarding engine subtitle: WhisperKit")
+        case .localHviske:
+            String(localized: "Offline · needs one setup command in Terminal", comment: "Onboarding engine subtitle: Hviske")
+        case .groqWhisper:
+            String(localized: "Fast transcription · free key in 30 seconds", comment: "Onboarding engine subtitle: Groq")
+        case .openAIRealtimeWhisper, .openAIGPT4OTranscribe, .openAIGPT4OMiniTranscribe20251215:
+            String(localized: "Transcription + cleanup in one", comment: "Onboarding engine subtitle: OpenAI")
+        case .elevenLabsScribe:
+            String(localized: "Strong Danish in the cloud · realtime", comment: "Onboarding engine subtitle: ElevenLabs")
+        }
+    }
 }
 
 /// Localized label for a WhisperKit CoreML model id (the App layer owns

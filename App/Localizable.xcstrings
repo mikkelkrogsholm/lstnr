@@ -177,6 +177,17 @@
         }
       }
     },
+    "Add a %@ key to use this — or pick Skip.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj en %@-nøgle for at bruge denne — eller vælg Spring over."
+          }
+        }
+      }
+    },
     "Add a Groq API key in Settings": {
       "extractionState": "manual",
       "localizations": {
@@ -239,6 +250,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tilføj denne motors nøgle (eller installér Hviske) for at fortsætte."
+          }
+        }
+      }
+    },
+    "Add your key": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj din nøgle"
+          }
+        }
+      }
+    },
+    "Add your key to continue — Groq is free.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj din nøgle for at fortsætte — Groq er gratis."
           }
         }
       }
@@ -316,6 +349,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Svarer ud fra din prompt."
+          }
+        }
+      }
+    },
+    "Answers your question instead of writing it down": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svarer på dit spørgsmål i stedet for at skrive det ned"
           }
         }
       }
@@ -496,6 +540,17 @@
         }
       }
     },
+    "Built in · downloads a model once, then runs entirely on your Mac": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indbygget · henter en model én gang, så kører alt på din Mac"
+          }
+        }
+      }
+    },
     "Cancel": {
       "extractionState": "manual",
       "localizations": {
@@ -551,6 +606,17 @@
         }
       }
     },
+    "Choose how Vara listens": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg hvordan Vara lytter"
+          }
+        }
+      }
+    },
     "Choose mode": {
       "extractionState": "manual",
       "localizations": {
@@ -558,6 +624,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vælg tilstand"
+          }
+        }
+      }
+    },
+    "Choose what happens to your dictation before it is inserted. Switch anytime with 1–9.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg hvad der sker med din diktering, før den indsættes. Skift når som helst med 1–9."
           }
         }
       }
@@ -602,6 +679,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Oprydning"
+          }
+        }
+      }
+    },
+    "Cleanup model": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oprydningsmodel"
           }
         }
       }
@@ -848,6 +936,17 @@
         }
       }
     },
+    "Download the on-device model": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent modellen til din Mac"
+          }
+        }
+      }
+    },
     "Downloaded": {
       "extractionState": "manual",
       "localizations": {
@@ -855,6 +954,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hentet"
+          }
+        }
+      }
+    },
+    "Downloads once, then runs entirely on your Mac — no internet needed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hentes én gang, så kører alt på din Mac — uden internet."
           }
         }
       }
@@ -925,6 +1035,28 @@
         }
       }
     },
+    "Fast transcription · free key in 30 seconds": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hurtig transskription · gratis nøgle på 30 sekunder"
+          }
+        }
+      }
+    },
+    "Fixes filler words and punctuation, keeps your wording": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retter fyldord og tegnsætning, beholder dine ord"
+          }
+        }
+      }
+    },
     "Fixes punctuation and removes filler words. Keeps your wording.": {
       "extractionState": "manual",
       "localizations": {
@@ -932,6 +1064,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Retter tegnsætning og fjerner fyldord. Bevarer dine formuleringer."
+          }
+        }
+      }
+    },
+    "For dictating code and technical notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Til at diktere kode og tekniske noter"
           }
         }
       }
@@ -1112,6 +1255,17 @@
         }
       }
     },
+    "Groq is free and fast. Or run Ollama on this Mac or your network to stay fully private.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groq er gratis og hurtig. Eller kør Ollama på din Mac eller dit netværk og hold alt privat."
+          }
+        }
+      }
+    },
     "History": {
       "extractionState": "manual",
       "localizations": {
@@ -1229,6 +1383,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Opsætning af genvejstast fejlede"
+          }
+        }
+      }
+    },
+    "How should Vara polish your text?": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvordan skal Vara rense din tekst?"
           }
         }
       }
@@ -1376,6 +1541,17 @@
         }
       }
     },
+    "Jeg tænkte, vi måske skulle ses på tirsdag, hvis det passer.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeg tænkte, vi måske skulle ses på tirsdag, hvis det passer."
+          }
+        }
+      }
+    },
     "Keep latest transcript visible in the menu bar": {
       "extractionState": "manual",
       "localizations": {
@@ -1442,6 +1618,28 @@
         }
       }
     },
+    "Large v3 Turbo (compressed) — best for Danish": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large v3 Turbo (komprimeret) — bedst til dansk"
+          }
+        }
+      }
+    },
+    "Large v3 Turbo — fastest": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large v3 Turbo — hurtigst"
+          }
+        }
+      }
+    },
     "Latest": {
       "extractionState": "manual",
       "localizations": {
@@ -1449,6 +1647,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Seneste"
+          }
+        }
+      }
+    },
+    "Lav en funktion, der henter brugere og cacher resultatet i 5 minutter. Returnér cached data ved gentagne kald, og invalidér efter 5 min.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lav en funktion, der henter brugere og cacher resultatet i 5 minutter. Returnér cached data ved gentagne kald, og invalidér efter 5 min."
           }
         }
       }
@@ -1684,6 +1893,17 @@
         }
       }
     },
+    "More options": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flere muligheder"
+          }
+        }
+      }
+    },
     "Most people use Groq or OpenAI. ElevenLabs and on-device Hviske are advanced — set them up under the Advanced tab.": {
       "extractionState": "manual",
       "localizations": {
@@ -1882,6 +2102,50 @@
         }
       }
     },
+    "ON THIS MAC — PRIVATE, OFFLINE": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PÅ DENNE MAC — PRIVAT, OFFLINE"
+          }
+        }
+      }
+    },
+    "OVER THE NETWORK — FAST, NO DOWNLOAD": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OVER NETVÆRKET — HURTIG, INGEN DOWNLOAD"
+          }
+        }
+      }
+    },
+    "Offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline"
+          }
+        }
+      }
+    },
+    "Offline · needs one setup command in Terminal": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline · kræver én opsætningskommando i Terminal"
+          }
+        }
+      }
+    },
     "Ollama (local)": {
       "extractionState": "manual",
       "localizations": {
@@ -1893,6 +2157,17 @@
         }
       }
     },
+    "Ollama is reachable — recommended for a fully private setup. Groq is free if you'd rather use a key.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ollama kan nås — anbefalet til en helt privat opsætning. Groq er gratis, hvis du hellere vil bruge en nøgle."
+          }
+        }
+      }
+    },
     "Ollama isn't reachable yet. Start it (ollama serve) — then this chain runs locally on your Mac.": {
       "extractionState": "manual",
       "localizations": {
@@ -1900,6 +2175,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ollama kan ikke nås endnu. Start den (ollama serve) — så kører denne kæde lokalt på din Mac."
+          }
+        }
+      }
+    },
+    "On this Mac or your network — e.g. your DGX. Nothing goes to the cloud.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "På denne Mac eller dit netværk — fx din DGX. Intet sendes til skyen."
           }
         }
       }
@@ -2087,6 +2373,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afslut"
+          }
+        }
+      }
+    },
+    "Rapporten ser god ud. Der er dog enkelte tal, der bør gennemgås, før vi sender den.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapporten ser god ud. Der er dog enkelte tal, der bør gennemgås, før vi sender den."
           }
         }
       }
@@ -2421,6 +2718,17 @@
         }
       }
     },
+    "Run one setup command in Terminal, then Vara detects it here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kør én opsætningskommando i Terminal, så finder Vara den her."
+          }
+        }
+      }
+    },
     "Runs against http://localhost:11434 — everything stays on this Mac.": {
       "extractionState": "manual",
       "localizations": {
@@ -2443,6 +2751,17 @@
         }
       }
     },
+    "Runs entirely on this Mac": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kører helt på din Mac"
+          }
+        }
+      }
+    },
     "Runs locally on this Mac — this chain sends nothing to the cloud.": {
       "extractionState": "manual",
       "localizations": {
@@ -2461,6 +2780,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kører på denne Mac — dansk"
+          }
+        }
+      }
+    },
+    "Runs on this Mac — Neural Engine": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kører på din Mac — Neural Engine"
           }
         }
       }
@@ -2564,6 +2894,17 @@
         }
       }
     },
+    "Set up": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sæt op"
+          }
+        }
+      }
+    },
     "Set up Hviske in Terminal — see Settings > Advanced.": {
       "extractionState": "manual",
       "localizations": {
@@ -2571,6 +2912,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sæt Hviske op i Terminal — se Indstillinger > Avanceret."
+          }
+        }
+      }
+    },
+    "Set up Hviske on this Mac": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sæt Hviske op på din Mac"
           }
         }
       }
@@ -2630,6 +2982,17 @@
         }
       }
     },
+    "Small — lightweight, lower accuracy": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Small — let, lavere præcision"
+          }
+        }
+      }
+    },
     "Something went wrong": {
       "extractionState": "manual",
       "localizations": {
@@ -2681,6 +3044,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start diktering"
+          }
+        }
+      }
+    },
+    "Start local and private — or use a key. You can change this later.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start lokalt og privat — eller brug en nøgle. Du kan ændre det senere."
           }
         }
       }
@@ -2747,6 +3121,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Streaming — hurtigst"
+          }
+        }
+      }
+    },
+    "Strong Danish in the cloud · realtime": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stærk til dansk i skyen · realtime"
           }
         }
       }
@@ -2828,6 +3213,17 @@
         }
       }
     },
+    "Tightens to a clear, professional tone": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strammer op til en klar, professionel tone"
+          }
+        }
+      }
+    },
     "Time saved": {
       "extractionState": "manual",
       "localizations": {
@@ -2857,6 +3253,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "I dag"
+          }
+        }
+      }
+    },
+    "Transcription + cleanup in one": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transskription + oprydning i ét"
           }
         }
       }
@@ -3147,6 +3554,17 @@
         }
       }
     },
+    "Which AI cleans up your text?": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvilken AI renser din tekst?"
+          }
+        }
+      }
+    },
     "Words today": {
       "extractionState": "manual",
       "localizations": {
@@ -3180,6 +3598,17 @@
         }
       }
     },
+    "Your engine transcribes; an AI does the cleanup. Local stays on your network.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din motor transskriberer; en AI står for oprydningen. Lokalt bliver på dit netværk."
+          }
+        }
+      }
+    },
     "Your key": {
       "extractionState": "manual",
       "localizations": {
@@ -3202,6 +3631,39 @@
         }
       }
     },
+    "Your key powers transcription. It is stored in your Keychain.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din nøgle driver transskriptionen. Den gemmes i din nøglering."
+          }
+        }
+      }
+    },
+    "Your words, exactly as said — no AI": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dine ord, præcis som sagt — ingen AI"
+          }
+        }
+      }
+    },
+    "lav en funktion der henter brugere og cacher dem i fem minutter": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "lav en funktion der henter brugere og cacher dem i fem minutter"
+          }
+        }
+      }
+    },
     "words": {
       "extractionState": "manual",
       "localizations": {
@@ -3209,6 +3671,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "ord"
+          }
+        }
+      }
+    },
+    "øh ja rapporten ser fin ud men der er lige nogle tal der skal tjekkes": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "øh ja rapporten ser fin ud men der er lige nogle tal der skal tjekkes"
+          }
+        }
+      }
+    },
+    "øhm ja jeg tænkte at vi måske skulle ses på tirsdag …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "øhm ja jeg tænkte at vi måske skulle ses på tirsdag …"
           }
         }
       }
