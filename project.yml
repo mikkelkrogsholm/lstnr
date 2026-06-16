@@ -110,12 +110,32 @@ targets:
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "2"
 
+  # Unit tests for App-layer pure logic that can't move to VaraCore (the settings
+  # enums are localized via App's string catalog). Hosted by the Vara app so it
+  # can @testable import Vara. Logic-only — no UI interaction.
+  VaraAppTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/VaraAppTests
+    dependencies:
+      - target: Vara
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dk.56n.vara.apptests
+        GENERATE_INFOPLIST_FILE: "YES"
+
 schemes:
   Vara:
     build:
       targets:
         Vara: all
+        VaraAppTests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - VaraAppTests
     archive:
       config: Release

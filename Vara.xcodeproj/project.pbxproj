@@ -43,8 +43,19 @@
 		E65D627433C07935BCD74C6D /* AppModeRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2391ACC2BC7FA6C6D41ED37 /* AppModeRule.swift */; };
 		EB8550AD991F7C119BBCF1BA /* VaraDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8905F372CA3231BFE529DBC /* VaraDashboardView.swift */; };
 		F5DCD79FA197C2A43A400EEF /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3ADF4F9CE0F6D8B1BE1377 /* MenuBarContent.swift */; };
+		F96805C7A64D92CC827A3C92 /* VaraAppSettingsCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F844A87A375B4D324DD435C9 /* VaraAppSettingsCodableTests.swift */; };
 		F9FE5D38A33823EF08B964F4 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 90B4E7E81F9CC1E85832AEC3 /* Sparkle */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C838AC61E408ED7C71F8815C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 33E7C2E85A5568989922BD90 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 775D42F0198A9B87172815B7;
+			remoteInfo = Vara;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0E3ADF4F9CE0F6D8B1BE1377 /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
@@ -62,6 +73,7 @@
 		496E1C790FB4D930D62B672F /* VaraMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraMigration.swift; sourceTree = "<group>"; };
 		6078922C0574A393677F356C /* WhisperKitModelSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelSection.swift; sourceTree = "<group>"; };
 		620090FD29CC4D0ED0AB0B7F /* VaraSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraSettingsView.swift; sourceTree = "<group>"; };
+		6601DCEB2501902B10161079 /* VaraAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VaraAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6EB8AD23F43DC60C607D8144 /* AppState+History.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppState+History.swift"; sourceTree = "<group>"; };
 		7275C1ECCEB853C058D4F0C4 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		7D94A07CEFA60089351332CB /* VaraApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraApp.swift; sourceTree = "<group>"; };
@@ -86,6 +98,7 @@
 		EAB94F8F90B2909144A4B897 /* AppState+Hotkey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppState+Hotkey.swift"; sourceTree = "<group>"; };
 		F074535333A202F6B5F597CD /* SettingsDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDeepLink.swift; sourceTree = "<group>"; };
 		F7138CABEF7A9E1585D2A390 /* vara */ = {isa = PBXFileReference; lastKnownFileType = folder; name = vara; path = .; sourceTree = SOURCE_ROOT; };
+		F844A87A375B4D324DD435C9 /* VaraAppSettingsCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraAppSettingsCodableTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +114,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0DC052C67A9AF06C8BF03501 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				CF9D14415FD39D148C53E9CC /* VaraAppTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		107797995587F53F7A260EFF /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -136,6 +157,7 @@
 			children = (
 				5AF513E9C9AAD9D1E937A6AD /* App */,
 				308CD067AA040A03793BF98D /* Packages */,
+				0DC052C67A9AF06C8BF03501 /* Tests */,
 				F43F950140B4D0C624F264BE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -202,10 +224,19 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
+		CF9D14415FD39D148C53E9CC /* VaraAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				F844A87A375B4D324DD435C9 /* VaraAppSettingsCodableTests.swift */,
+			);
+			path = VaraAppTests;
+			sourceTree = "<group>";
+		};
 		F43F950140B4D0C624F264BE /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				253CA6E846D493141E1E254B /* Vara.app */,
+				6601DCEB2501902B10161079 /* VaraAppTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -234,6 +265,24 @@
 			productReference = 253CA6E846D493141E1E254B /* Vara.app */;
 			productType = "com.apple.product-type.application";
 		};
+		95BB1BDB6295713622193509 /* VaraAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 67117725A70642BAB04C24C5 /* Build configuration list for PBXNativeTarget "VaraAppTests" */;
+			buildPhases = (
+				646EB6B03C9D4FEBB9B6660C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9CD8AAB84DD4B51318829109 /* PBXTargetDependency */,
+			);
+			name = VaraAppTests;
+			packageProductDependencies = (
+			);
+			productName = VaraAppTests;
+			productReference = 6601DCEB2501902B10161079 /* VaraAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -244,6 +293,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					775D42F0198A9B87172815B7 = {
+						DevelopmentTeam = 3B7KHK6C9K;
+						ProvisioningStyle = Automatic;
+					};
+					95BB1BDB6295713622193509 = {
 						DevelopmentTeam = 3B7KHK6C9K;
 						ProvisioningStyle = Automatic;
 					};
@@ -269,6 +322,7 @@
 			projectRoot = "";
 			targets = (
 				775D42F0198A9B87172815B7 /* Vara */,
+				95BB1BDB6295713622193509 /* VaraAppTests */,
 			);
 		};
 /* End PBXProject section */
@@ -287,6 +341,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		646EB6B03C9D4FEBB9B6660C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F96805C7A64D92CC827A3C92 /* VaraAppSettingsCodableTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7857E7072E9C0F6070006A72 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -327,6 +389,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9CD8AAB84DD4B51318829109 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 775D42F0198A9B87172815B7 /* Vara */;
+			targetProxy = C838AC61E408ED7C71F8815C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0734BA00C8A0B21EEBC4C05C /* Release */ = {
@@ -389,6 +459,23 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		2394886B279E8CD1EBED9F3B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dk.56n.vara.apptests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vara.app/Contents/MacOS/Vara";
 			};
 			name = Release;
 		};
@@ -502,6 +589,23 @@
 			};
 			name = Debug;
 		};
+		C26DFA09DF833208B9F3264B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dk.56n.vara.apptests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vara.app/Contents/MacOS/Vara";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -510,6 +614,15 @@
 			buildConfigurations = (
 				B75C95E9A2D6403C0FED0810 /* Debug */,
 				72D7AAAD317637CFD501AF61 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		67117725A70642BAB04C24C5 /* Build configuration list for PBXNativeTarget "VaraAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C26DFA09DF833208B9F3264B /* Debug */,
+				2394886B279E8CD1EBED9F3B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
