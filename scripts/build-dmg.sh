@@ -126,6 +126,26 @@ if [ "$SIGN_KIND" = "ad-hoc" ]; then
     CODESIGN_OPTS=(--force --options runtime)
 fi
 
+# Sparkle ships nested helpers (XPC services, the Autoupdate executable, and
+# Updater.app) that the generic framework loop below does NOT match. They must
+# each be signed with the hardened runtime BEFORE the framework that contains
+# them, or notarization rejects the bundle. Versions/Current symlinks to the
+# active version dir, so this stays version-agnostic.
+SPARKLE_FW="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+if [ -d "$SPARKLE_FW" ]; then
+    info "Signing Sparkle's nested helpers..."
+    for helper in \
+        "Versions/Current/XPCServices/Downloader.xpc" \
+        "Versions/Current/XPCServices/Installer.xpc" \
+        "Versions/Current/Autoupdate" \
+        "Versions/Current/Updater.app"; do
+        if [ -e "$SPARKLE_FW/$helper" ]; then
+            codesign "${CODESIGN_OPTS[@]}" --sign "$SIGN_IDENTITY" "$SPARKLE_FW/$helper"
+        fi
+    done
+    ok "Sparkle helpers signed."
+fi
+
 # Sign nested code (frameworks, dylibs, bundles, helper executables) first.
 while IFS= read -r -d '' nested; do
     codesign "${CODESIGN_OPTS[@]}" --sign "$SIGN_IDENTITY" "$nested"
@@ -231,6 +251,33 @@ if [ "$SIGN_KIND" = "developer-id" ] && have_notary_profile; then
         xcrun stapler staple "$DMG_PATH"
         ok "Stapled."
         xcrun stapler validate "$DMG_PATH" && ok "Staple validates."
+        echo
+
+        # Sparkle appcast entry. sign_update reads the EdDSA PRIVATE key from the
+        # keychain and signs the FINAL (stapled) DMG bytes — must run after the
+        # staple, since stapling rewrites the DMG. Print a ready-to-paste <item>
+        # for the appcast.xml hosted at SUFeedURL (https://vara.dk/appcast.xml).
+        SIGN_UPDATE="$DERIVED_DIR/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
+        if [ -x "$SIGN_UPDATE" ]; then
+            BUILD_NUM="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$REPO_ROOT/App/Info.plist" 2>/dev/null || echo "1")"
+            PUB_DATE="$(date -u '+%a, %d %b %Y %H:%M:%S +0000')"
+            SIG_LINE="$("$SIGN_UPDATE" "$DMG_PATH")"
+            bold "Appcast item — paste at the top of appcast.xml on vara.dk:"
+            cat <<APPCAST
+        <item>
+            <title>Vara $VERSION</title>
+            <sparkle:version>$BUILD_NUM</sparkle:version>
+            <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <pubDate>$PUB_DATE</pubDate>
+            <enclosure url="https://vara.dk/$DMG_NAME" $SIG_LINE type="application/octet-stream" />
+        </item>
+APPCAST
+            echo
+            info "Then upload $DMG_NAME to https://vara.dk/ so the enclosure URL resolves."
+        else
+            warn "sign_update not found at $SIGN_UPDATE — sign the DMG manually for the appcast."
+        fi
         echo
         bold "RELEASE BUILD COMPLETE."
         info "Distributable, notarized DMG: $DMG_PATH"

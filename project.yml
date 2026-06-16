@@ -16,6 +16,9 @@ configs:
 packages:
   VaraCore:
     path: .
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.6.0"
 
 settings:
   base:
@@ -74,6 +77,12 @@ targets:
         # for public hosts (unlike NSAllowsArbitraryLoads, which we never set).
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        # Sparkle auto-update. SUPublicEDKey is the EdDSA public key from
+        # `generate_keys` (private key lives in the login keychain, never in the
+        # repo). SUFeedURL serves the appcast over HTTPS from vara.dk.
+        SUFeedURL: https://vara.dk/appcast.xml
+        SUPublicEDKey: gkGG0RaoroAzfFTpL8TJrIsYlU6K++AnJx0JxJrvOrU=
+        SUEnableAutomaticChecks: true
     entitlements:
       path: App/Vara.entitlements
       properties:
@@ -90,6 +99,8 @@ targets:
     dependencies:
       - package: VaraCore
         product: VaraCore
+      - package: Sparkle
+        product: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dk.56n.vara

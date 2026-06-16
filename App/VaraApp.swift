@@ -1,8 +1,16 @@
+import Sparkle
 import SwiftUI
 
 @main
 struct VaraApp: App {
     @State private var state = AppState()
+    /// Sparkle auto-updater. Created once for the app's lifetime; `startingUpdater:
+    /// true` begins scheduled background checks against the SUFeedURL appcast.
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
 
     var body: some Scene {
         WindowGroup("Vara", id: "main") {
@@ -11,7 +19,7 @@ struct VaraApp: App {
         .defaultSize(width: 860, height: 620)
 
         MenuBarExtra {
-            MenuBarContent(state: state)
+            MenuBarContent(state: state, updater: updaterController.updater)
         } label: {
             Label(
                 state.isRecording ? "Vara •" : "Vara",

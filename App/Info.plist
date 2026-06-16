@@ -37,5 +37,11 @@
 	<string>© 2026 Brokk og Sindre ApS · brokk-sindre.dk</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Vara listens to your voice to turn speech into text. Audio is transcribed by the engine you choose in Settings.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://vara.dk/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>gkGG0RaoroAzfFTpL8TJrIsYlU6K++AnJx0JxJrvOrU=</string>
 </dict>
 </plist>

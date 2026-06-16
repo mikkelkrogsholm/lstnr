@@ -1,3 +1,4 @@
+import Sparkle
 import VaraCore
 import SwiftUI
 
@@ -5,6 +6,7 @@ import SwiftUI
 /// latest transcript and recent history.
 struct MenuBarContent: View {
     let state: AppState
+    let updater: SPUUpdater
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
 
@@ -202,6 +204,10 @@ struct MenuBarContent: View {
             }
             .buttonStyle(.borderless)
             .font(.system(size: 11))
+
+            CheckForUpdatesButton(updater: updater)
+                .buttonStyle(.borderless)
+                .font(.system(size: 11))
 
             Button {
                 NSApplication.shared.terminate(nil)

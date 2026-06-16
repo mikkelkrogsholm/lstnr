@@ -34,6 +34,7 @@
 		99A6474C70607F1530B60726 /* KeychainCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE07EBF0F13396109C0532C3 /* KeychainCredentialStore.swift */; };
 		BCA0B3D130AB361C1F51ECD7 /* EngineCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A4135F104D9014AA8A093D /* EngineCard.swift */; };
 		BEDBC7120B1FDF4BF15B4745 /* VaraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D94A07CEFA60089351332CB /* VaraApp.swift */; };
+		BEEC2F35B945424F5997522F /* CheckForUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AE93AF9F850ADD8A355737 /* CheckForUpdates.swift */; };
 		C15721F412700A537986F40F /* RecordingHUDWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B06E7C98BBD1DB6BEE35F4 /* RecordingHUDWindowController.swift */; };
 		C846DBCCEB23F847EC071F35 /* CustomEndpointsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E1166CE9FEFD5F057DDB14 /* CustomEndpointsSection.swift */; };
 		D982B6A13797D8E7AC1569C8 /* VaraCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6E083E4744F546E3CA6F2CAD /* VaraCore */; };
@@ -42,6 +43,7 @@
 		E65D627433C07935BCD74C6D /* AppModeRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2391ACC2BC7FA6C6D41ED37 /* AppModeRule.swift */; };
 		EB8550AD991F7C119BBCF1BA /* VaraDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8905F372CA3231BFE529DBC /* VaraDashboardView.swift */; };
 		F5DCD79FA197C2A43A400EEF /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3ADF4F9CE0F6D8B1BE1377 /* MenuBarContent.swift */; };
+		F9FE5D38A33823EF08B964F4 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 90B4E7E81F9CC1E85832AEC3 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +65,7 @@
 		6EB8AD23F43DC60C607D8144 /* AppState+History.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppState+History.swift"; sourceTree = "<group>"; };
 		7275C1ECCEB853C058D4F0C4 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		7D94A07CEFA60089351332CB /* VaraApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraApp.swift; sourceTree = "<group>"; };
+		83AE93AF9F850ADD8A355737 /* CheckForUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckForUpdates.swift; sourceTree = "<group>"; };
 		8BD8A066FCE1DDA87832F7AB /* RecordingHUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingHUDView.swift; sourceTree = "<group>"; };
 		8D584049EEDFA6D6BE72C25F /* DiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
 		92CE105EDC41C5EC3F88EF67 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
@@ -91,6 +94,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D982B6A13797D8E7AC1569C8 /* VaraCore in Frameworks */,
+				F9FE5D38A33823EF08B964F4 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,6 +161,7 @@
 				1A50BA0BCCD72C5CA19094E9 /* AppState+Dictation.swift */,
 				6EB8AD23F43DC60C607D8144 /* AppState+History.swift */,
 				EAB94F8F90B2909144A4B897 /* AppState+Hotkey.swift */,
+				83AE93AF9F850ADD8A355737 /* CheckForUpdates.swift */,
 				8D584049EEDFA6D6BE72C25F /* DiagnosticsView.swift */,
 				93A707B7DB75AB2E24AF574A /* Info.plist */,
 				BB93546D7B48CC2A0D58B514 /* Localizable.xcstrings */,
@@ -223,6 +228,7 @@
 			name = Vara;
 			packageProductDependencies = (
 				6E083E4744F546E3CA6F2CAD /* VaraCore */,
+				90B4E7E81F9CC1E85832AEC3 /* Sparkle */,
 			);
 			productName = Vara;
 			productReference = 253CA6E846D493141E1E254B /* Vara.app */;
@@ -254,6 +260,7 @@
 			mainGroup = 1934BDDDD35275CE3BF8D0B8;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				FAAC040D77079905DE20B9C6 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				593B93D894DC88D3CDC1FBC9 /* XCLocalSwiftPackageReference "." */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -293,6 +300,7 @@
 				264DE4BBFD7A042DD6AF9225 /* AppState.swift in Sources */,
 				599AD74324E174D5E0AB4D63 /* BSTheme.swift in Sources */,
 				4406EF5B1D8CA668E7EEF955 /* BackendMetadata.swift in Sources */,
+				BEEC2F35B945424F5997522F /* CheckForUpdates.swift in Sources */,
 				C846DBCCEB23F847EC071F35 /* CustomEndpointsSection.swift in Sources */,
 				03DACA13389FFE705F31E033 /* DiagnosticsView.swift in Sources */,
 				BCA0B3D130AB361C1F51ECD7 /* EngineCard.swift in Sources */,
@@ -524,10 +532,26 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		FAAC040D77079905DE20B9C6 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		6E083E4744F546E3CA6F2CAD /* VaraCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = VaraCore;
+		};
+		90B4E7E81F9CC1E85832AEC3 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FAAC040D77079905DE20B9C6 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
