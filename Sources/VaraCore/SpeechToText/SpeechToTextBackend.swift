@@ -22,6 +22,24 @@ public enum MicrophoneProfile: String, Codable, Sendable, CaseIterable {
     }
 }
 
+/// Transcription latency/accuracy tradeoff for the OpenAI realtime
+/// `gpt-realtime-whisper` model (audio.input.transcription.delay). Higher = more
+/// accurate, slightly slower. `auto` sends nothing (server default). Ignored by
+/// every other backend.
+public enum TranscriptionLatency: String, Codable, Sendable, CaseIterable {
+    case auto
+    case minimal
+    case low
+    case medium
+    case high
+    case xhigh
+
+    /// The OpenAI `delay` value, or nil for `auto` (omit the field).
+    public var openAIDelay: String? {
+        self == .auto ? nil : rawValue
+    }
+}
+
 public struct SpeechToTextRequest: Sendable {
     public let audio: SpeechToTextAudio
     public let languageCode: String?
@@ -35,17 +53,21 @@ public struct SpeechToTextRequest: Sendable {
     /// Microphone profile for input noise reduction. Consumed only by backends
     /// with an equivalent (OpenAI realtime); others ignore it.
     public let microphoneProfile: MicrophoneProfile
+    /// Latency/accuracy tradeoff (OpenAI realtime only); others ignore it.
+    public let transcriptionLatency: TranscriptionLatency
 
     public init(
         audio: SpeechToTextAudio,
         languageCode: String? = nil,
         vocabulary: [String] = [],
-        microphoneProfile: MicrophoneProfile = .nearField
+        microphoneProfile: MicrophoneProfile = .nearField,
+        transcriptionLatency: TranscriptionLatency = .auto
     ) {
         self.audio = audio
         self.languageCode = languageCode
         self.vocabulary = vocabulary
         self.microphoneProfile = microphoneProfile
+        self.transcriptionLatency = transcriptionLatency
     }
 
     /// Vocabulary rendered as a Whisper-style `prompt` string (comma-separated),

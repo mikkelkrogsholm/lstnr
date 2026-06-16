@@ -126,6 +126,7 @@ extension AppState {
         // can't use them (OpenAI realtime, WhisperKit) ignore them.
         let vocabulary = settings.vocabulary
         let microphoneProfile = settings.microphoneProfile
+        let realtimeLatency = settings.realtimeLatency
         // Snapshot of mode + processor taken at transcription time so digit
         // overrides during the recording take effect.
         let resolveProcessing: @Sendable () async -> (DictationMode, DictationModeProcessor, String?)? = { [weak self] in
@@ -170,7 +171,8 @@ extension AppState {
                     audio: instrumentAudio(recoverable.audio),
                     languageCode: request.languageCode,
                     vocabulary: vocabulary,
-                    microphoneProfile: microphoneProfile
+                    microphoneProfile: microphoneProfile,
+                    transcriptionLatency: realtimeLatency
                 )
 
                 let rawResult: TranscriptionResult

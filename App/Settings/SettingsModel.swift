@@ -22,6 +22,8 @@ struct VaraAppSettings: Codable, Hashable {
     var vocabulary: [String]
     /// Microphone profile for input noise reduction (OpenAI realtime only).
     var microphoneProfile: MicrophoneProfile
+    /// Latency/accuracy tradeoff (OpenAI realtime only).
+    var realtimeLatency: TranscriptionLatency
 
     static let defaults = VaraAppSettings(
         shortcut: .rightCommand,
@@ -43,7 +45,8 @@ struct VaraAppSettings: Codable, Hashable {
         appModeRules: [],
         playSounds: true,
         vocabulary: [],
-        microphoneProfile: .nearField
+        microphoneProfile: .nearField,
+        realtimeLatency: .auto
     )
 
     init(
@@ -62,7 +65,8 @@ struct VaraAppSettings: Codable, Hashable {
         appModeRules: [AppModeRule],
         playSounds: Bool,
         vocabulary: [String],
-        microphoneProfile: MicrophoneProfile
+        microphoneProfile: MicrophoneProfile,
+        realtimeLatency: TranscriptionLatency
     ) {
         self.shortcut = shortcut
         self.language = language
@@ -85,6 +89,7 @@ struct VaraAppSettings: Codable, Hashable {
         self.playSounds = playSounds
         self.vocabulary = vocabulary
         self.microphoneProfile = microphoneProfile
+        self.realtimeLatency = realtimeLatency
     }
 
     init(draft: VaraSettingsDraft) {
@@ -104,7 +109,8 @@ struct VaraAppSettings: Codable, Hashable {
             appModeRules: draft.appModeRules,
             playSounds: draft.playSounds,
             vocabulary: draft.vocabulary,
-            microphoneProfile: draft.microphoneProfile
+            microphoneProfile: draft.microphoneProfile,
+            realtimeLatency: draft.realtimeLatency
         )
     }
 
@@ -125,7 +131,8 @@ struct VaraAppSettings: Codable, Hashable {
             appModeRules: appModeRules,
             playSounds: playSounds,
             vocabulary: vocabulary,
-            microphoneProfile: microphoneProfile
+            microphoneProfile: microphoneProfile,
+            realtimeLatency: realtimeLatency
         )
     }
 
@@ -161,6 +168,7 @@ struct VaraAppSettings: Codable, Hashable {
         case playSounds
         case vocabulary
         case microphoneProfile
+        case realtimeLatency
     }
 
     init(from decoder: Decoder) throws {
@@ -181,7 +189,8 @@ struct VaraAppSettings: Codable, Hashable {
             appModeRules: try container.decodeIfPresent([AppModeRule].self, forKey: .appModeRules) ?? Self.defaults.appModeRules,
             playSounds: try container.decodeIfPresent(Bool.self, forKey: .playSounds) ?? Self.defaults.playSounds,
             vocabulary: try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? Self.defaults.vocabulary,
-            microphoneProfile: try container.decodeIfPresent(MicrophoneProfile.self, forKey: .microphoneProfile) ?? Self.defaults.microphoneProfile
+            microphoneProfile: try container.decodeIfPresent(MicrophoneProfile.self, forKey: .microphoneProfile) ?? Self.defaults.microphoneProfile,
+            realtimeLatency: try container.decodeIfPresent(TranscriptionLatency.self, forKey: .realtimeLatency) ?? Self.defaults.realtimeLatency
         )
     }
 }
@@ -203,6 +212,7 @@ struct VaraSettingsDraft: Hashable {
     var playSounds: Bool
     var vocabulary: [String]
     var microphoneProfile: MicrophoneProfile
+    var realtimeLatency: TranscriptionLatency
 
     static let preview = VaraAppSettings.defaults.draft
 }

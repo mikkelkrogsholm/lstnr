@@ -59,8 +59,10 @@ struct VaraSettingsView: View {
                     vocabularySection
                 case .engine:
                     engineSection
+                    engineAccuracySection
                     if draft.speechBackend == .openAIRealtimeWhisper {
                         microphoneSection
+                        realtimeLatencySection
                     }
                 case .intelligence:
                     intelligenceSection
@@ -153,6 +155,56 @@ struct VaraSettingsView: View {
             Text("Dictation", comment: "Settings section header")
         } footer: {
             Text("Vara records from macOS' default input device — change the microphone in System Settings → Sound. What happens to the text is decided by the selected mode.", comment: "Settings dictation footer")
+        }
+    }
+
+    /// Cross-engine accuracy settings surfaced in the Engine tab (also in
+    /// Dictation): Language + Vocabulary apply to every engine. Same `draft`
+    /// bindings, so the two locations stay in sync.
+    private var engineAccuracySection: some View {
+        Section {
+            Picker(selection: $draft.language) {
+                ForEach(VaraLanguageChoice.allCases) { language in
+                    Text(language.title).tag(language)
+                }
+            } label: {
+                Text("Language", comment: "Settings field")
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Words Vara should get right", comment: "Settings section header: custom vocabulary")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                TextEditor(text: vocabularyText)
+                    .font(.system(size: 13))
+                    .frame(minHeight: 72)
+                    .scrollContentBackground(.hidden)
+            }
+        } header: {
+            Text("All engines", comment: "Engine settings: cross-engine section header")
+        } footer: {
+            Text("Language and vocabulary apply to every engine. Vocabulary biases the transcript toward names/jargon/spellings you set (used by Groq, OpenAI GPT-4o Transcribe, ElevenLabs).", comment: "Engine accuracy footer")
+        }
+    }
+
+    /// Latency/accuracy tradeoff (OpenAI realtime only): maps to the realtime
+    /// transcription `delay`. Shown only when that backend is active.
+    private var realtimeLatencySection: some View {
+        Section {
+            Picker(selection: $draft.realtimeLatency) {
+                Text("Auto (server default)", comment: "Realtime latency option: auto").tag(TranscriptionLatency.auto)
+                Text("Minimal — fastest", comment: "Realtime latency option").tag(TranscriptionLatency.minimal)
+                Text("Low", comment: "Realtime latency option").tag(TranscriptionLatency.low)
+                Text("Medium", comment: "Realtime latency option").tag(TranscriptionLatency.medium)
+                Text("High", comment: "Realtime latency option").tag(TranscriptionLatency.high)
+                Text("Extra high — most accurate", comment: "Realtime latency option").tag(TranscriptionLatency.xhigh)
+            } label: {
+                Text("Speed vs. accuracy", comment: "Settings field: realtime latency")
+            }
+        } header: {
+            Text("Speed vs. accuracy", comment: "Settings section header: realtime latency")
+        } footer: {
+            Text("Higher accuracy adds a little latency. Only affects OpenAI Realtime (gpt-realtime-whisper).", comment: "Realtime latency footer")
         }
     }
 

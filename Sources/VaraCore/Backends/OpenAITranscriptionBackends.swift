@@ -180,7 +180,7 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
                     reason: "OpenAI realtime transcription expects PCM s16le mono at \(Self.inputSampleRate) Hz; received \(sampleRate) Hz."
                 )
             }
-            return try await transcribe(pcmChunks: stream, language: request.languageCode, microphoneProfile: request.microphoneProfile)
+            return try await transcribe(pcmChunks: stream, language: request.languageCode, microphoneProfile: request.microphoneProfile, latency: request.transcriptionLatency)
         }
     }
 
@@ -215,7 +215,8 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
     public func transcribe(
         pcmChunks: AsyncStream<Data>,
         language: String?,
-        microphoneProfile: MicrophoneProfile = .nearField
+        microphoneProfile: MicrophoneProfile = .nearField,
+        latency: TranscriptionLatency = .auto
     ) async throws -> TranscriptionResult {
         let (task, socketObserver) = openSocket()
         defer { socketObserver.finish() }
@@ -223,7 +224,7 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
 
         do {
             await diagnosticLog?("OpenAI Realtime Whisper websocket opened. language=\(language ?? "automatic")")
-            try await sendSessionUpdate(task: task, language: language, microphoneProfile: microphoneProfile)
+            try await sendSessionUpdate(task: task, language: language, microphoneProfile: microphoneProfile, latency: latency)
             async let reader = readUntilCompleted(task: task)
 
             var totalInputBytes = 0
@@ -319,7 +320,7 @@ private extension OpenAIRealtimeWhisperBackend {
         return (task, observer)
     }
 
-    func sendSessionUpdate(task: URLSessionWebSocketTask, language: String?, microphoneProfile: MicrophoneProfile) async throws {
+    func sendSessionUpdate(task: URLSessionWebSocketTask, language: String?, microphoneProfile: MicrophoneProfile, latency: TranscriptionLatency) async throws {
         let event = RealtimeSessionUpdate(
             type: "session.update",
             session: RealtimeSession(
@@ -327,7 +328,9 @@ private extension OpenAIRealtimeWhisperBackend {
                 audio: RealtimeAudio(
                     input: RealtimeAudioInput(
                         format: RealtimeAudioFormat(type: "audio/pcm", rate: Self.realtimeSampleRate),
-                        transcription: RealtimeTranscription(model: modelID, language: language),
+                        // delay: latency/accuracy tradeoff. nil (auto) is omitted
+                        // by the synthesized encoder, leaving the server default.
+                        transcription: RealtimeTranscription(model: modelID, language: language, delay: latency.openAIDelay),
                         // Input noise reduction (near/far-field). Improves the
                         // model's perception of the audio; verified accepted on
                         // the GA transcription session.
@@ -532,6 +535,9 @@ private struct RealtimeNoiseReduction: Encodable {
 private struct RealtimeTranscription: Encodable {
     let model: String
     let language: String?
+    // Synthesized Encodable uses encodeIfPresent for optionals, so a nil delay
+    // is omitted (server default) rather than sent as null.
+    let delay: String?
 }
 
 private struct RealtimeAudioAppend: Encodable {

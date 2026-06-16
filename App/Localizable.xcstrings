@@ -3784,6 +3784,116 @@
           }
         }
       }
+    },
+    "All engines": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle motorer"
+          }
+        }
+      }
+    },
+    "Language and vocabulary apply to every engine. Vocabulary biases the transcript toward names/jargon/spellings you set (used by Groq, OpenAI GPT-4o Transcribe, ElevenLabs).": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprog og ordforråd gælder alle motorer. Ordforrådet biaser transskriptionen mod de navne/fagudtryk/stavemåder du angiver (bruges af Groq, OpenAI GPT-4o Transcribe, ElevenLabs)."
+          }
+        }
+      }
+    },
+    "Speed vs. accuracy": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hastighed vs. præcision"
+          }
+        }
+      }
+    },
+    "Auto (server default)": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto (server-standard)"
+          }
+        }
+      }
+    },
+    "Minimal — fastest": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimal — hurtigst"
+          }
+        }
+      }
+    },
+    "Low": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lav"
+          }
+        }
+      }
+    },
+    "Medium": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mellem"
+          }
+        }
+      }
+    },
+    "High": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Høj"
+          }
+        }
+      }
+    },
+    "Extra high — most accurate": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekstra høj — mest præcis"
+          }
+        }
+      }
+    },
+    "Higher accuracy adds a little latency. Only affects OpenAI Realtime (gpt-realtime-whisper).": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Højere præcision koster lidt ekstra ventetid. Påvirker kun OpenAI Realtime (gpt-realtime-whisper)."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
