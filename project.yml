@@ -58,8 +58,8 @@ targets:
       properties:
         CFBundleName: Vara
         CFBundleDisplayName: Vara
-        CFBundleShortVersionString: "0.1.0"
-        CFBundleVersion: "1"
+        CFBundleShortVersionString: "0.2.0"
+        CFBundleVersion: "2"
         LSUIElement: false
         LSMinimumSystemVersion: "14.0"
         ATSApplicationFontsPath: Fonts
@@ -107,8 +107,8 @@ targets:
         PRODUCT_NAME: Vara
         GENERATE_INFOPLIST_FILE: "NO"
         INFOPLIST_FILE: App/Info.plist
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "2"
 
 schemes:
   Vara:

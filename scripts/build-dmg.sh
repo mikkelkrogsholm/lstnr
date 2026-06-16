@@ -72,6 +72,15 @@ else
 fi
 echo
 
+# xcodegen just rewrote App/Info.plist from project.yml, so re-read the version
+# AFTER it (the initial read in the config section above predates this step). A
+# version bump in project.yml must flow into the DMG name + appcast, or the file
+# is misnamed (e.g. binary 0.2.0 inside a Vara-0.1.0.dmg).
+VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$REPO_ROOT/App/Info.plist" 2>/dev/null || echo "$VERSION")"
+DMG_NAME="${PRODUCT_NAME}-${VERSION}.dmg"
+DMG_PATH="$BUILD_DIR/$DMG_NAME"
+info "Building version $VERSION."
+
 # ---- 1. Pick a signing identity ----------------------------------------------
 # Priority: Developer ID Application (release) > Apple Development (local) > ad-hoc.
 SIGN_IDENTITY=""
