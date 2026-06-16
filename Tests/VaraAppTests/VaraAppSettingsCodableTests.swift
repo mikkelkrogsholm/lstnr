@@ -56,6 +56,24 @@ final class VaraAppSettingsCodableTests: XCTestCase {
         settings.historyLimit = 1
         XCTAssertGreaterThanOrEqual(settings.draft.historyLimit, 10)
     }
+
+    func testUnknownEnumRawValueFallsBackPerFieldNotWipingEverything() throws {
+        var json = try defaultsAsMutableJSON()
+        // A value an older/newer build doesn't recognise (removed engine, typo,
+        // downgrade). Before hardening, decodeIfPresent THREW here and the store
+        // reset ALL settings; now each bad field independently falls back.
+        json["speechBackend"] = "totally-unknown-engine"
+        json["microphoneProfile"] = "bogus"
+        json["pasteAutomatically"] = false   // a valid pre-existing field that must survive
+
+        let settings = try decode(json)
+
+        XCTAssertEqual(settings.speechBackend, VaraAppSettings.defaults.speechBackend,
+                       "an unknown engine must fall back to default, not throw")
+        XCTAssertEqual(settings.microphoneProfile, .nearField)
+        XCTAssertFalse(settings.pasteAutomatically,
+                       "one bad enum value must NOT wipe the rest of the user's settings")
+    }
 }
 
 /// The shortcut key mapping is a pure data table with the same silent-rot risk

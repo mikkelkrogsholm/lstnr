@@ -173,24 +173,33 @@ struct VaraAppSettings: Codable, Hashable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Tolerant per-field decode: an absent key OR an unknown/garbage value
+        // (e.g. an enum rawValue dropped in a future version, or a downgrade)
+        // falls back to the default for THAT field, instead of throwing and
+        // wiping ALL of the user's settings.
+        func value<T: Decodable>(_ type: T.Type, _ key: CodingKeys, _ fallback: T) -> T {
+            // `try?` flattens decodeIfPresent's T? to nil for BOTH an absent key
+            // and a throw (unknown/garbage rawValue), so either way → fallback.
+            (try? container.decodeIfPresent(type, forKey: key)) ?? fallback
+        }
         self.init(
-            shortcut: try container.decodeIfPresent(VaraShortcutChoice.self, forKey: .shortcut) ?? Self.defaults.shortcut,
-            language: try container.decodeIfPresent(VaraLanguageChoice.self, forKey: .language) ?? Self.defaults.language,
-            speechBackend: try container.decodeIfPresent(VaraSpeechBackendChoice.self, forKey: .speechBackend) ?? Self.defaults.speechBackend,
-            whisperKitModel: try container.decodeIfPresent(String.self, forKey: .whisperKitModel) ?? Self.defaults.whisperKitModel,
-            pasteAutomatically: try container.decodeIfPresent(Bool.self, forKey: .pasteAutomatically) ?? Self.defaults.pasteAutomatically,
-            showHUD: try container.decodeIfPresent(Bool.self, forKey: .showHUD) ?? Self.defaults.showHUD,
-            keepRecentTranscript: try container.decodeIfPresent(Bool.self, forKey: .keepRecentTranscript) ?? Self.defaults.keepRecentTranscript,
-            historyLimit: try container.decodeIfPresent(Int.self, forKey: .historyLimit) ?? Self.defaults.historyLimit,
-            modes: try container.decodeIfPresent([DictationMode].self, forKey: .modes) ?? Self.defaults.modes,
-            selectedModeID: try container.decodeIfPresent(UUID.self, forKey: .selectedModeID) ?? Self.defaults.selectedModeID,
-            defaultLLM: try container.decodeIfPresent(LLMSelection.self, forKey: .defaultLLM) ?? Self.defaults.defaultLLM,
-            customEndpoints: try container.decodeIfPresent([CustomLLMEndpoint].self, forKey: .customEndpoints) ?? Self.defaults.customEndpoints,
-            appModeRules: try container.decodeIfPresent([AppModeRule].self, forKey: .appModeRules) ?? Self.defaults.appModeRules,
-            playSounds: try container.decodeIfPresent(Bool.self, forKey: .playSounds) ?? Self.defaults.playSounds,
-            vocabulary: try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? Self.defaults.vocabulary,
-            microphoneProfile: try container.decodeIfPresent(MicrophoneProfile.self, forKey: .microphoneProfile) ?? Self.defaults.microphoneProfile,
-            realtimeLatency: try container.decodeIfPresent(TranscriptionLatency.self, forKey: .realtimeLatency) ?? Self.defaults.realtimeLatency
+            shortcut: value(VaraShortcutChoice.self, .shortcut, Self.defaults.shortcut),
+            language: value(VaraLanguageChoice.self, .language, Self.defaults.language),
+            speechBackend: value(VaraSpeechBackendChoice.self, .speechBackend, Self.defaults.speechBackend),
+            whisperKitModel: value(String.self, .whisperKitModel, Self.defaults.whisperKitModel),
+            pasteAutomatically: value(Bool.self, .pasteAutomatically, Self.defaults.pasteAutomatically),
+            showHUD: value(Bool.self, .showHUD, Self.defaults.showHUD),
+            keepRecentTranscript: value(Bool.self, .keepRecentTranscript, Self.defaults.keepRecentTranscript),
+            historyLimit: value(Int.self, .historyLimit, Self.defaults.historyLimit),
+            modes: value([DictationMode].self, .modes, Self.defaults.modes),
+            selectedModeID: value(UUID.self, .selectedModeID, Self.defaults.selectedModeID),
+            defaultLLM: (try? container.decodeIfPresent(LLMSelection.self, forKey: .defaultLLM)) ?? Self.defaults.defaultLLM,
+            customEndpoints: value([CustomLLMEndpoint].self, .customEndpoints, Self.defaults.customEndpoints),
+            appModeRules: value([AppModeRule].self, .appModeRules, Self.defaults.appModeRules),
+            playSounds: value(Bool.self, .playSounds, Self.defaults.playSounds),
+            vocabulary: value([String].self, .vocabulary, Self.defaults.vocabulary),
+            microphoneProfile: value(MicrophoneProfile.self, .microphoneProfile, Self.defaults.microphoneProfile),
+            realtimeLatency: value(TranscriptionLatency.self, .realtimeLatency, Self.defaults.realtimeLatency)
         )
     }
 }
