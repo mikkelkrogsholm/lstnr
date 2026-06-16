@@ -270,11 +270,11 @@ if [ "$SIGN_KIND" = "developer-id" ] && have_notary_profile; then
             <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <pubDate>$PUB_DATE</pubDate>
-            <enclosure url="https://vara.dk/$DMG_NAME" $SIG_LINE type="application/octet-stream" />
+            <enclosure url="https://vara.dk/download/$DMG_NAME" $SIG_LINE type="application/octet-stream" />
         </item>
 APPCAST
             echo
-            info "Then upload $DMG_NAME to https://vara.dk/ so the enclosure URL resolves."
+            info "Then drop $DMG_NAME into vara-www/public/download/ and redeploy vara.dk."
         else
             warn "sign_update not found at $SIGN_UPDATE — sign the DMG manually for the appcast."
         fi
