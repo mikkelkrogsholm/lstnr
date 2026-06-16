@@ -56,6 +56,7 @@ struct VaraSettingsView: View {
                 switch selectedSection {
                 case .dictation:
                     dictationSection
+                    vocabularySection
                 case .engine:
                     engineSection
                 case .intelligence:
@@ -150,6 +151,36 @@ struct VaraSettingsView: View {
         } footer: {
             Text("Vara records from macOS' default input device — change the microphone in System Settings → Sound. What happens to the text is decided by the selected mode.", comment: "Settings dictation footer")
         }
+    }
+
+    /// Custom vocabulary: free text, one term/phrase per line. Biases the RAW
+    /// transcript before LLM cleanup. Threaded into SpeechToTextRequest and mapped
+    /// per backend (Whisper `prompt`, ElevenLabs `keyterms`).
+    private var vocabularySection: some View {
+        Section {
+            TextEditor(text: vocabularyText)
+                .font(.system(size: 13))
+                .frame(minHeight: 88)
+                .scrollContentBackground(.hidden)
+                .accessibilityLabel(Text("Custom vocabulary", comment: "Accessibility label for the vocabulary editor"))
+        } header: {
+            Text("Words Vara should get right", comment: "Settings section header: custom vocabulary")
+        } footer: {
+            Text("Names, jargon, product terms, preferred spellings — one per line. Vara nudges the speech engine to spell these correctly (Groq, OpenAI GPT-4o Transcribe, ElevenLabs). ElevenLabs caps each entry at 20 characters and 50 entries; on-device WhisperKit and OpenAI Realtime ignore them for now.", comment: "Settings custom vocabulary footer")
+        }
+    }
+
+    /// Bridges the `[String]` model to a multi-line text field. Empty lines are
+    /// preserved while typing (so Enter works); the backends trim/drop blanks.
+    private var vocabularyText: Binding<String> {
+        Binding(
+            get: { draft.vocabulary.joined(separator: "\n") },
+            set: { newValue in
+                draft.vocabulary = newValue
+                    .components(separatedBy: .newlines)
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
+            }
+        )
     }
 
     /// Launch-at-login is system state (SMAppService), not part of our

@@ -42,7 +42,7 @@ public struct GroqWhisperBackend: ASRBackend, SpeechToTextBackend {
     public func transcribe(_ request: SpeechToTextRequest) async throws -> TranscriptionResult {
         switch request.audio {
         case .file(let url):
-            return try await transcribe(audio: url, language: request.languageCode)
+            return try await transcribe(audio: url, language: request.languageCode, prompt: request.whisperPrompt())
         case .pcm16Stream(let stream, let sampleRate):
             guard sampleRate == Self.sampleRate else {
                 throw SpeechToTextBackendError.unsupportedAudio(
@@ -52,7 +52,7 @@ public struct GroqWhisperBackend: ASRBackend, SpeechToTextBackend {
             }
             let audioFile = try await materializePCM16WAV(stream: stream, sampleRate: sampleRate)
             defer { try? FileManager.default.removeItem(at: audioFile.url) }
-            let result = try await transcribe(audio: audioFile.url, language: request.languageCode)
+            let result = try await transcribe(audio: audioFile.url, language: request.languageCode, prompt: request.whisperPrompt())
             return TranscriptionResult(
                 text: result.text,
                 detectedLanguage: result.detectedLanguage,
@@ -65,7 +65,12 @@ public struct GroqWhisperBackend: ASRBackend, SpeechToTextBackend {
         }
     }
 
+    // ASRBackend witness (CLI path): no vocabulary biasing.
     public func transcribe(audio: URL, language: String?) async throws -> TranscriptionResult {
+        try await transcribe(audio: audio, language: language, prompt: nil)
+    }
+
+    public func transcribe(audio: URL, language: String?, prompt: String?) async throws -> TranscriptionResult {
         let endpoint = baseURL.appendingPathComponent("v1/audio/transcriptions")
         let boundary = "----vara-\(UUID().uuidString)"
         var request = URLRequest(url: endpoint)
@@ -87,6 +92,10 @@ public struct GroqWhisperBackend: ASRBackend, SpeechToTextBackend {
         field("temperature", Self.formatTemperature(temperature))
         field("response_format", "verbose_json")
         if let language { field("language", language) }
+        // Vocabulary biasing: Whisper's `prompt` nudges spelling/casing of names
+        // and jargon. Groq caps it at 224 tokens (request-side truncation in
+        // SpeechToTextRequest.whisperPrompt keeps us under that).
+        if let prompt, !prompt.isEmpty { field("prompt", prompt) }
 
         body.append("--\(boundary)\r\n")
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n")

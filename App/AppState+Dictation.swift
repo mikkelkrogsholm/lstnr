@@ -121,6 +121,10 @@ extension AppState {
                 await MainActor.run { self?.log(message) }
             }
         }
+        // Snapshot the vocabulary-biasing terms at session-build time; the
+        // transcribe closure threads them onto every request. Backends that
+        // can't use them (OpenAI realtime, WhisperKit) ignore them.
+        let vocabulary = settings.vocabulary
         // Snapshot of mode + processor taken at transcription time so digit
         // overrides during the recording take effect.
         let resolveProcessing: @Sendable () async -> (DictationMode, DictationModeProcessor, String?)? = { [weak self] in
@@ -163,7 +167,8 @@ extension AppState {
                 let recoverable = RecoverableAudioCapture(audio: request.audio, log: logMessage)
                 let instrumentedRequest = SpeechToTextRequest(
                     audio: instrumentAudio(recoverable.audio),
-                    languageCode: request.languageCode
+                    languageCode: request.languageCode,
+                    vocabulary: vocabulary
                 )
 
                 let rawResult: TranscriptionResult

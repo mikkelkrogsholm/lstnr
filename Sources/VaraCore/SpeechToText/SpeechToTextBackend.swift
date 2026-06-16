@@ -8,10 +8,41 @@ public enum SpeechToTextAudio: Sendable {
 public struct SpeechToTextRequest: Sendable {
     public let audio: SpeechToTextAudio
     public let languageCode: String?
+    /// User-supplied terms/phrases (names, jargon, preferred spellings) that bias
+    /// the RAW transcript before LLM cleanup. Each backend maps these to its own
+    /// facility: Whisper-family `prompt` (Groq, OpenAI batch), ElevenLabs realtime
+    /// `keyterms`. Backends without such a facility ignore them — notably OpenAI
+    /// realtime (gpt-realtime-whisper does not support `prompt`) and WhisperKit
+    /// (promptTokens deferred pending argmaxinc/WhisperKit#372).
+    public let vocabulary: [String]
 
-    public init(audio: SpeechToTextAudio, languageCode: String? = nil) {
+    public init(audio: SpeechToTextAudio, languageCode: String? = nil, vocabulary: [String] = []) {
         self.audio = audio
         self.languageCode = languageCode
+        self.vocabulary = vocabulary
+    }
+
+    /// Vocabulary rendered as a Whisper-style `prompt` string (comma-separated),
+    /// or nil if empty. Capped to `maxCharacters` so it stays well under
+    /// provider token limits (Groq caps `prompt` at 224 tokens).
+    public func whisperPrompt(maxCharacters: Int = 896) -> String? {
+        let joined = vocabulary
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+        guard !joined.isEmpty else { return nil }
+        return String(joined.prefix(maxCharacters))
+    }
+
+    /// Vocabulary entries valid as ElevenLabs realtime `keyterms`: trimmed,
+    /// non-empty, ≤20 characters (the documented per-term cap), max 50 entries.
+    public var elevenLabsKeyterms: [String] {
+        Array(
+            vocabulary
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty && $0.count <= 20 }
+                .prefix(50)
+        )
     }
 }
 

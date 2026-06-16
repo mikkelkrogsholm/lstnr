@@ -40,7 +40,7 @@ public struct OpenAIAudioTranscriptionBackend: ASRBackend, SpeechToTextBackend {
     public func transcribe(_ request: SpeechToTextRequest) async throws -> TranscriptionResult {
         switch request.audio {
         case .file(let url):
-            return try await transcribe(audio: url, language: request.languageCode)
+            return try await transcribe(audio: url, language: request.languageCode, prompt: request.whisperPrompt())
         case .pcm16Stream(let stream, let sampleRate):
             guard sampleRate == Self.sampleRate else {
                 throw SpeechToTextBackendError.unsupportedAudio(
@@ -50,7 +50,7 @@ public struct OpenAIAudioTranscriptionBackend: ASRBackend, SpeechToTextBackend {
             }
             let audioFile = try await materializePCM16WAV(stream: stream, sampleRate: sampleRate)
             defer { try? FileManager.default.removeItem(at: audioFile.url) }
-            let result = try await transcribe(audio: audioFile.url, language: request.languageCode)
+            let result = try await transcribe(audio: audioFile.url, language: request.languageCode, prompt: request.whisperPrompt())
             return TranscriptionResult(
                 text: result.text,
                 detectedLanguage: result.detectedLanguage,
@@ -63,7 +63,12 @@ public struct OpenAIAudioTranscriptionBackend: ASRBackend, SpeechToTextBackend {
         }
     }
 
+    // ASRBackend witness (CLI path): no vocabulary biasing.
     public func transcribe(audio: URL, language: String?) async throws -> TranscriptionResult {
+        try await transcribe(audio: audio, language: language, prompt: nil)
+    }
+
+    public func transcribe(audio: URL, language: String?, prompt: String?) async throws -> TranscriptionResult {
         let endpoint = baseURL.appendingPathComponent("v1/audio/transcriptions")
         let boundary = "----vara-\(UUID().uuidString)"
         var request = URLRequest(url: endpoint)
@@ -85,6 +90,10 @@ public struct OpenAIAudioTranscriptionBackend: ASRBackend, SpeechToTextBackend {
         field("model", modelID)
         field("response_format", "json")
         if let language { field("language", language) }
+        // Vocabulary biasing: gpt-4o-transcribe / -mini accept a free-text `prompt`
+        // to steer spelling of names/jargon. (NOT supported on the realtime
+        // gpt-realtime-whisper path — intentionally not sent there.)
+        if let prompt, !prompt.isEmpty { field("prompt", prompt) }
 
         body.append("--\(boundary)\r\n")
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n")
@@ -207,7 +216,8 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
         pcmChunks: AsyncStream<Data>,
         language: String?
     ) async throws -> TranscriptionResult {
-        let task = try openSocket()
+        let (task, socketObserver) = openSocket()
+        defer { socketObserver.finish() }
         let start = Date()
 
         do {
@@ -254,28 +264,58 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
             )
         } catch {
             task.cancel(with: .abnormalClosure, reason: nil)
+            // A rejected WebSocket UPGRADE surfaces here only as errno 57
+            // "Socket is not connected" on the first send — the real HTTP
+            // status/close reason is captured by the delegate. Promote it to a
+            // diagnosable error so the failure isn't an opaque ENOTCONN.
+            if let rejection = socketObserver.rejection {
+                throw OpenAITranscriptionError.realtimeConnectionRejected(
+                    modelID: modelID,
+                    status: rejection.status,
+                    closeReason: rejection.reason
+                )
+            }
+            let nsError = error as NSError
+            if nsError.domain == NSPOSIXErrorDomain, nsError.code == 57 {
+                throw OpenAITranscriptionError.realtimeConnectionRejected(
+                    modelID: modelID,
+                    status: nil,
+                    closeReason: nil
+                )
+            }
             throw error
         }
     }
 }
 
 private extension OpenAIRealtimeWhisperBackend {
-    func openSocket() throws -> URLSessionWebSocketTask {
+    func openSocket() -> (task: URLSessionWebSocketTask, observer: RealtimeSocketObserver) {
         var components = URLComponents(
             url: baseURL.appendingPathComponent("v1/realtime"),
             resolvingAgainstBaseURL: false
         )!
         if components.scheme == "https" { components.scheme = "wss" }
         if components.scheme == "http" { components.scheme = "ws" }
-        components.queryItems = [URLQueryItem(name: "model", value: modelID)]
+        // A transcription session is selected with intent=transcription. The
+        // transcription model is passed in session.update under
+        // audio.input.transcription.model — NOT as ?model=. Passing a
+        // transcription model (e.g. gpt-realtime-whisper) as the session model is
+        // rejected by the GA server with invalid_model ("is a transcription model
+        // and cannot be used as the realtime session model"), which closes the
+        // socket and surfaces only as errno 57 "Socket is not connected".
+        components.queryItems = [URLQueryItem(name: "intent", value: "transcription")]
 
         var request = URLRequest(url: components.url!)
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
-        let session = URLSession(configuration: .default)
+        // A delegate-backed session so a rejected HTTP upgrade (401/403/404)
+        // is captured instead of being lost behind a bare ENOTCONN.
+        let observer = RealtimeSocketObserver()
+        let session = URLSession(configuration: .default, delegate: observer, delegateQueue: nil)
+        observer.adopt(session: session)
         let task = session.webSocketTask(with: request)
         task.resume()
-        return task
+        return (task, observer)
     }
 
     func sendSessionUpdate(task: URLSessionWebSocketTask, language: String?) async throws {
@@ -509,6 +549,7 @@ public enum OpenAITranscriptionError: Error, CustomStringConvertible, Sendable {
     case unsupportedAudio(String)
     case encodingFailed
     case realtimeServerError(type: String, message: String)
+    case realtimeConnectionRejected(modelID: String, status: Int?, closeReason: String?)
 
     public var description: String {
         switch self {
@@ -522,7 +563,57 @@ public enum OpenAITranscriptionError: Error, CustomStringConvertible, Sendable {
             return "OpenAI realtime transcription failed to encode an outgoing event"
         case .realtimeServerError(let type, let message):
             return "OpenAI realtime transcription [\(type)]: \(message)"
+        case .realtimeConnectionRejected(let modelID, let status, let closeReason):
+            let statusText = status.map { "HTTP \($0)" } ?? "socket closed during upgrade (no HTTP status surfaced)"
+            let reasonText = closeReason.map { " — \($0)" } ?? ""
+            return "OpenAI rejected the realtime WebSocket for model '\(modelID)' (\(statusText))\(reasonText). The batch OpenAI transcription backends are unaffected; a rejected upgrade usually means this realtime model isn't enabled for your account/project."
         }
+    }
+}
+
+/// Captures the outcome of the WebSocket UPGRADE handshake. `URLSessionWebSocketTask`
+/// does not expose the HTTP response of a rejected upgrade — a 401/403/404 only
+/// surfaces later as errno 57 "Socket is not connected" on the first send. This
+/// delegate records the HTTP status and any close reason so a refused handshake
+/// becomes a real, diagnosable error instead of an opaque ENOTCONN. It also owns
+/// the delegate-backed URLSession so the session<->delegate reference is broken
+/// via `finish()` once the socket is done.
+final class RealtimeSocketObserver: NSObject, URLSessionWebSocketDelegate, @unchecked Sendable {
+    private let lock = NSLock()
+    private var httpStatus: Int?
+    private var closeReason: String?
+    private var ownedSession: URLSession?
+
+    func adopt(session: URLSession) {
+        lock.lock(); ownedSession = session; lock.unlock()
+    }
+
+    /// The captured rejection, if the upgrade failed; nil if nothing was recorded.
+    var rejection: (status: Int?, reason: String?)? {
+        lock.lock(); defer { lock.unlock() }
+        guard httpStatus != nil || closeReason != nil else { return nil }
+        return (httpStatus, closeReason)
+    }
+
+    /// Tear down the delegate-backed session (breaks the retain cycle).
+    func finish() {
+        lock.lock(); let session = ownedSession; ownedSession = nil; lock.unlock()
+        session?.invalidateAndCancel()
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard let http = task.response as? HTTPURLResponse else { return }
+        lock.lock(); httpStatus = http.statusCode; lock.unlock()
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        webSocketTask: URLSessionWebSocketTask,
+        didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
+        reason: Data?
+    ) {
+        guard let reason, let text = String(data: reason, encoding: .utf8), !text.isEmpty else { return }
+        lock.lock(); closeReason = text; lock.unlock()
     }
 }
 

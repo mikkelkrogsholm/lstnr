@@ -53,7 +53,7 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
                     reason: "Scribe realtime expects PCM s16le mono at \(Self.sampleRate) Hz; received \(sampleRate) Hz."
                 )
             }
-            return try await transcribe(pcmChunks: stream, language: request.languageCode)
+            return try await transcribe(pcmChunks: stream, language: request.languageCode, keyterms: request.elevenLabsKeyterms)
         }
     }
 
@@ -91,9 +91,10 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
     /// and signals end-of-utterance by finishing the stream.
     public func transcribe(
         pcmChunks: AsyncStream<Data>,
-        language: String?
+        language: String?,
+        keyterms: [String] = []
     ) async throws -> TranscriptionResult {
-        let task = try openSocket(language: language)
+        let task = try openSocket(language: language, keyterms: keyterms)
         let start = Date()
 
         do {
@@ -140,7 +141,7 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
         }
     }
 
-    private func openSocket(language: String?) throws -> URLSessionWebSocketTask {
+    private func openSocket(language: String?, keyterms: [String] = []) throws -> URLSessionWebSocketTask {
         var components = URLComponents(
             url: baseURL.appendingPathComponent("v1/speech-to-text/realtime"),
             resolvingAgainstBaseURL: false
@@ -155,6 +156,12 @@ public struct ScribeRealtimeBackend: ASRBackend, SpeechToTextBackend {
             URLQueryItem(name: "include_language_detection", value: "true"),
         ]
         if let language { items.append(URLQueryItem(name: "language_code", value: language)) }
+        // Vocabulary biasing: Scribe realtime takes keyterms as repeated query
+        // params (max 50 entries, ≤20 chars each — already enforced upstream in
+        // SpeechToTextRequest.elevenLabsKeyterms).
+        for term in keyterms {
+            items.append(URLQueryItem(name: "keyterms", value: term))
+        }
         components.queryItems = items
 
         var request = URLRequest(url: components.url!)

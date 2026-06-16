@@ -16,6 +16,10 @@ struct VaraAppSettings: Codable, Hashable {
     var customEndpoints: [CustomLLMEndpoint]
     var appModeRules: [AppModeRule]
     var playSounds: Bool
+    /// User-supplied terms/phrases (names, jargon, preferred spellings) that bias
+    /// the raw transcript. Mapped per backend (Whisper `prompt`, ElevenLabs
+    /// `keyterms`); ignored by backends without such a facility.
+    var vocabulary: [String]
 
     static let defaults = VaraAppSettings(
         shortcut: .rightCommand,
@@ -35,7 +39,8 @@ struct VaraAppSettings: Codable, Hashable {
         defaultLLM: LLMSelection(provider: .groq, model: "llama-3.3-70b-versatile"),
         customEndpoints: [],
         appModeRules: [],
-        playSounds: true
+        playSounds: true,
+        vocabulary: []
     )
 
     init(
@@ -52,7 +57,8 @@ struct VaraAppSettings: Codable, Hashable {
         defaultLLM: LLMSelection?,
         customEndpoints: [CustomLLMEndpoint],
         appModeRules: [AppModeRule],
-        playSounds: Bool
+        playSounds: Bool,
+        vocabulary: [String]
     ) {
         self.shortcut = shortcut
         self.language = language
@@ -73,6 +79,7 @@ struct VaraAppSettings: Codable, Hashable {
         self.customEndpoints = customEndpoints
         self.appModeRules = appModeRules
         self.playSounds = playSounds
+        self.vocabulary = vocabulary
     }
 
     init(draft: VaraSettingsDraft) {
@@ -90,7 +97,8 @@ struct VaraAppSettings: Codable, Hashable {
             defaultLLM: draft.defaultLLM,
             customEndpoints: draft.customEndpoints,
             appModeRules: draft.appModeRules,
-            playSounds: draft.playSounds
+            playSounds: draft.playSounds,
+            vocabulary: draft.vocabulary
         )
     }
 
@@ -109,7 +117,8 @@ struct VaraAppSettings: Codable, Hashable {
             defaultLLM: defaultLLM,
             customEndpoints: customEndpoints,
             appModeRules: appModeRules,
-            playSounds: playSounds
+            playSounds: playSounds,
+            vocabulary: vocabulary
         )
     }
 
@@ -143,6 +152,7 @@ struct VaraAppSettings: Codable, Hashable {
         case customEndpoints
         case appModeRules
         case playSounds
+        case vocabulary
     }
 
     init(from decoder: Decoder) throws {
@@ -161,7 +171,8 @@ struct VaraAppSettings: Codable, Hashable {
             defaultLLM: try container.decodeIfPresent(LLMSelection.self, forKey: .defaultLLM) ?? Self.defaults.defaultLLM,
             customEndpoints: try container.decodeIfPresent([CustomLLMEndpoint].self, forKey: .customEndpoints) ?? Self.defaults.customEndpoints,
             appModeRules: try container.decodeIfPresent([AppModeRule].self, forKey: .appModeRules) ?? Self.defaults.appModeRules,
-            playSounds: try container.decodeIfPresent(Bool.self, forKey: .playSounds) ?? Self.defaults.playSounds
+            playSounds: try container.decodeIfPresent(Bool.self, forKey: .playSounds) ?? Self.defaults.playSounds,
+            vocabulary: try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? Self.defaults.vocabulary
         )
     }
 }
@@ -181,6 +192,7 @@ struct VaraSettingsDraft: Hashable {
     var customEndpoints: [CustomLLMEndpoint]
     var appModeRules: [AppModeRule]
     var playSounds: Bool
+    var vocabulary: [String]
 
     static let preview = VaraAppSettings.defaults.draft
 }

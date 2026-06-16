@@ -240,6 +240,11 @@ private final class WhisperKitEngine: @unchecked Sendable {
         await gate.acquire()
         defer { gate.release() }
         try Task.checkCancellation()
+        // NOTE: vocabulary biasing (DecodingOptions.promptTokens, encoded via the
+        // tokenizer) is intentionally NOT wired yet — promptTokens can return an
+        // empty transcript on the large-v3-v20240930 family (Vara's default) per
+        // the still-open argmaxinc/WhisperKit#372. The cloud backends carry the
+        // vocabulary setting; revisit here once #372 is fixed/verified.
         let options = DecodingOptions(language: language)
         let results = try await pipe.transcribe(audioPath: audioPath, decodeOptions: options)
         lock.withLock { didPredict = true }
