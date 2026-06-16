@@ -290,24 +290,56 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
     }
 }
 
-private extension OpenAIRealtimeWhisperBackend {
-    func openSocket() -> (task: URLSessionWebSocketTask, observer: RealtimeSocketObserver) {
+// Pure request builders, extracted so they can be unit-tested without opening a
+// live socket (the ?intent= URL and the session.update wire shape are exactly
+// the things that silently broke once).
+extension OpenAIRealtimeWhisperBackend {
+    /// The GA realtime transcription WebSocket URL. A transcription session is
+    /// selected with `intent=transcription`. The transcription model is passed in
+    /// session.update under audio.input.transcription.model — NOT as `?model=`.
+    /// Passing a transcription model (e.g. gpt-realtime-whisper) as the session
+    /// model is rejected by the GA server with invalid_model, which closes the
+    /// socket and surfaces only as errno 57 "Socket is not connected".
+    static func realtimeRequestURL(baseURL: URL) -> URL {
         var components = URLComponents(
             url: baseURL.appendingPathComponent("v1/realtime"),
             resolvingAgainstBaseURL: false
         )!
         if components.scheme == "https" { components.scheme = "wss" }
         if components.scheme == "http" { components.scheme = "ws" }
-        // A transcription session is selected with intent=transcription. The
-        // transcription model is passed in session.update under
-        // audio.input.transcription.model — NOT as ?model=. Passing a
-        // transcription model (e.g. gpt-realtime-whisper) as the session model is
-        // rejected by the GA server with invalid_model ("is a transcription model
-        // and cannot be used as the realtime session model"), which closes the
-        // socket and surfaces only as errno 57 "Socket is not connected".
         components.queryItems = [URLQueryItem(name: "intent", value: "transcription")]
+        return components.url!
+    }
 
-        var request = URLRequest(url: components.url!)
+    /// The `session.update` event (encoded JSON) sent right after connecting.
+    /// Pure given its inputs, so a test can parse it and assert the wire shape
+    /// (snake_case keys, the 24 kHz wire rate, delay omit-vs-emit, …).
+    func sessionUpdateData(
+        language: String?,
+        microphoneProfile: MicrophoneProfile,
+        latency: TranscriptionLatency
+    ) throws -> Data {
+        let event = RealtimeSessionUpdate(
+            type: "session.update",
+            session: RealtimeSession(
+                type: "transcription",
+                audio: RealtimeAudio(
+                    input: RealtimeAudioInput(
+                        format: RealtimeAudioFormat(type: "audio/pcm", rate: Self.realtimeSampleRate),
+                        transcription: RealtimeTranscription(model: modelID, language: language, delay: latency.openAIDelay),
+                        noiseReduction: RealtimeNoiseReduction(type: microphoneProfile.openAINoiseReductionType),
+                        turnDetection: nil
+                    )
+                )
+            )
+        )
+        return try JSONEncoder().encode(event)
+    }
+}
+
+private extension OpenAIRealtimeWhisperBackend {
+    func openSocket() -> (task: URLSessionWebSocketTask, observer: RealtimeSocketObserver) {
+        var request = URLRequest(url: Self.realtimeRequestURL(baseURL: baseURL))
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
         // A delegate-backed session so a rejected HTTP upgrade (401/403/404)
@@ -321,26 +353,11 @@ private extension OpenAIRealtimeWhisperBackend {
     }
 
     func sendSessionUpdate(task: URLSessionWebSocketTask, language: String?, microphoneProfile: MicrophoneProfile, latency: TranscriptionLatency) async throws {
-        let event = RealtimeSessionUpdate(
-            type: "session.update",
-            session: RealtimeSession(
-                type: "transcription",
-                audio: RealtimeAudio(
-                    input: RealtimeAudioInput(
-                        format: RealtimeAudioFormat(type: "audio/pcm", rate: Self.realtimeSampleRate),
-                        // delay: latency/accuracy tradeoff. nil (auto) is omitted
-                        // by the synthesized encoder, leaving the server default.
-                        transcription: RealtimeTranscription(model: modelID, language: language, delay: latency.openAIDelay),
-                        // Input noise reduction (near/far-field). Improves the
-                        // model's perception of the audio; verified accepted on
-                        // the GA transcription session.
-                        noiseReduction: RealtimeNoiseReduction(type: microphoneProfile.openAINoiseReductionType),
-                        turnDetection: nil
-                    )
-                )
-            )
-        )
-        try await sendJSON(task: task, event)
+        let data = try sessionUpdateData(language: language, microphoneProfile: microphoneProfile, latency: latency)
+        guard let json = String(data: data, encoding: .utf8) else {
+            throw OpenAITranscriptionError.encodingFailed
+        }
+        try await task.send(.string(json))
     }
 
     func sendAppend(task: URLSessionWebSocketTask, pcm24k: Data) async throws {
