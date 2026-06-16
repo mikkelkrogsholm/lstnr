@@ -20,6 +20,8 @@ struct VaraAppSettings: Codable, Hashable {
     /// the raw transcript. Mapped per backend (Whisper `prompt`, ElevenLabs
     /// `keyterms`); ignored by backends without such a facility.
     var vocabulary: [String]
+    /// Microphone profile for input noise reduction (OpenAI realtime only).
+    var microphoneProfile: MicrophoneProfile
 
     static let defaults = VaraAppSettings(
         shortcut: .rightCommand,
@@ -40,7 +42,8 @@ struct VaraAppSettings: Codable, Hashable {
         customEndpoints: [],
         appModeRules: [],
         playSounds: true,
-        vocabulary: []
+        vocabulary: [],
+        microphoneProfile: .nearField
     )
 
     init(
@@ -58,7 +61,8 @@ struct VaraAppSettings: Codable, Hashable {
         customEndpoints: [CustomLLMEndpoint],
         appModeRules: [AppModeRule],
         playSounds: Bool,
-        vocabulary: [String]
+        vocabulary: [String],
+        microphoneProfile: MicrophoneProfile
     ) {
         self.shortcut = shortcut
         self.language = language
@@ -80,6 +84,7 @@ struct VaraAppSettings: Codable, Hashable {
         self.appModeRules = appModeRules
         self.playSounds = playSounds
         self.vocabulary = vocabulary
+        self.microphoneProfile = microphoneProfile
     }
 
     init(draft: VaraSettingsDraft) {
@@ -98,7 +103,8 @@ struct VaraAppSettings: Codable, Hashable {
             customEndpoints: draft.customEndpoints,
             appModeRules: draft.appModeRules,
             playSounds: draft.playSounds,
-            vocabulary: draft.vocabulary
+            vocabulary: draft.vocabulary,
+            microphoneProfile: draft.microphoneProfile
         )
     }
 
@@ -118,7 +124,8 @@ struct VaraAppSettings: Codable, Hashable {
             customEndpoints: customEndpoints,
             appModeRules: appModeRules,
             playSounds: playSounds,
-            vocabulary: vocabulary
+            vocabulary: vocabulary,
+            microphoneProfile: microphoneProfile
         )
     }
 
@@ -153,6 +160,7 @@ struct VaraAppSettings: Codable, Hashable {
         case appModeRules
         case playSounds
         case vocabulary
+        case microphoneProfile
     }
 
     init(from decoder: Decoder) throws {
@@ -172,7 +180,8 @@ struct VaraAppSettings: Codable, Hashable {
             customEndpoints: try container.decodeIfPresent([CustomLLMEndpoint].self, forKey: .customEndpoints) ?? Self.defaults.customEndpoints,
             appModeRules: try container.decodeIfPresent([AppModeRule].self, forKey: .appModeRules) ?? Self.defaults.appModeRules,
             playSounds: try container.decodeIfPresent(Bool.self, forKey: .playSounds) ?? Self.defaults.playSounds,
-            vocabulary: try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? Self.defaults.vocabulary
+            vocabulary: try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? Self.defaults.vocabulary,
+            microphoneProfile: try container.decodeIfPresent(MicrophoneProfile.self, forKey: .microphoneProfile) ?? Self.defaults.microphoneProfile
         )
     }
 }
@@ -193,6 +202,7 @@ struct VaraSettingsDraft: Hashable {
     var appModeRules: [AppModeRule]
     var playSounds: Bool
     var vocabulary: [String]
+    var microphoneProfile: MicrophoneProfile
 
     static let preview = VaraAppSettings.defaults.draft
 }

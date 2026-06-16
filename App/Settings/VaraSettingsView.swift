@@ -59,6 +59,9 @@ struct VaraSettingsView: View {
                     vocabularySection
                 case .engine:
                     engineSection
+                    if draft.speechBackend == .openAIRealtimeWhisper {
+                        microphoneSection
+                    }
                 case .intelligence:
                     intelligenceSection
                 case .advanced:
@@ -150,6 +153,25 @@ struct VaraSettingsView: View {
             Text("Dictation", comment: "Settings section header")
         } footer: {
             Text("Vara records from macOS' default input device — change the microphone in System Settings → Sound. What happens to the text is decided by the selected mode.", comment: "Settings dictation footer")
+        }
+    }
+
+    /// Microphone profile (OpenAI realtime only): maps to the realtime
+    /// `noise_reduction` type. Shown only when that backend is active.
+    private var microphoneSection: some View {
+        Section {
+            Picker(selection: $draft.microphoneProfile) {
+                Text("Headset / close mic", comment: "Microphone profile option (near-field)")
+                    .tag(MicrophoneProfile.nearField)
+                Text("Laptop / room mic", comment: "Microphone profile option (far-field)")
+                    .tag(MicrophoneProfile.farField)
+            } label: {
+                Text("Microphone", comment: "Settings field: microphone profile")
+            }
+        } header: {
+            Text("Microphone", comment: "Settings section header: microphone profile")
+        } footer: {
+            Text("Tunes OpenAI Realtime's input noise reduction. Pick the option that matches how close you speak to the mic.", comment: "Microphone profile footer")
         }
     }
 

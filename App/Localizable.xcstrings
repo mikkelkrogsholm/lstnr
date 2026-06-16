@@ -3718,6 +3718,72 @@
           }
         }
       }
+    },
+    "Words Vara should get right": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ord Vara skal ramme rigtigt"
+          }
+        }
+      }
+    },
+    "Names, jargon, product terms, preferred spellings — one per line. Vara nudges the speech engine to spell these correctly (Groq, OpenAI GPT-4o Transcribe, ElevenLabs). ElevenLabs caps each entry at 20 characters and 50 entries; on-device WhisperKit and OpenAI Realtime ignore them for now.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navne, fagudtryk, produktnavne, foretrukne stavemåder — ét pr. linje. Vara skubber talemotoren mod at stave dem korrekt (Groq, OpenAI GPT-4o Transcribe, ElevenLabs). ElevenLabs tillader højst 20 tegn pr. udtryk og 50 udtryk i alt; lokal WhisperKit og OpenAI Realtime ignorerer dem indtil videre."
+          }
+        }
+      }
+    },
+    "Custom vocabulary": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brugerdefineret ordforråd"
+          }
+        }
+      }
+    },
+    "Headset / close mic": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Headset / tæt mikrofon"
+          }
+        }
+      }
+    },
+    "Laptop / room mic": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bærbar / rummikrofon"
+          }
+        }
+      }
+    },
+    "Tunes OpenAI Realtime's input noise reduction. Pick the option that matches how close you speak to the mic.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Justerer OpenAI Realtimes støjreduktion på input-lyden. Vælg det der passer til hvor tæt du taler på mikrofonen."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -5,6 +5,23 @@ public enum SpeechToTextAudio: Sendable {
     case pcm16Stream(AsyncStream<Data>, sampleRate: Int)
 }
 
+/// Microphone profile for input-audio noise reduction. Maps to the OpenAI
+/// realtime `audio.input.noise_reduction.type`; ignored by backends without an
+/// equivalent. `nearField` suits close-talking mics (headset/built-in laptop mic
+/// held close), `farField` suits room/conference mics.
+public enum MicrophoneProfile: String, Codable, Sendable, CaseIterable {
+    case nearField
+    case farField
+
+    /// The OpenAI realtime `noise_reduction.type` value.
+    public var openAINoiseReductionType: String {
+        switch self {
+        case .nearField: "near_field"
+        case .farField: "far_field"
+        }
+    }
+}
+
 public struct SpeechToTextRequest: Sendable {
     public let audio: SpeechToTextAudio
     public let languageCode: String?
@@ -15,11 +32,20 @@ public struct SpeechToTextRequest: Sendable {
     /// realtime (gpt-realtime-whisper does not support `prompt`) and WhisperKit
     /// (promptTokens deferred pending argmaxinc/WhisperKit#372).
     public let vocabulary: [String]
+    /// Microphone profile for input noise reduction. Consumed only by backends
+    /// with an equivalent (OpenAI realtime); others ignore it.
+    public let microphoneProfile: MicrophoneProfile
 
-    public init(audio: SpeechToTextAudio, languageCode: String? = nil, vocabulary: [String] = []) {
+    public init(
+        audio: SpeechToTextAudio,
+        languageCode: String? = nil,
+        vocabulary: [String] = [],
+        microphoneProfile: MicrophoneProfile = .nearField
+    ) {
         self.audio = audio
         self.languageCode = languageCode
         self.vocabulary = vocabulary
+        self.microphoneProfile = microphoneProfile
     }
 
     /// Vocabulary rendered as a Whisper-style `prompt` string (comma-separated),

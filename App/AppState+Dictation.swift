@@ -125,6 +125,7 @@ extension AppState {
         // transcribe closure threads them onto every request. Backends that
         // can't use them (OpenAI realtime, WhisperKit) ignore them.
         let vocabulary = settings.vocabulary
+        let microphoneProfile = settings.microphoneProfile
         // Snapshot of mode + processor taken at transcription time so digit
         // overrides during the recording take effect.
         let resolveProcessing: @Sendable () async -> (DictationMode, DictationModeProcessor, String?)? = { [weak self] in
@@ -168,7 +169,8 @@ extension AppState {
                 let instrumentedRequest = SpeechToTextRequest(
                     audio: instrumentAudio(recoverable.audio),
                     languageCode: request.languageCode,
-                    vocabulary: vocabulary
+                    vocabulary: vocabulary,
+                    microphoneProfile: microphoneProfile
                 )
 
                 let rawResult: TranscriptionResult

@@ -180,7 +180,7 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
                     reason: "OpenAI realtime transcription expects PCM s16le mono at \(Self.inputSampleRate) Hz; received \(sampleRate) Hz."
                 )
             }
-            return try await transcribe(pcmChunks: stream, language: request.languageCode)
+            return try await transcribe(pcmChunks: stream, language: request.languageCode, microphoneProfile: request.microphoneProfile)
         }
     }
 
@@ -214,7 +214,8 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
 
     public func transcribe(
         pcmChunks: AsyncStream<Data>,
-        language: String?
+        language: String?,
+        microphoneProfile: MicrophoneProfile = .nearField
     ) async throws -> TranscriptionResult {
         let (task, socketObserver) = openSocket()
         defer { socketObserver.finish() }
@@ -222,7 +223,7 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
 
         do {
             await diagnosticLog?("OpenAI Realtime Whisper websocket opened. language=\(language ?? "automatic")")
-            try await sendSessionUpdate(task: task, language: language)
+            try await sendSessionUpdate(task: task, language: language, microphoneProfile: microphoneProfile)
             async let reader = readUntilCompleted(task: task)
 
             var totalInputBytes = 0
@@ -318,7 +319,7 @@ private extension OpenAIRealtimeWhisperBackend {
         return (task, observer)
     }
 
-    func sendSessionUpdate(task: URLSessionWebSocketTask, language: String?) async throws {
+    func sendSessionUpdate(task: URLSessionWebSocketTask, language: String?, microphoneProfile: MicrophoneProfile) async throws {
         let event = RealtimeSessionUpdate(
             type: "session.update",
             session: RealtimeSession(
@@ -327,6 +328,10 @@ private extension OpenAIRealtimeWhisperBackend {
                     input: RealtimeAudioInput(
                         format: RealtimeAudioFormat(type: "audio/pcm", rate: Self.realtimeSampleRate),
                         transcription: RealtimeTranscription(model: modelID, language: language),
+                        // Input noise reduction (near/far-field). Improves the
+                        // model's perception of the audio; verified accepted on
+                        // the GA transcription session.
+                        noiseReduction: RealtimeNoiseReduction(type: microphoneProfile.openAINoiseReductionType),
                         turnDetection: nil
                     )
                 )
@@ -492,11 +497,13 @@ private struct RealtimeAudio: Encodable {
 private struct RealtimeAudioInput: Encodable {
     let format: RealtimeAudioFormat
     let transcription: RealtimeTranscription
+    let noiseReduction: RealtimeNoiseReduction
     let turnDetection: String?
 
     enum CodingKeys: String, CodingKey {
         case format
         case transcription
+        case noiseReduction = "noise_reduction"
         case turnDetection = "turn_detection"
     }
 
@@ -504,6 +511,7 @@ private struct RealtimeAudioInput: Encodable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(format, forKey: .format)
         try container.encode(transcription, forKey: .transcription)
+        try container.encode(noiseReduction, forKey: .noiseReduction)
         if let turnDetection {
             try container.encode(turnDetection, forKey: .turnDetection)
         } else {
@@ -515,6 +523,10 @@ private struct RealtimeAudioInput: Encodable {
 private struct RealtimeAudioFormat: Encodable {
     let type: String
     let rate: Int
+}
+
+private struct RealtimeNoiseReduction: Encodable {
+    let type: String
 }
 
 private struct RealtimeTranscription: Encodable {
