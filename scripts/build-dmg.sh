@@ -176,6 +176,31 @@ else
 fi
 echo
 
+# ---- 3.5 Notarize + staple the APP so it validates OFFLINE ------------------
+# Stapling only the DMG (step 6) leaves the app inside UN-stapled, so an app
+# copied out of the DMG relies on an online Apple check and shows "is damaged"
+# on machines that can't reach the notary service (firewall/VPN/offline/stale
+# Gatekeeper cache). Notarize + staple the app BEFORE wrapping it, so the ticket
+# travels inside the .app and Gatekeeper validates it without a network round-trip.
+notary_ready() { xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; }
+if [ "$SIGN_KIND" = "developer-id" ] && notary_ready; then
+    bold "Notarizing the app (so the ticket ships INSIDE the .app)..."
+    APP_ZIP="$BUILD_DIR/${PRODUCT_NAME}-app.zip"
+    rm -f "$APP_ZIP"
+    /usr/bin/ditto -c -k --keepParent "$APP_PATH" "$APP_ZIP"
+    if xcrun notarytool submit "$APP_ZIP" --keychain-profile "$NOTARY_PROFILE" --wait; then
+        ok "App notarization accepted."
+        xcrun stapler staple "$APP_PATH"
+        xcrun stapler validate "$APP_PATH" && ok "App stapled — validates offline."
+    else
+        err "App notarization failed. Inspect with: xcrun notarytool log <id> --keychain-profile \"$NOTARY_PROFILE\""
+        rm -f "$APP_ZIP"
+        exit 1
+    fi
+    rm -f "$APP_ZIP"
+    echo
+fi
+
 # ---- 4. Stage the DMG layout (.app + /Applications symlink) ------------------
 bold "Staging DMG contents..."
 ln -sf /Applications "$STAGING_DIR/Applications"
