@@ -398,16 +398,42 @@ struct DictationTranscriptionFailure: Error, CustomStringConvertible, Sendable {
     let recoveredAudioPath: String?
 
     var description: String {
-        if recoveredAudioPath != nil {
-            return String(
-                localized: "Transcription failed, but your audio was kept and can be recovered. Please try again.",
-                comment: "Error shown when transcription fails but the recording was saved"
-            )
+        // Prefer a specific, actionable reason (bad key / no credit / rate limit /
+        // no access / offline). Falls back to the generic recoverable message for
+        // anything we can't classify — and we never echo a raw provider body, which
+        // could carry the transcript.
+        if let reason = APIFailureReason.reason(for: underlying),
+           let message = Self.specificMessage(for: reason) {
+            return message
         }
-        return String(
-            localized: "Transcription failed. Please try again.",
-            comment: "Error shown when transcription fails and no audio could be recovered"
-        )
+        return Self.genericMessage(recoverable: recoveredAudioPath != nil)
+    }
+
+    /// Fixed, localized, actionable line per known failure reason. `nil` for
+    /// `.other`/unrecognized so the generic message is used (no raw-string echo).
+    static func specificMessage(for reason: APIFailureReason) -> String? {
+        switch reason {
+        case .invalidKey:
+            return String(localized: "Your API key was rejected. Check it under Settings › Engine.", comment: "Dictation error: provider returned 401, the key is wrong/revoked")
+        case .insufficientQuota:
+            return String(localized: "Your account is out of credit. Add billing with your provider, then try again.", comment: "Dictation error: provider returned 429 insufficient_quota — no money on the account")
+        case .rateLimited:
+            return String(localized: "Too many requests right now. Wait a moment and try again.", comment: "Dictation error: provider rate limit")
+        case .noAccess:
+            return String(localized: "Your account can't use this engine's model. Pick another engine under Settings › Engine.", comment: "Dictation error: 403/404, account lacks access to the model")
+        case .network:
+            return String(localized: "No connection to the transcription service. Check your internet and try again.", comment: "Dictation error: offline/network failure")
+        case .server:
+            return String(localized: "The transcription service had a problem. Try again in a moment.", comment: "Dictation error: provider 5xx outage")
+        case .other:
+            return nil
+        }
+    }
+
+    static func genericMessage(recoverable: Bool) -> String {
+        recoverable
+            ? String(localized: "Transcription failed, but your audio was kept and can be recovered. Please try again.", comment: "Error shown when transcription fails but the recording was saved")
+            : String(localized: "Transcription failed. Please try again.", comment: "Error shown when transcription fails and no audio could be recovered")
     }
 }
 

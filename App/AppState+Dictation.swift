@@ -185,10 +185,13 @@ extension AppState {
                     // the dictation is recoverable, log its path, and surface a
                     // clear message — never a silent loss.
                     let savedPath = await recoverable.finalizeForRecovery()
+                    // Redact: a provider HTTP error can echo our input back, and we
+                    // ask users to send debug.log. Keeps the status code, drops the body.
+                    let safeError = Self.redactedLogDescription("\(error)")
                     if let savedPath {
-                        await logMessage("Transcription failed: \(error). Captured audio kept at \(savedPath)")
+                        await logMessage("Transcription failed: \(safeError). Captured audio kept at \(savedPath)")
                     } else {
-                        await logMessage("Transcription failed: \(error). No audio could be recovered.")
+                        await logMessage("Transcription failed: \(safeError). No audio could be recovered.")
                     }
                     throw DictationTranscriptionFailure(
                         underlying: error,
@@ -654,16 +657,18 @@ extension AppState {
     /// `"Chat completion HTTP <status>: <body>"`, and that body can echo the
     /// user's transcript — so we replace it with a byte count, mirroring
     /// `ChatClientError.redactedDescription`. Anything else passes through.
+    /// Redact the body after any "… HTTP <status>: <body>" provider error so a
+    /// response that echoes our input (transcript/audio) never lands in debug.log,
+    /// which we ask users to send us. Keeps the prefix + status code for diagnosis.
+    /// Covers the LLM (Chat completion), OpenAI transcription and Groq paths.
     nonisolated private static func redactedLogDescription(_ message: String) -> String {
-        let marker = "Chat completion HTTP "
-        guard let markerRange = message.range(of: marker),
-              let colonRange = message.range(of: ": ", range: markerRange.upperBound..<message.endIndex) else {
+        guard let httpRange = message.range(of: "HTTP "),
+              let colonRange = message.range(of: ": ", range: httpRange.upperBound..<message.endIndex) else {
             return message
         }
-        let status = message[markerRange.upperBound..<colonRange.lowerBound]
-        let body = message[colonRange.upperBound...]
-        let byteCount = Data(body.utf8).count
-        return "Chat completion HTTP \(status): <\(byteCount) bytes redacted>"
+        let prefix = message[message.startIndex..<colonRange.lowerBound]
+        let byteCount = Data(message[colonRange.upperBound...].utf8).count
+        return "\(prefix): <\(byteCount) bytes redacted>"
     }
 
     /// Runs `operation`, throwing `AppStateTimeoutError` if it does not finish in

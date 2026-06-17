@@ -3894,6 +3894,204 @@
           }
         }
       }
+    },
+    "Your API key was rejected. Check it under Settings › Engine.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din API-nøgle blev afvist. Tjek den under Indstillinger › Motor."
+          }
+        }
+      }
+    },
+    "Your account is out of credit. Add billing with your provider, then try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din konto er løbet tør for kredit. Tilføj betaling hos din udbyder, og prøv igen."
+          }
+        }
+      }
+    },
+    "Too many requests right now. Wait a moment and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For mange forespørgsler lige nu. Vent et øjeblik, og prøv igen."
+          }
+        }
+      }
+    },
+    "Your account can't use this engine's model. Pick another engine under Settings › Engine.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din konto kan ikke bruge denne motors model. Vælg en anden motor under Indstillinger › Motor."
+          }
+        }
+      }
+    },
+    "No connection to the transcription service. Check your internet and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen forbindelse til transskriptionstjenesten. Tjek dit internet, og prøv igen."
+          }
+        }
+      }
+    },
+    "The transcription service had a problem. Try again in a moment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transskriptionstjenesten havde et problem. Prøv igen om lidt."
+          }
+        }
+      }
+    },
+    "Saved — checking key …": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemt — tjekker nøgle …"
+          }
+        }
+      }
+    },
+    "Key ✓ — works": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nøgle ✓ — virker"
+          }
+        }
+      }
+    },
+    "Key rejected — check it": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nøgle afvist — tjek den"
+          }
+        }
+      }
+    },
+    "No credit on the account — add billing": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen kredit på kontoen — tilføj betaling"
+          }
+        }
+      }
+    },
+    "Key works (rate-limited right now)": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nøglen virker (begrænset lige nu)"
+          }
+        }
+      }
+    },
+    "Account lacks access to this model": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoen har ikke adgang til denne model"
+          }
+        }
+      }
+    },
+    "Couldn't reach the provider — check your internet": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke nå udbyderen — tjek dit internet"
+          }
+        }
+      }
+    },
+    "Provider error — try again later": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udbyderfejl — prøv igen senere"
+          }
+        }
+      }
+    },
+    "Couldn't verify the key": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke verificere nøglen"
+          }
+        }
+      }
+    },
+    "Update ready: Vara %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdatering klar: Vara %@"
+          }
+        }
+      }
+    },
+    "A new version is ready to install.": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En ny version er klar at installere."
+          }
+        }
+      }
+    },
+    "Update now": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdater nu"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

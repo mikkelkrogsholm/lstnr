@@ -672,12 +672,59 @@ struct VaraSettingsView: View {
         do {
             try credentialStore?.saveCredential(trimmedKey, for: provider)
             binding.wrappedValue = trimmedKey
-            keyStatusBinding(for: provider).wrappedValue = trimmedKey.isEmpty
-                ? String(localized: "Removed", comment: "Key status")
-                : String(localized: "Saved", comment: "Key status")
+            if trimmedKey.isEmpty {
+                keyStatusBinding(for: provider).wrappedValue = String(localized: "Removed", comment: "Key status")
+            } else {
+                // Don't stop at "Saved" — actually check the key works AND the
+                // account has credit, so "Key ✓" means usable, not just present.
+                keyStatusBinding(for: provider).wrappedValue = String(localized: "Saved — checking key …", comment: "Key status while validating against the provider")
+                validateKey(trimmedKey, for: provider)
+            }
             NotificationCenter.default.post(name: .varaCredentialsDidChange, object: nil)
         } catch {
             keyStatusBinding(for: provider).wrappedValue = String(localized: "Save failed", comment: "Key status")
+        }
+    }
+
+    /// Probe the provider with a minimal real request and report whether the key
+    /// works + the account can use it. Bindings are Sendable; the result is
+    /// applied on the main actor only if the field still holds the same key.
+    private func validateKey(_ key: String, for provider: VaraCredentialProvider) {
+        let statusBinding = keyStatusBinding(for: provider)
+        let fieldBinding = keyBinding(for: provider)
+        let validatorProvider: CredentialValidator.Provider = switch provider {
+        case .elevenLabs: .elevenLabs
+        case .groq: .groq
+        case .openAI: .openAI
+        case .anthropic: .anthropic
+        case .gemini: .gemini
+        }
+        Task { @MainActor in
+            let reason = await CredentialValidator.validate(provider: validatorProvider, key: key)
+            guard fieldBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines) == key else { return }
+            statusBinding.wrappedValue = Self.validationStatusText(reason)
+        }
+    }
+
+    /// Human-readable status for a validation result (`nil` == works).
+    static func validationStatusText(_ reason: APIFailureReason?) -> String {
+        switch reason {
+        case nil:
+            return String(localized: "Key ✓ — works", comment: "Key validation: key is valid and the account can use it")
+        case .invalidKey:
+            return String(localized: "Key rejected — check it", comment: "Key validation: provider returned 401")
+        case .insufficientQuota:
+            return String(localized: "No credit on the account — add billing", comment: "Key validation: 429 insufficient_quota")
+        case .rateLimited:
+            return String(localized: "Key works (rate-limited right now)", comment: "Key validation: 429 rate limit")
+        case .noAccess:
+            return String(localized: "Account lacks access to this model", comment: "Key validation: 403/404")
+        case .network:
+            return String(localized: "Couldn't reach the provider — check your internet", comment: "Key validation: offline")
+        case .server:
+            return String(localized: "Provider error — try again later", comment: "Key validation: 5xx")
+        case .other:
+            return String(localized: "Couldn't verify the key", comment: "Key validation: unknown failure")
         }
     }
 

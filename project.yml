@@ -58,8 +58,8 @@ targets:
       properties:
         CFBundleName: Vara
         CFBundleDisplayName: Vara
-        CFBundleShortVersionString: "0.2.2"
-        CFBundleVersion: "4"
+        CFBundleShortVersionString: "0.2.3"
+        CFBundleVersion: "5"
         LSUIElement: false
         LSMinimumSystemVersion: "14.0"
         ATSApplicationFontsPath: Fonts
@@ -83,6 +83,9 @@ targets:
         SUFeedURL: https://vara.dk/appcast.xml
         SUPublicEDKey: gkGG0RaoroAzfFTpL8TJrIsYlU6K++AnJx0JxJrvOrU=
         SUEnableAutomaticChecks: true
+        # Check daily (in seconds). Combined with the silent launch check in
+        # VaraUpdateModel, this keeps the in-app "update available" banner timely.
+        SUScheduledCheckInterval: 86400
     entitlements:
       path: App/Vara.entitlements
       properties:
@@ -107,8 +110,8 @@ targets:
         PRODUCT_NAME: Vara
         GENERATE_INFOPLIST_FILE: "NO"
         INFOPLIST_FILE: App/Info.plist
-        MARKETING_VERSION: "0.2.2"
-        CURRENT_PROJECT_VERSION: "4"
+        MARKETING_VERSION: "0.2.3"
+        CURRENT_PROJECT_VERSION: "5"
 
   # Unit tests for App-layer pure logic that can't move to VaraCore (the settings
   # enums are localized via App's string catalog). Hosted by the Vara app so it

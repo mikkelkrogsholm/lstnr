@@ -5,6 +5,7 @@ import SwiftUI
 /// searchable history. Replaces the old developer-tool layout.
 struct VaraDashboardView: View {
     let state: AppState
+    @ObservedObject var updateModel: VaraUpdateModel
     @State private var scratchpadText = ""
     @State private var searchText = ""
     @State private var accessibilityGranted = true
@@ -18,6 +19,7 @@ struct VaraDashboardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 heroHeader
+                updateBanner
                 permissionWarnings
                 modePicker
                 statsRow
@@ -33,6 +35,47 @@ struct VaraDashboardView: View {
         .frame(minWidth: 640, minHeight: 560)
         .onAppear {
             accessibilityGranted = state.checkAccessibilityGranted()
+            updateModel.refresh()
+        }
+    }
+
+    // MARK: Update banner
+
+    /// Visible "an update is ready" prompt with a one-click install. Shown only
+    /// when Sparkle's silent check found a newer build — so users never sit on an
+    /// old version unaware (the buried "Check for Updates…" wasn't discoverable).
+    @ViewBuilder
+    private var updateBanner: some View {
+        if let version = updateModel.availableVersion {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(BSTheme.cyan)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Update ready: Vara \(version)", comment: "Dashboard update banner title; %@ is the new version")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(BSTheme.textPrimary)
+                    Text("A new version is ready to install.", comment: "Dashboard update banner subtitle")
+                        .font(.system(size: 11))
+                        .foregroundStyle(BSTheme.textMuted)
+                }
+
+                Spacer()
+
+                Button {
+                    updateModel.installUpdate()
+                } label: {
+                    Text("Update now", comment: "Dashboard update banner install button")
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(12)
+            .background(BSTheme.cyan.opacity(0.10), in: RoundedRectangle(cornerRadius: BSTheme.smallCornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: BSTheme.smallCornerRadius, style: .continuous)
+                    .strokeBorder(BSTheme.cyan.opacity(0.4))
+            }
         }
     }
 
@@ -631,5 +674,5 @@ private struct HistoryRow: View {
 }
 
 #Preview("Dashboard") {
-    VaraDashboardView(state: AppState())
+    VaraDashboardView(state: AppState(), updateModel: VaraUpdateModel())
 }

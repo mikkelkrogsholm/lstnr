@@ -37,11 +37,13 @@
 		BEEC2F35B945424F5997522F /* CheckForUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AE93AF9F850ADD8A355737 /* CheckForUpdates.swift */; };
 		C15721F412700A537986F40F /* RecordingHUDWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B06E7C98BBD1DB6BEE35F4 /* RecordingHUDWindowController.swift */; };
 		C846DBCCEB23F847EC071F35 /* CustomEndpointsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E1166CE9FEFD5F057DDB14 /* CustomEndpointsSection.swift */; };
+		C900F8900261E6C8966A203C /* VaraUpdateModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEF04239A8A898BDFA3F74F /* VaraUpdateModel.swift */; };
 		D982B6A13797D8E7AC1569C8 /* VaraCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6E083E4744F546E3CA6F2CAD /* VaraCore */; };
 		DC0E3156169EE716C76EF8A0 /* ModeEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E328442066315B1FA7D59151 /* ModeEditorView.swift */; };
 		E4F1F1A87D49C00BBDB9102E /* WhisperKitModelSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6078922C0574A393677F356C /* WhisperKitModelSection.swift */; };
 		E65D627433C07935BCD74C6D /* AppModeRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2391ACC2BC7FA6C6D41ED37 /* AppModeRule.swift */; };
 		EB8550AD991F7C119BBCF1BA /* VaraDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8905F372CA3231BFE529DBC /* VaraDashboardView.swift */; };
+		F014FB221D269E4611688EE1 /* TranscriptionErrorMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FAE32C91471DE9B98F130B0 /* TranscriptionErrorMessageTests.swift */; };
 		F5DCD79FA197C2A43A400EEF /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3ADF4F9CE0F6D8B1BE1377 /* MenuBarContent.swift */; };
 		F96805C7A64D92CC827A3C92 /* VaraAppSettingsCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F844A87A375B4D324DD435C9 /* VaraAppSettingsCodableTests.swift */; };
 		F9FE5D38A33823EF08B964F4 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 90B4E7E81F9CC1E85832AEC3 /* Sparkle */; };
@@ -71,6 +73,7 @@
 		449B3FBDD9F1444DA3A2BCA3 /* ModePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModePresentation.swift; sourceTree = "<group>"; };
 		477761F204C3DC413E7C5D3F /* SettingsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModel.swift; sourceTree = "<group>"; };
 		496E1C790FB4D930D62B672F /* VaraMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraMigration.swift; sourceTree = "<group>"; };
+		4FAE32C91471DE9B98F130B0 /* TranscriptionErrorMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionErrorMessageTests.swift; sourceTree = "<group>"; };
 		6078922C0574A393677F356C /* WhisperKitModelSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelSection.swift; sourceTree = "<group>"; };
 		620090FD29CC4D0ED0AB0B7F /* VaraSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraSettingsView.swift; sourceTree = "<group>"; };
 		6601DCEB2501902B10161079 /* VaraAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VaraAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -92,6 +95,7 @@
 		BB93546D7B48CC2A0D58B514 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C17579637BA9143B96A20B92 /* AppRulesSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRulesSection.swift; sourceTree = "<group>"; };
 		D8905F372CA3231BFE529DBC /* VaraDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraDashboardView.swift; sourceTree = "<group>"; };
+		DBEF04239A8A898BDFA3F74F /* VaraUpdateModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaraUpdateModel.swift; sourceTree = "<group>"; };
 		DE07EBF0F13396109C0532C3 /* KeychainCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainCredentialStore.swift; sourceTree = "<group>"; };
 		E328442066315B1FA7D59151 /* ModeEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeEditorView.swift; sourceTree = "<group>"; };
 		E96E5CAB230B56139FC79374 /* SettingsEnums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsEnums.swift; sourceTree = "<group>"; };
@@ -193,6 +197,7 @@
 				7D94A07CEFA60089351332CB /* VaraApp.swift */,
 				D8905F372CA3231BFE529DBC /* VaraDashboardView.swift */,
 				496E1C790FB4D930D62B672F /* VaraMigration.swift */,
+				DBEF04239A8A898BDFA3F74F /* VaraUpdateModel.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -227,6 +232,7 @@
 		CF9D14415FD39D148C53E9CC /* VaraAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				4FAE32C91471DE9B98F130B0 /* TranscriptionErrorMessageTests.swift */,
 				F844A87A375B4D324DD435C9 /* VaraAppSettingsCodableTests.swift */,
 			);
 			path = VaraAppTests;
@@ -345,6 +351,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F014FB221D269E4611688EE1 /* TranscriptionErrorMessageTests.swift in Sources */,
 				F96805C7A64D92CC827A3C92 /* VaraAppSettingsCodableTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -384,6 +391,7 @@
 				2A227264DD742027F13ED8F7 /* VaraMigration.swift in Sources */,
 				8E06D931EC7821E24F253693 /* VaraOnboarding.swift in Sources */,
 				26C1451E169EF592E9142213 /* VaraSettingsView.swift in Sources */,
+				C900F8900261E6C8966A203C /* VaraUpdateModel.swift in Sources */,
 				E4F1F1A87D49C00BBDB9102E /* WhisperKitModelSection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -555,14 +563,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Vara.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.2.2;
+				MARKETING_VERSION = 0.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = dk.56n.vara;
 				PRODUCT_NAME = Vara;
 				SDKROOT = macosx;
@@ -575,14 +583,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Vara.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.2.2;
+				MARKETING_VERSION = 0.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = dk.56n.vara;
 				PRODUCT_NAME = Vara;
 				SDKROOT = macosx;

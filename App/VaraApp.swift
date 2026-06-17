@@ -4,22 +4,19 @@ import SwiftUI
 @main
 struct VaraApp: App {
     @State private var state = AppState()
-    /// Sparkle auto-updater. Created once for the app's lifetime; `startingUpdater:
-    /// true` begins scheduled background checks against the SUFeedURL appcast.
-    private let updaterController = SPUStandardUpdaterController(
-        startingUpdater: true,
-        updaterDelegate: nil,
-        userDriverDelegate: nil
-    )
+    /// Sparkle auto-updater + "update available" state for the in-app banner.
+    /// Created once for the app's lifetime; does scheduled background checks AND a
+    /// silent launch check so the dashboard can show a visible update prompt.
+    @StateObject private var updateModel = VaraUpdateModel()
 
     var body: some Scene {
         WindowGroup("Vara", id: "main") {
-            MainWindowRoot(state: state)
+            MainWindowRoot(state: state, updateModel: updateModel)
         }
         .defaultSize(width: 860, height: 620)
 
         MenuBarExtra {
-            MenuBarContent(state: state, updater: updaterController.updater)
+            MenuBarContent(state: state, updater: updateModel.updater)
         } label: {
             Label(
                 state.isRecording ? "Vara •" : "Vara",
@@ -44,11 +41,12 @@ struct VaraApp: App {
 /// otherwise the dashboard.
 private struct MainWindowRoot: View {
     let state: AppState
+    @ObservedObject var updateModel: VaraUpdateModel
     @AppStorage(VaraOnboarding.completedDefaultsKey) private var onboardingCompleted = false
 
     var body: some View {
         if onboardingCompleted {
-            VaraDashboardView(state: state)
+            VaraDashboardView(state: state, updateModel: updateModel)
         } else {
             OnboardingView(state: state)
         }
