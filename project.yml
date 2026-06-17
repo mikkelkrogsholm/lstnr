@@ -58,8 +58,8 @@ targets:
       properties:
         CFBundleName: Vara
         CFBundleDisplayName: Vara
-        CFBundleShortVersionString: "0.2.1"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "0.2.2"
+        CFBundleVersion: "4"
         LSUIElement: false
         LSMinimumSystemVersion: "14.0"
         ATSApplicationFontsPath: Fonts
@@ -107,8 +107,8 @@ targets:
         PRODUCT_NAME: Vara
         GENERATE_INFOPLIST_FILE: "NO"
         INFOPLIST_FILE: App/Info.plist
-        MARKETING_VERSION: "0.2.1"
-        CURRENT_PROJECT_VERSION: "3"
+        MARKETING_VERSION: "0.2.2"
+        CURRENT_PROJECT_VERSION: "4"
 
   # Unit tests for App-layer pure logic that can't move to VaraCore (the settings
   # enums are localized via App's string catalog). Hosted by the Vara app so it

@@ -30,6 +30,14 @@ final class RecordingHUDState {
     /// title shows a one-time-prep message instead of the normal forging copy.
     /// Read only while `phase == .forging`; recomputed on every forge entry.
     var forgePreparingModel: Bool = false
+    /// The active speech engine's display name (e.g. "ElevenLabs Scribe", "OpenAI
+    /// Realtime"). Shown as a HUD chip so it's clear every dictation which backend
+    /// is transcribing. Set on each recording start, like `modeTitle`; persists
+    /// through forging + the inserted outcome.
+    var engineName: String = ""
+    /// Whether that engine runs on-device (private) vs. in the cloud — drives the
+    /// engine chip's glyph (laptop vs. cloud).
+    var engineRunsLocally: Bool = false
 
     func pushLevel(_ level: Double) {
         levels.append(level)

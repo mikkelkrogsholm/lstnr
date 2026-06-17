@@ -139,7 +139,15 @@ public struct SpeechToTextBackendCapabilities: Equatable, Sendable {
 public protocol SpeechToTextBackend: Sendable {
     var id: String { get }
     var displayName: String { get }
+    /// A compact engine label for tight UI such as the dictation HUD chip (so the
+    /// active engine is clear without truncation). Defaults to `displayName`;
+    /// backends with a long `displayName` override it.
+    var shortName: String { get }
     var capabilities: SpeechToTextBackendCapabilities { get }
 
     func transcribe(_ request: SpeechToTextRequest) async throws -> TranscriptionResult
+}
+
+public extension SpeechToTextBackend {
+    var shortName: String { displayName }
 }

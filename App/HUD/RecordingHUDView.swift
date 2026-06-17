@@ -137,39 +137,75 @@ struct RecordingHUDView: View {
 
     @ViewBuilder
     private var bottomRow: some View {
-        HStack(spacing: 8) {
-            if showsModeChip {
-                HStack(spacing: 4) {
-                    Image(systemName: state.modeSymbol)
-                        .font(.system(size: 9, weight: .semibold))
-                    Text(state.modeTitle)
-                        .font(.system(size: 10, weight: .medium))
-                }
-                .foregroundStyle(HUDPalette.teal)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(HUDPalette.teal.opacity(0.16), in: Capsule())
-            }
+        HStack(spacing: 6) {
+            if showsModeChip { modeChip }
+            if showsEngineChip { engineChip }
 
             Spacer(minLength: 4)
 
             if state.phase == .recording {
-                Text("Release · Esc · 1–9", comment: "HUD hint: release key to insert, Esc cancels, digits switch mode")
-                    .font(.system(size: 10))
-                    .foregroundStyle(HUDPalette.muted)
+                hintLabel(Text("Release · Esc · 1–9", comment: "HUD hint: release key to insert, Esc cancels, digits switch mode"))
             } else if state.phase == .forging {
                 // Forging is now escapable — surface the Esc hint so the user
                 // isn't trapped if the backend hangs.
-                Text("Esc · cancel", comment: "HUD hint while forging: Esc cancels")
-                    .font(.system(size: 10))
-                    .foregroundStyle(HUDPalette.muted)
+                hintLabel(Text("Esc · cancel", comment: "HUD hint while forging: Esc cancels"))
             }
         }
+    }
+
+    /// Teal chip naming the active dictation mode (e.g. "Ren tekst").
+    private var modeChip: some View {
+        chip(symbol: state.modeSymbol, text: state.modeTitle, tint: HUDPalette.teal)
+    }
+
+    /// Muted chip naming the active speech engine, with a cloud/laptop glyph that
+    /// shows at a glance whether transcription runs in the cloud or on-device —
+    /// answers "which engine is running?" on every dictation.
+    private var engineChip: some View {
+        chip(
+            symbol: state.engineRunsLocally ? "laptopcomputer" : "cloud",
+            text: state.engineName,
+            tint: HUDPalette.muted,
+            maxTextWidth: 116
+        )
+    }
+
+    private func chip(symbol: String, text: String, tint: Color, maxTextWidth: CGFloat? = nil) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: symbol)
+                .font(.system(size: 9, weight: .semibold))
+            Text(text)
+                .font(.system(size: 10, weight: .medium))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: maxTextWidth)
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(tint.opacity(0.16), in: Capsule())
+    }
+
+    /// The keyboard hint, deprioritized so it compresses before the chips when
+    /// the HUD is narrow.
+    private func hintLabel(_ text: Text) -> some View {
+        text
+            .font(.system(size: 10))
+            .foregroundStyle(HUDPalette.muted)
+            .lineLimit(1)
+            .layoutPriority(-1)
     }
 
     private var showsModeChip: Bool {
         switch state.phase {
         case .recording, .forging, .inserted: !state.modeTitle.isEmpty
+        default: false
+        }
+    }
+
+    private var showsEngineChip: Bool {
+        switch state.phase {
+        case .recording, .forging, .inserted: !state.engineName.isEmpty
         default: false
         }
     }
@@ -323,6 +359,8 @@ private struct PulsingDot: View {
             state.beginRecording(startedAt: Date(timeIntervalSinceNow: -7))
             state.modeTitle = "Ren tekst"
             state.modeSymbol = "sparkles"
+            state.engineName = "ElevenLabs Scribe"
+            state.engineRunsLocally = false
             for index in 0..<48 {
                 state.pushLevel(0.04 + 0.16 * abs(sin(Double(index) * 0.4)))
             }
@@ -331,6 +369,8 @@ private struct PulsingDot: View {
             state.phase = .forging
             state.modeTitle = "Ren tekst"
             state.modeSymbol = "sparkles"
+            state.engineName = "Hviske"
+            state.engineRunsLocally = true
             for index in 0..<48 {
                 state.pushLevel(0.04 + 0.16 * abs(sin(Double(index) * 0.4)))
             }
@@ -339,6 +379,8 @@ private struct PulsingDot: View {
             state.phase = .inserted(words: 23)
             state.modeTitle = "Ren tekst"
             state.modeSymbol = "sparkles"
+            state.engineName = "OpenAI Realtime"
+            state.engineRunsLocally = false
             state.transcriptPreview = "Hej, jeg ville lige følge op på vores møde i går …"
         })
         RecordingHUDView(state: configured(error) { state in

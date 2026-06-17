@@ -444,6 +444,8 @@ extension AppState {
             let mode = activeMode
             hudState.modeTitle = mode.displayTitle
             hudState.modeSymbol = mode.symbolName
+            hudState.engineName = backend?.shortName ?? ""
+            hudState.engineRunsLocally = backend?.capabilities.runsLocally ?? false
             hudState.beginRecording(startedAt: Date())
             presentHUD()
             playFeedbackSound("Tink", volume: 0.25)

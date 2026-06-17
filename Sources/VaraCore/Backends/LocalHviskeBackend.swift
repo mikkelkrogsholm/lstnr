@@ -6,6 +6,7 @@ public struct LocalHviskeBackend: SpeechToTextBackend {
 
     public let id = "local-hviske-v5.3"
     public let displayName = "Local Hviske v5.3"
+    public var shortName: String { "Hviske" }
     public let capabilities = SpeechToTextBackendCapabilities(
         supportsFileTranscription: true,
         supportsStreamingTranscription: false,

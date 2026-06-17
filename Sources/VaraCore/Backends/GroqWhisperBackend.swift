@@ -25,6 +25,7 @@ public struct GroqWhisperBackend: ASRBackend, SpeechToTextBackend {
     public var id: String { name }
 
     public var displayName: String { "Groq Whisper Large v3" }
+    public var shortName: String { "Groq Whisper" }
 
     public var capabilities: SpeechToTextBackendCapabilities {
         SpeechToTextBackendCapabilities(

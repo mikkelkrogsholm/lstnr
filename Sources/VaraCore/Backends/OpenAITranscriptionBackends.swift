@@ -23,6 +23,7 @@ public struct OpenAIAudioTranscriptionBackend: ASRBackend, SpeechToTextBackend {
     }
 
     public var id: String { name }
+    public var shortName: String { modelID.localizedCaseInsensitiveContains("mini") ? "OpenAI 4o-mini" : "OpenAI 4o" }
 
     public var capabilities: SpeechToTextBackendCapabilities {
         SpeechToTextBackendCapabilities(
@@ -155,6 +156,7 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
     public var id: String { name }
 
     public var displayName: String { "OpenAI GPT Realtime Whisper" }
+    public var shortName: String { "OpenAI Realtime" }
 
     public var capabilities: SpeechToTextBackendCapabilities {
         SpeechToTextBackendCapabilities(
@@ -180,16 +182,49 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
                     reason: "OpenAI realtime transcription expects PCM s16le mono at \(Self.inputSampleRate) Hz; received \(sampleRate) Hz."
                 )
             }
-            return try await transcribe(pcmChunks: stream, language: request.languageCode, microphoneProfile: request.microphoneProfile, latency: request.transcriptionLatency)
+            // Buffer the whole utterance so a rejected realtime session (e.g. an
+            // OpenAI account WITHOUT gpt-realtime-whisper access) can fall back to
+            // the broadly-available batch endpoint with the SAME audio, instead of
+            // losing the dictation. (Push-to-talk already commits at end-of-speech,
+            // so buffering costs no perceptible latency.)
+            var pcm = Data()
+            for await chunk in stream { pcm.append(chunk) }
+            do {
+                return try await transcribe(
+                    pcmChunks: Self.chunkedStream(pcm, chunkMilliseconds: chunkMilliseconds),
+                    language: request.languageCode,
+                    microphoneProfile: request.microphoneProfile,
+                    latency: request.transcriptionLatency
+                )
+            } catch {
+                await diagnosticLog?("OpenAI realtime failed (\(error)); falling back to gpt-4o-transcribe.")
+                return try await realtimeFallbackBatchBackend().transcribe(SpeechToTextRequest(
+                    audio: .pcm16Stream(Self.chunkedStream(pcm, chunkMilliseconds: chunkMilliseconds), sampleRate: Self.inputSampleRate),
+                    languageCode: request.languageCode,
+                    vocabulary: request.vocabulary
+                ))
+            }
         }
     }
 
-    public func transcribe(audio: URL, language: String?) async throws -> TranscriptionResult {
-        let pcm = try AudioReader.readPCM16(url: audio, targetSampleRate: Double(Self.inputSampleRate))
-        let durationSeconds = Double(pcm.count / 2) / Double(Self.inputSampleRate)
+    /// The batch endpoint Vara falls back to when a realtime session is rejected
+    /// (e.g. the account lacks gpt-realtime-whisper access). gpt-4o-transcribe is
+    /// broadly available and takes the same OpenAI key, so the dictation still
+    /// lands instead of erroring out.
+    private func realtimeFallbackBatchBackend() -> OpenAIAudioTranscriptionBackend {
+        OpenAIAudioTranscriptionBackend(
+            apiKey: apiKey,
+            modelID: "gpt-4o-transcribe",
+            displayName: "OpenAI GPT-4o Transcribe (realtime fallback)"
+        )
+    }
+
+    /// Re-emits buffered PCM as an `AsyncStream` of ~`chunkMilliseconds` slices,
+    /// so a one-shot stream can be replayed (e.g. to the realtime path, then the
+    /// batch fallback).
+    static func chunkedStream(_ pcm: Data, chunkMilliseconds: Int) -> AsyncStream<Data> {
         let bytesPerChunk = max(320, Self.inputSampleRate * 2 * chunkMilliseconds / 1000)
         let (stream, continuation) = AsyncStream<Data>.makeStream()
-
         Task.detached {
             var offset = 0
             while offset < pcm.count {
@@ -199,17 +234,31 @@ public struct OpenAIRealtimeWhisperBackend: ASRBackend, SpeechToTextBackend {
             }
             continuation.finish()
         }
+        return stream
+    }
 
-        let result = try await transcribe(pcmChunks: stream, language: language)
-        return TranscriptionResult(
-            text: result.text,
-            detectedLanguage: result.detectedLanguage,
-            languageConfidence: result.languageConfidence,
-            audioDurationSeconds: durationSeconds,
-            elapsedSeconds: result.elapsedSeconds,
-            backend: result.backend,
-            rawJSON: result.rawJSON
-        )
+    public func transcribe(audio: URL, language: String?) async throws -> TranscriptionResult {
+        let pcm = try AudioReader.readPCM16(url: audio, targetSampleRate: Double(Self.inputSampleRate))
+        let durationSeconds = Double(pcm.count / 2) / Double(Self.inputSampleRate)
+        do {
+            let result = try await transcribe(pcmChunks: Self.chunkedStream(pcm, chunkMilliseconds: chunkMilliseconds), language: language)
+            return TranscriptionResult(
+                text: result.text,
+                detectedLanguage: result.detectedLanguage,
+                languageConfidence: result.languageConfidence,
+                audioDurationSeconds: durationSeconds,
+                elapsedSeconds: result.elapsedSeconds,
+                backend: result.backend,
+                rawJSON: result.rawJSON
+            )
+        } catch {
+            // Same rejection handling as the streaming path: a restore-saved-audio
+            // retry on a gated account should also fall back to the batch endpoint.
+            await diagnosticLog?("OpenAI realtime failed (\(error)); falling back to gpt-4o-transcribe.")
+            return try await realtimeFallbackBatchBackend().transcribe(
+                SpeechToTextRequest(audio: .file(audio), languageCode: language)
+            )
+        }
     }
 
     public func transcribe(

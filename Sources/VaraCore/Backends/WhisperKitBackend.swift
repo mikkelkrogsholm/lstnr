@@ -34,6 +34,7 @@ public struct WhisperKitBackend: SpeechToTextBackend {
 
     public let id = "local-whisperkit"
     public let displayName: String
+    public var shortName: String { "WhisperKit" }
     public let capabilities = SpeechToTextBackendCapabilities(
         supportsFileTranscription: true,
         supportsStreamingTranscription: false,

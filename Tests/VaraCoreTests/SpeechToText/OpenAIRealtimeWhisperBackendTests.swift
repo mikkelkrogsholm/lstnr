@@ -105,4 +105,48 @@ final class OpenAIRealtimeWhisperBackendTests: XCTestCase {
         XCTAssertFalse(noStatus.description.isEmpty)
         XCTAssertTrue(noStatus.description.contains("gpt-realtime-whisper"))
     }
+
+    // MARK: - Buffered replay (the realtime → batch fallback re-streams the same audio)
+
+    func testChunkedStreamReassemblesToOriginalLosslessly() async {
+        var pcm = Data()
+        for i in 0..<10_000 { pcm.append(UInt8(i & 0xFF)) }
+        var rebuilt = Data()
+        for await chunk in OpenAIRealtimeWhisperBackend.chunkedStream(pcm, chunkMilliseconds: 100) {
+            rebuilt.append(chunk)
+        }
+        XCTAssertEqual(rebuilt, pcm, "replayed chunks must reconstruct the buffered audio byte-for-byte")
+    }
+
+    func testChunkedStreamProducesUniformChunksThenRemainder() async {
+        let pcm = Data(repeating: 0xAB, count: 8000)
+        var sizes: [Int] = []
+        for await chunk in OpenAIRealtimeWhisperBackend.chunkedStream(pcm, chunkMilliseconds: 100) {
+            sizes.append(chunk.count)
+        }
+        XCTAssertGreaterThan(sizes.count, 1, "8000 bytes should split into multiple chunks")
+        let full = try! XCTUnwrap(sizes.first)
+        XCTAssertTrue(sizes.dropLast().allSatisfy { $0 == full }, "all but the last chunk must be full-sized: \(sizes)")
+        XCTAssertLessThanOrEqual(try! XCTUnwrap(sizes.last), full)
+        XCTAssertEqual(sizes.reduce(0, +), 8000, "no bytes may be lost or duplicated across chunks")
+    }
+
+    func testChunkedStreamOfEmptyBufferEmitsNothing() async {
+        var count = 0
+        for await _ in OpenAIRealtimeWhisperBackend.chunkedStream(Data(), chunkMilliseconds: 100) { count += 1 }
+        XCTAssertEqual(count, 0, "an empty buffer must finish the stream with no chunks")
+    }
+
+    // MARK: - HUD engine short names (must stay compact + non-truncating)
+
+    func testRealtimeShortNameIsConcise() {
+        XCTAssertEqual(makeBackend().shortName, "OpenAI Realtime")
+    }
+
+    func testOpenAIBatchShortNameDerivesFromModelID() {
+        let full = OpenAIAudioTranscriptionBackend(apiKey: "k", modelID: "gpt-4o-transcribe", displayName: "OpenAI GPT-4o Transcribe")
+        XCTAssertEqual(full.shortName, "OpenAI 4o")
+        let mini = OpenAIAudioTranscriptionBackend(apiKey: "k", modelID: "gpt-4o-mini-transcribe", displayName: "OpenAI GPT-4o Mini Transcribe 2025-12-15")
+        XCTAssertEqual(mini.shortName, "OpenAI 4o-mini")
+    }
 }

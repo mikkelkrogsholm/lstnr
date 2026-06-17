@@ -29,6 +29,7 @@ public struct ScribeV2Backend: ASRBackend, SpeechToTextBackend {
     public var id: String { name }
 
     public var displayName: String { "ElevenLabs Scribe v2" }
+    public var shortName: String { "ElevenLabs Scribe" }
 
     public var capabilities: SpeechToTextBackendCapabilities {
         SpeechToTextBackendCapabilities(
